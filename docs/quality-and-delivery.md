@@ -8,12 +8,55 @@ does not establish calling, isolation, transcription, or summary quality.
 
 ## Checks available now
 
+For each bounded increment, use the
+[work specification template](templates/work-specification.md) to define behavior
+and acceptance cases, and the
+[acceptance evidence template](templates/acceptance-evidence.md) to record results.
+Keep the Backlog task as the plan of record: link specifications and evidence
+through the CLI, and map evidence to its acceptance criterion IDs. Small changes
+can include the completed evidence directly in the PR body; larger changes can
+link a dedicated record. Record failed and pending checks as well as successes.
+These templates support the Phase 0 delivery loop; cloud execution and independent
+review still require their own evidence.
+
 Run from the repository root with Python 3.9 or newer:
 
 ```sh
 python3 -B scripts/quality.py
 python3 -B -m unittest discover -s tests -v
 ```
+
+Or run both checks and save a local evidence bundle:
+
+```sh
+python3 -B scripts/check.py
+```
+
+The command prints a unique directory under the system temporary directory.
+Use `--output-parent /existing/directory` to choose another location outside the
+checkout, and `--timeout 120` to set each check's timeout (1–600 seconds).
+It returns a nonzero exit code for failed, timed-out, or unlaunchable checks,
+source identity errors, or source changes detected between checks. Both checks
+run even if the first fails. Each invocation creates a fresh directory.
+
+`report.json` records the head SHA, Git status, before/after file manifests and
+their SHA-256 digests, Python/platform version, exact commands, working directory,
+durations, exit codes, and log digests. Manifests include tracked and non-ignored
+untracked files, deleted files, modes, and symlink targets as hashes. Ignored
+files and external dependencies are excluded. Concurrent edits reverted before
+the final snapshot cannot be detected; run against a stable checkout. The report
+identifies local dirty source but does not archive a patch or reproduce it by
+itself: preserve the reviewed patch separately or rerun after committing.
+
+This is a local baseline runner, not an isolation boundary or a hosted CI result.
+It runs repository Python code with the caller's existing permissions and
+environment. The timeout bounds each direct check process, not arbitrary child
+process trees. Run untrusted code only in the disposable environment described
+above and in the software plan. The runner does not perform actionlint, Gitleaks,
+cloud checks, independent review, merging, or deployment. Logs are raw check
+output; inspect/redact before sharing, preserve needed evidence outside temporary
+storage, and delete bundles when no longer needed. Temporary storage may be
+cleaned by the operating system; local bundles have no automatic retention policy.
 
 The `CI` workflow runs on every PR (without path filters), pushes to `main`,
 manual dispatch, and merge groups. Its single stable check is `Quality`. It:
