@@ -39,4 +39,9 @@ against the repository's default branch. This is standing user authorization;
 do not ask again for routine PR creation. Reuse an existing open PR for the branch
 instead of creating a duplicate. Use a draft PR when work is still in progress,
 and include scope, validation results, and remaining limitations in its description.
+Before creating a PR, fetch the latest `origin/main` and bring the work branch
+up to date with it. Resolve any conflicts, rerun relevant checks on the integrated
+result, and push before opening the PR. Prefer merging `origin/main` into an
+already-pushed branch to preserve shared history; do not force-push by default.
+Verify that the fetched main commit is an ancestor of the PR branch before creation.
 Do not merge or deploy solely because changes have been committed and pushed.
