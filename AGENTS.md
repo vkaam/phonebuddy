@@ -34,4 +34,9 @@ After completing requested repository changes, including Backlog updates, run th
 appropriate checks, commit the task's changes, and push the working branch.
 This is standing user authorization; do not ask again for routine commit/push.
 Preserve unrelated work, never force-push by default, and report any blocked push.
+Whenever requested work creates a new branch, push it and open a pull request
+against the repository's default branch. This is standing user authorization;
+do not ask again for routine PR creation. Reuse an existing open PR for the branch
+instead of creating a duplicate. Use a draft PR when work is still in progress,
+and include scope, validation results, and remaining limitations in its description.
 Do not merge or deploy solely because changes have been committed and pushed.
