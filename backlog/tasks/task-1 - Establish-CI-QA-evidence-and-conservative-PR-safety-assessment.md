@@ -5,7 +5,7 @@ status: Done
 assignee:
   - '@codex'
 created_date: '2026-10-29T18:48:00Z'
-updated_date: '2026-10-29T18:59:00Z'
+updated_date: '2026-10-29T19:00:00Z'
 labels: []
 dependencies: []
 references:
@@ -56,9 +56,11 @@ PhoneBuddy is planning-only and has no automated checks. Establish a runnable re
 ## Implementation Notes
 
 <!-- SECTION:NOTES:BEGIN -->
-Implemented read-only CI, checksum-pinned actionlint/Gitleaks, trusted-base advisory risk reporting, current-head/current-merge CI evidence validation, independent review checks, CODEOWNERS, Dependabot, PR evidence template, and QA/CD activation documentation. Local checks passed: 15 unittest tests (with adversarial subcases), repository checks, actionlint 1.7.12, Gitleaks 8.30.1 full Git history and working directory, and git diff --check. GitHub API confirms main has no branch protection and allow_auto_merge=false. No cloud credentials, deployable application, or infrastructure exists; deployment and merge execution are deliberately inactive. Preparing a draft PR to verify hosted CI; bootstrap risk workflow needs these files on main before live PR assessments can run.
+Implemented read-only CI, checksum-pinned actionlint/Gitleaks, trusted-base advisory risk reporting, current-head/current-merge CI evidence validation, independent human review checks, CODEOWNERS, Dependabot, PR evidence template, and QA/CD activation documentation. Local checks passed: 15 unittest tests with adversarial subcases, repository checks, actionlint 1.7.12, Gitleaks 8.30.1 on Git history and working directory, and diff whitespace checks. First hosted CI run 40935621130 passed every step including artifact upload.
 
-Hosted CI run 40935621130 passed all steps, including QA artifact upload. Live GitHub collector exercise found that check runs attach to the PR head; added a CI run title containing github.sha and verify that it matches the current synthetic merge commit, with a stale-merge regression case. All 15 tests, repository validation, and actionlint pass after this correction. Draft PR #1 also includes the four pre-existing setup commits that were already on local main but not remote main; no existing work was rewritten. Bootstrap PR remains manual-review by design.
+Live API integration confirmed that GitHub attaches checks to the PR head. CI records the tested merge commit in its run title, which the collector compares against the current merge commit; a stale-merge regression case passes. The updated hosted run is being verified. GitHub confirms main has no protection and auto-merge is disabled; cloud deployments and merge execution remain inactive. Draft PR #1 also includes three pre-existing setup commits already on local main but not remote main; no prior work was rewritten. The bootstrap requires manual review, and the advisory workflow needs its trusted policy on main before subsequent live reports can run.
+
+Updated hosted CI run 40935969858 passed. A second live collector exercise recognized successful Quality evidence for the exact current head and merge commit, with no missing/malformed-evidence fallback. The bootstrap still correctly receives manual-review.
 <!-- SECTION:NOTES:END -->
 
 ## Final Summary
