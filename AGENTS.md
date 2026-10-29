@@ -28,6 +28,35 @@ Do not edit Backlog task, draft, document, decision, or milestone markdown files
 </CRITICAL_INSTRUCTION>
 <!-- BACKLOG.MD GUIDELINES END -->
 
+## Taking Backlog work through review
+
+When asked to work on the Backlog without a specific task, list the available
+tasks and pick an eligible, unassigned item whose dependencies are satisfied.
+Respect any requested priority or scope, and do not take over someone else's
+active work. If no eligible item can be identified, report the blocker. When a
+task is specified, read it and verify its eligibility before starting. Follow
+the execution guide to claim it, record a plan, and keep progress in Backlog.
+
+Carry the assigned work through a pull request, not just a local implementation:
+
+1. Verify the acceptance criteria and record evidence using the finalization
+   guide. Keep the task active while implementation or required verification is
+   incomplete. Record the PR link and any outstanding blockers in the task.
+2. Follow the publishing instructions below. Open or update the branch's PR with
+   its task, scope, validation, and remaining limitations. Do not create a
+   duplicate PR.
+3. Monitor all checks on the PR's current head until they complete successfully.
+   Inspect failures, fix issues within scope, run relevant local checks, commit
+   and push, then monitor the new head again. Pending, cancelled, skipped,
+   missing, stale, or otherwise inconclusive checks are not successful checks.
+   If a check cannot be completed or fixed, report its name, state, and blocker;
+   do not claim the PR is green.
+4. Once the work and acceptance criteria are verified and the PR checks are
+   green, complete the Backlog finalization steps. If those updates change the
+   PR branch, commit and push them and verify checks again for the final head.
+   Report the PR link, final check results, and any remaining review or other
+   blockers. A green PR still requires the project's review and merge controls.
+
 ## Publishing changes
 
 After completing requested repository changes, including Backlog updates, run the
