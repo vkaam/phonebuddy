@@ -173,6 +173,7 @@ class CollectorTests(unittest.TestCase):
                 return {"truncated": scenario == "truncated-tree", "tree": [
                     {"path": "docs/usage/calling.md", "mode": "100644"}]}
             if "/check-runs?" in route:
+                self.assertIn("/commits/" + "a" * 40 + "/check-runs?", route)
                 return {"check_runs": [{
                     "name": "Quality", "status": "completed", "conclusion": "success",
                     "app": {"slug": "fake-app" if scenario == "fake-app" else "github-actions"},
@@ -180,6 +181,7 @@ class CollectorTests(unittest.TestCase):
                 }]}
             if "/actions/runs/123" in route:
                 return {"path": ".github/workflows/ci.yml", "event": "pull_request",
+                        "display_title": "CI " + ("d" if scenario == "stale-merge" else "c") * 40,
                         "head_sha": ("d" if scenario == "stale-ci" else "a") * 40}
             if route.endswith("/branches/main"):
                 return {"commit": {"sha": "b" * 40}}
@@ -193,7 +195,7 @@ class CollectorTests(unittest.TestCase):
         self.assertTrue(assess(self.collect_fixture())["auto_merge_candidate"])
 
     def test_collector_rejects_force_push_truncated_tree_and_spoofed_or_stale_ci(self):
-        for scenario in ["force-push", "truncated-tree", "fake-app", "stale-ci"]:
+        for scenario in ["force-push", "truncated-tree", "fake-app", "stale-ci", "stale-merge"]:
             with self.subTest(scenario=scenario):
                 self.assertFalse(assess(self.collect_fixture(scenario))["auto_merge_candidate"])
 

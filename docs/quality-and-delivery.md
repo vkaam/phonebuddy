@@ -57,8 +57,9 @@ branch, from this repository, with clean mergeability and all of:
   added/deleted lines, with complete patches and matching file counts.
 - Only `README.md` or lowercase Markdown in `docs/usage/`. Agent/security
   instruction filenames are excluded. Every unknown path requires review.
-- A successful `Quality` check on the current test merge commit, from the CI
-  workflow running for this PR's current head. Failed, skipped, stale, missing,
+- A successful `Quality` check for this PR's current head, from the CI workflow
+  whose run title records the current test merge commit (`CI <github.sha>`).
+  Failed, skipped, stale, missing,
   wrong-workflow, or unknown evidence requires review.
 - A current independent human approval from a repository collaborator/member/
   owner, no active changes-requested review, and no `do-not-merge`,

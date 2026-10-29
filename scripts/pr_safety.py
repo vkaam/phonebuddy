@@ -155,7 +155,7 @@ def collect(repo, number):
     merge_sha = pr.get("merge_commit_sha")
     if merge_sha and SHA.fullmatch(merge_sha):
         checks = api(
-            f"{prefix}/commits/{merge_sha}/check-runs?check_name=Quality&filter=latest&per_page=100"
+            f"{prefix}/commits/{pr['head']['sha']}/check-runs?check_name=Quality&filter=latest&per_page=100"
         )["check_runs"]
         for check in checks:
             match = re.fullmatch(
@@ -166,9 +166,11 @@ def collect(repo, number):
                     or check["name"] != "Quality" or check["status"] != "completed"):
                 continue
             run = api(f"{prefix}/actions/runs/{match[1]}")
-            if run["path"] == ".github/workflows/ci.yml" and run["head_sha"] == pr["head"]["sha"]:
+            tested_merge = re.fullmatch(r"CI ([0-9a-f]{40})", run.get("display_title", ""))
+            if (run["path"] == ".github/workflows/ci.yml"
+                    and run["head_sha"] == pr["head"]["sha"] and tested_merge):
                 quality = {"conclusion": check["conclusion"], "head_sha": run["head_sha"],
-                           "merge_sha": merge_sha, "workflow_path": run["path"], "event": run["event"]}
+                           "merge_sha": tested_merge[1], "workflow_path": run["path"], "event": run["event"]}
                 break
     latest_base = api(f"{prefix}/branches/{urllib.parse.quote(metadata['default_branch'], safe='')}")
     # A force-push while collecting evidence must not produce a candidate.
