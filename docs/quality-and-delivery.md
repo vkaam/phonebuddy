@@ -1,0 +1,164 @@
+# Quality and delivery baseline
+
+This increment starts Phase 0 of the [software plan](software-plan.md) on the
+existing GitHub repository. It does not decide a future Azure DevOps migration.
+There is no application, infrastructure, cloud identity, or deployed environment
+yet. A green baseline check validates the repository and its safety policy; it
+does not establish calling, isolation, transcription, or summary quality.
+
+## Checks available now
+
+Run from the repository root with Python 3.9 or newer:
+
+```sh
+python3 -B scripts/quality.py
+python3 -B -m unittest discover -s tests -v
+```
+
+The `CI` workflow runs on every PR (without path filters), pushes to `main`,
+manual dispatch, and merge groups. Its single stable check is `Quality`. It:
+
+- Checks UTF-8 text, final newlines, trailing whitespace, conflict markers,
+  local Markdown file links, and immutable action references. Anchor existence
+  and remote link availability are not checked.
+- Runs adversarial safety-policy regression tests, including stale evidence,
+  missing metadata, review vetoes, forks, symlinks, renames, and sensitive files.
+- Validates workflow syntax and expressions with actionlint 1.7.12.
+- Scans reachable Git history with Gitleaks 8.30.1, redacting detected secrets.
+  Local uncommitted changes need a separate `gitleaks dir --redact .` scan.
+- Retains test logs, workflow validation output, and redacted secret-scan evidence
+  for 14 days, identified by run ID and attempt. Failed steps fail `Quality`.
+
+Actions use immutable revisions; downloaded tools have pinned SHA-256 hashes.
+Dependabot proposes weekly action updates. Tool versions/checksums require
+reviewed updates in the workflow. CI has a read-only token, no Azure credentials,
+no privileged connections, no shared cache, and a ten-minute job limit.
+Run untrusted PRs only on GitHub-hosted disposable runners.
+
+## Interpreting PR safety
+
+`PR safety / Risk report (advisory)` reads metadata and executes the current
+default-branch policy. It never checks out PR code, consumes PR artifacts,
+restores PR caches, posts approvals, or merges. It runs on PR changes/reviews
+and after associated CI runs complete. A CI run with no associated PR produces
+no recommendation. An assessment on the initial bootstrap PR cannot execute
+until these files exist on `main`; review that PR manually.
+
+Find the decision in the Actions run summary and `pr-safety-<run>-<attempt>`
+artifact. JSON contains the decision, reasons, policy SHA, head/base SHAs,
+generation time, and remaining controls. A green advisory job means the report
+was produced; read its `decision` field. Never require this advisory job as a
+branch-protection check or interpret a successful job as permission to merge.
+
+The only `low-risk-candidate` is an open, non-draft PR into the current default
+branch, from this repository, with clean mergeability and all of:
+
+- At most ten added/modified regular, non-executable text files and 200 total
+  added/deleted lines, with complete patches and matching file counts.
+- Only `README.md` or lowercase Markdown in `docs/usage/`. Agent/security
+  instruction filenames are excluded. Every unknown path requires review.
+- A successful `Quality` check on the current test merge commit, from the CI
+  workflow running for this PR's current head. Failed, skipped, stale, missing,
+  wrong-workflow, or unknown evidence requires review.
+- A current independent human approval from a repository collaborator/member/
+  owner, no active changes-requested review, and no `do-not-merge`,
+  `no-auto-merge`, `needs-review`, or `security` label.
+
+All other changes receive `manual-review`, including code, tests, lockfiles,
+contracts, database migrations, identities, organization isolation, telephony,
+recording/retention, Azure configuration, prompts/evaluation thresholds,
+architecture plans, delivery instructions, and the safety policy itself.
+The classifier measures bounded change risk; it does not verify the truth of
+documentation or prove absence of defects. An agent/LLM review is supplementary.
+
+Every report has `merge_authorized: false`. No merge automation is installed.
+A later merger must re-read live head/base identities, current approvals,
+resolved conversations, required checks, and the protected policy immediately
+before using native GitHub auto-merge. It must stop on changes or unknown state,
+and must never bypass rules. Saved JSON is not an authorization token. Policy
+changes require maintainer review, including when a PR claims to be low risk.
+
+To reproduce a report with saved API-shaped evidence:
+
+```sh
+python3 scripts/pr_safety.py --input /tmp/pr-evidence.json --output /tmp/pr-safety.json
+```
+
+For read-only live collection, a maintainer can run `--collect <PR-number>`
+from a trusted default-branch checkout with `GH_TOKEN` and `GITHUB_REPOSITORY`
+set. Never run the collector from an untrusted PR checkout. API failures produce
+`manual-review`, not a positive recommendation.
+
+## GitHub activation
+
+Observed on 29 October 2026: the public repository's default branch is `main`,
+branch protection is absent, and repository auto-merge is disabled. Local files
+do not change these settings. After this bootstrap is reviewed and CI has run:
+
+1. Protect `main`: require a PR, at least one independent approval, Code Owner
+   approval, dismissal of stale approvals, approval of the most recent push by
+   someone other than its pusher, and resolved review conversations.
+2. Require the `Quality` status check from GitHub Actions, with branches up to
+   date before merge (or use a protected merge queue). Include administrators,
+   prohibit force pushes/deletions, and avoid bypass actors.
+3. Verify `.github/CODEOWNERS` resolves to maintainers with write access. It
+   currently names `@vkaam` for delivery/security-sensitive paths. Add another
+   maintainer before relying on independent approval for that owner's PRs.
+4. Keep fork workflow approval enabled, default workflow permissions read-only,
+   and workflow approval/PR-creation rights disabled. Enable GitHub secret
+   scanning and push protection where available as additional controls.
+5. Exercise one successful documentation PR, one deliberately failed CI PR, and
+   one policy-change PR. Confirm the latter two cannot bypass protection and
+   that the trusted report binds to the current commits.
+6. Leave repository auto-merge disabled until a separately reviewed merger
+   enforces this contract. Native auto-merge can also be enabled manually per
+   PR after policy review; the advisory report does not enable it.
+
+GitHub's [required-check behavior](https://docs.github.com/en/pull-requests/how-tos/merge-and-close-pull-requests/troubleshooting-required-status-checks)
+accepts skipped/neutral checks in some cases, so the evaluator specifically
+requires `success`. The merge-group trigger ensures required CI can run in a
+future merge queue. Protect policy files and keep privileged event handlers
+on trusted code; see [secure use of Actions](https://docs.github.com/en/actions/security-for-github-actions/security-guides/security-hardening-for-github-actions).
+
+## Platform QA gates to implement with each component
+
+These gates are pending; no placeholder job currently claims they pass.
+
+| Component/change | Evidence required before pilot release |
+| --- | --- |
+| React/Fastify/worker | Locked install, formatting/lint, strict TypeScript, build, meaningful unit/contract tests, dependency scan and container image scan |
+| Identity and storage | Real SQL/queue integration, cross-organization list/detail/export/WebSocket/blob/job negatives, pooled-session isolation, idempotent retries, migrations and restore/deletion replay |
+| Browser calling | Chosen pilot browsers, injected-audio UI tests, controlled SIP peer, inbound/outbound, hold/resume, DTMF, hangup and failure states |
+| Gateway/media | Two-way audio under NAT and forced TURN, separate leg capture, 60-minute call/token-refresh tests, 10 concurrent calls, overload, draining/reconnect and AI-outage survival |
+| Transcription | Versioned approved Dutch/English/Flemish/code-switching/noisy/narrowband corpus; WER baseline and provisional ≤20% target; p95 final-segment visibility ≤3 seconds |
+| Summary/prompt/model | Schema/source ownership validation, supported claims, no fabricated owners/deadlines in release fixtures, precision/recall and held-out human scoring (≥90% useful), p95 completion ≤60 seconds for calls ≤30 minutes |
+| Bicep/configuration | Format/lint/build, parameter/policy validation, authenticated what-if, reviewed material changes, deployment smoke checks and rollback evidence |
+| Release operations | Retention/deletion, secret/log hygiene, cost bounds, capacity/restore tests, alerts, incident owner, and provider-specific acceptance before Fonzer enablement |
+
+Persist test counts, failures, dataset/config versions, measured distributions,
+commit and artifact digests, and CI run links with each release candidate.
+Define coverage thresholds from meaningful domain risks once executable code
+exists; a global coverage percentage alone does not qualify a PR for auto-merge.
+
+## CD rollout contract
+
+No Azure deployment workflow is enabled: Bicep modules, subscription/region,
+federated identities, environment protections, deployable artifacts, and smoke
+tests do not exist yet. Introduce CD alongside the first deployable component:
+
+1. Build once after protected-main CI; retain immutable artifact/image digests,
+   dependency/image scan evidence, and provenance for that exact commit.
+2. Validate Bicep/parameters and run Azure what-if through a dev-only federated
+   identity in a trusted deployment job. PR builds get no cloud identity.
+3. Deploy dev and run smoke/integration/isolation checks. Stop promotion on
+   failures, unknown results, migration issues, or missing evidence.
+4. Promote the same artifact digests to test and production through protected
+   environments with separate least-privilege identities. Human production
+   approval remains required, including for changes merged automatically.
+5. Record environment/config/migration versions, health and rollback evidence.
+   Drain gateway/streaming sessions before replacement; an artifact rollback
+   must not assume destructive SQL migrations are reversible.
+
+Keep deployments off PR and advisory workflows. Use Azure workload identity
+federation rather than stored client secrets. The existing software plan remains
+the source for product acceptance and unresolved pilot inputs.

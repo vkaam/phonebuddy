@@ -1,0 +1,13 @@
+# Enforced only after main requires Code Owner review. Add another maintainer
+# before relying on independent approval for PRs authored by vkaam.
+/.github/ @vkaam
+/scripts/ @vkaam
+/tests/ @vkaam
+/AGENTS.md @vkaam
+/backlog/config.yml @vkaam
+/.groma/ @vkaam
+/docs/software-plan.md @vkaam
+/docs/quality-and-delivery.md @vkaam
+/infra/ @vkaam
+/gateway/ @vkaam
+/pipelines/ @vkaam
