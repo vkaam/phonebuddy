@@ -1,11 +1,11 @@
 ---
 id: TASK-15
 title: Build the React web application shell
-status: In Progress
+status: Done
 assignee:
   - '@codex'
 created_date: '2026-10-29T20:07:00Z'
-updated_date: '2026-10-30T13:24:00Z'
+updated_date: '2026-10-30T13:25:00Z'
 labels:
   - frontend
 dependencies: []
@@ -60,4 +60,12 @@ Create the browser product foundation for the internal pilot, with room for orga
 Locked install, unit tests and production build passed. Chromium exercised dialer, history and settings navigation, keyboard focus, 375px layout and missing-configuration error. Local quality and actionlint passed; production dependency audit reported zero vulnerabilities. The shell intentionally has no authentication, API integration or calling yet. Hosted PR CI and review remain pending.
 
 PR #9 tracks hosted CI and review.
+
+Hosted CI run 41063037362 passed; final task update requires a new run.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Built the React shell with responsive navigation, public configuration validation and static CI artifacts. Local tests, browser interaction checks, production build, actionlint and hosted CI passed. Authentication and calling remain future work.
+<!-- SECTION:FINAL_SUMMARY:END -->
