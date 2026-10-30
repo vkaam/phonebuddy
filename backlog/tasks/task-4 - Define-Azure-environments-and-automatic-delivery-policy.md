@@ -1,7 +1,7 @@
 ---
 id: TASK-4
 title: Define Azure environments and automatic delivery policy
-status: Done
+status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-10-29T20:04:00Z'
@@ -14,6 +14,7 @@ references:
   - docs/software-plan.md
   - docs/quality-and-delivery.md
   - docs/azure-delivery-policy.md
+  - https://github.com/vkaam/phonebuddy/pull/7
 modified_files:
   - docs/azure-delivery-policy.md
   - docs/quality-and-delivery.md
@@ -51,6 +52,8 @@ Establish pilot, test and production boundaries on the existing GitHub Actions b
 Initial review found no Azure environments or identities configured in the repository; subscription IDs, regional availability, named owners, and budget amounts require owner input. The existing delivery baseline still calls for a manual production approval, conflicting with this task’s automatic delivery requirement. Implementation awaits review of the proposed policy decisions.
 
 Environment register records unresolved inputs and enablement prerequisites; delivery policy specifies ordered automatic promotion, measurable initial gates and recovery ownership. Conflicting production approval statements were updated. Verified with python3 -B scripts/check.py (pass) and git diff --check; no environments or gates have been provisioned.
+
+PR #7 tracks review and hosted checks; final status awaits successful checks on the final head.
 <!-- SECTION:NOTES:END -->
 
 ## Final Summary
