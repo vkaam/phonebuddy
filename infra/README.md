@@ -26,14 +26,22 @@ is tracked separately in TASK-7.
 
 ## Deployment and recovery prerequisites
 
-The parameter files contain example geography and `UNRESOLVED` owner and cost
-center values. They are not deployment-ready and do not automatically prevent a
-deployment: replace them through reviewed configuration after confirming the
+The parameter files contain `UNRESOLVED` geography, owner and cost center
+values. They are not deployment-ready: replace them through reviewed configuration after confirming the
 subscription, tenant, region, quota, budget, owners and access controls in the
 policy. Never put secrets in parameter files or outputs. The intended target is
 a subscription deployment using a separately scoped federated identity; confirm
-the selected subscription explicitly, validate and review what-if first, then
-deploy and repeat the exact deployment to demonstrate convergence. Record both
+the selected subscription explicitly, then run the preflight for the target:
+
+```sh
+BICEP=/path/to/bicep python3 -B scripts/check_bicep.py --deployment-ready dev
+```
+
+Substitute `test` or `prod` as appropriate. This rejects placeholders and a
+mismatched environment, but it cannot verify Azure approvals, permissions, quota,
+budget or geography. It is not automatically enforced by Azure or CI: the future
+trusted deployment pipeline must invoke it and fail closed. Then validate and
+review what-if, deploy and repeat the exact deployment to demonstrate convergence. Record both
 runs and resource state; this has not yet been tested.
 
 Resource groups use fixed names per environment. Distinct subscriptions or

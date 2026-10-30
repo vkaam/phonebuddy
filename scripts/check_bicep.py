@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Compile the pinned Bicep baseline and check its environment contracts."""
+import argparse
 import json
 import os
 from pathlib import Path
@@ -15,7 +16,21 @@ def run(*args):
     return subprocess.run(args, cwd=ROOT, text=True, capture_output=True, check=True).stdout
 
 
+def deployment_ready(environment, parameters):
+    """Reject placeholders before an operator invokes a deployment."""
+    if parameters['environment']['value'] != environment:
+        raise ValueError('Parameter file does not match the requested environment')
+    for field in ('location', 'owner', 'costCenter'):
+        value = parameters[field]['value']
+        if not isinstance(value, str) or not value.strip() or value.strip().upper() == 'UNRESOLVED':
+            raise ValueError(f'{field} must be supplied before deployment')
+
+
 def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--deployment-ready', choices=['dev', 'test', 'prod'],
+                        help='also reject unresolved inputs for this environment')
+    options = parser.parse_args()
     binary = os.environ.get('BICEP', 'bicep')
     version = run(binary, '--version')
     if not version.startswith('Bicep CLI version ' + VERSION + ' '):
@@ -28,8 +43,11 @@ def main():
     for env in allowed:
         params = json.loads(run(binary, 'build-params',
                                 f'infra/environments/{env}.bicepparam', '--stdout'))
-        if json.loads(params['parametersJson'])['parameters']['environment']['value'] != env:
+        values = json.loads(params['parametersJson'])['parameters']
+        if values['environment']['value'] != env:
             raise ValueError(f'{env} parameter file selects a different environment')
+        if options.deployment_ready == env:
+            deployment_ready(env, values)
     # Compiler must reject an invalid environment rather than only warn.
     with tempfile.TemporaryDirectory() as tmp:
         bad = Path(tmp) / 'invalid.bicepparam'
