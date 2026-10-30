@@ -14,6 +14,7 @@ references:
   - docs/quality-and-delivery.md
   - .github/workflows/ci.yml
   - apps/web/package.json
+  - https://github.com/vkaam/phonebuddy/pull/9
 modified_files:
   - apps/web/package.json
   - apps/web/package-lock.json
@@ -57,4 +58,6 @@ Create the browser product foundation for the internal pilot, with room for orga
 
 <!-- SECTION:NOTES:BEGIN -->
 Locked install, unit tests and production build passed. Chromium exercised dialer, history and settings navigation, keyboard focus, 375px layout and missing-configuration error. Local quality and actionlint passed; production dependency audit reported zero vulnerabilities. The shell intentionally has no authentication, API integration or calling yet. Hosted PR CI and review remain pending.
+
+PR #9 tracks hosted CI and review.
 <!-- SECTION:NOTES:END -->
