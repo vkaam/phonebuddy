@@ -1,15 +1,32 @@
 ---
 id: TASK-15
 title: Build the React web application shell
-status: To Do
-assignee: []
+status: In Progress
+assignee:
+  - '@codex'
 created_date: '2026-10-29T20:07:00Z'
+updated_date: '2026-10-30T13:24:00Z'
 labels:
   - frontend
 dependencies: []
 references:
   - docs/software-plan.md
   - docs/quality-and-delivery.md
+  - .github/workflows/ci.yml
+  - apps/web/package.json
+modified_files:
+  - apps/web/package.json
+  - apps/web/package-lock.json
+  - apps/web/tsconfig.json
+  - apps/web/index.html
+  - apps/web/src/config.js
+  - apps/web/src/main.tsx
+  - apps/web/src/style.css
+  - apps/web/tests/config.test.mjs
+  - apps/web/config.example.json
+  - apps/web/README.md
+  - .gitignore
+  - .github/workflows/ci.yml
 priority: high
 type: feature
 ordinal: 15000
@@ -23,7 +40,21 @@ Create the browser product foundation for the internal pilot, with room for orga
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 Vite/React/TypeScript builds reproducibly with locked dependencies and integrates with existing CI and static deployment artifacts.
-- [ ] #2 Responsive navigation, loading/error/empty states and accessible keyboard focus work for dialer, history and settings routes.
-- [ ] #3 Public runtime configuration contains no secrets; missing required configuration gives an actionable startup error.
+- [x] #1 Vite/React/TypeScript builds reproducibly with locked dependencies and integrates with existing CI and static deployment artifacts.
+- [x] #2 Responsive navigation, loading/error/empty states and accessible keyboard focus work for dialer, history and settings routes.
+- [x] #3 Public runtime configuration contains no secrets; missing required configuration gives an actionable startup error.
 <!-- AC:END -->
+
+## Implementation Plan
+
+<!-- SECTION:PLAN:BEGIN -->
+1. Create a locked Vite/React/TypeScript application with validated public runtime configuration and a deployable static build.
+2. Implement responsive, keyboard-accessible navigation and clear loading, empty and error states for dialer, history and settings without implying calling is available.
+3. Integrate repeatable build and tests into the existing unprivileged CI quality job; verify behavior and record evidence.
+<!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Locked install, unit tests and production build passed. Chromium exercised dialer, history and settings navigation, keyboard focus, 375px layout and missing-configuration error. Local quality and actionlint passed; production dependency audit reported zero vulnerabilities. The shell intentionally has no authentication, API integration or calling yet. Hosted PR CI and review remain pending.
+<!-- SECTION:NOTES:END -->

@@ -149,3 +149,6 @@ vite.config.ts.timestamp-*
 
 # Turbo Repo
 .turbo
+
+# Local public runtime configuration
+apps/web/public/config.json
