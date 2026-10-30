@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-10-29T20:04:00Z'
-updated_date: '2026-10-30T13:03:00Z'
+updated_date: '2026-10-30T13:04:00Z'
 labels:
   - infrastructure
   - cicd
@@ -16,6 +16,7 @@ references:
   - docs/quality-and-delivery.md
   - docs/azure-delivery-policy.md
   - infra/main.bicep
+  - https://github.com/vkaam/phonebuddy/pull/8
 modified_files:
   - infra/main.bicep
   - infra/modules/foundation.bicep
@@ -54,4 +55,6 @@ Azure infrastructure needs reproducible environment-specific definitions before 
 
 <!-- SECTION:NOTES:BEGIN -->
 Added subscription-scoped foundation module and per-environment parameters, pinned Bicep 0.34.44 local compiler checks, and documented deployment and cleanup prerequisites. Local compiler, lint, environment selection, and invalid-environment checks passed. Disposable and repeat deployment remain blocked: no designated subscription, Azure identity, approved region, owners or budgets are configured. No application capacity or isolation has yet been provisioned or validated.
+
+Draft PR #8 depends on unmerged PR #7; Azure deployment evidence and environment isolation remain outstanding.
 <!-- SECTION:NOTES:END -->
