@@ -1,11 +1,11 @@
 ---
 id: TASK-4
 title: Define Azure environments and automatic delivery policy
-status: In Progress
+status: Done
 assignee:
   - '@codex'
 created_date: '2026-10-29T20:04:00Z'
-updated_date: '2026-10-30T06:21:00Z'
+updated_date: '2026-10-30T06:22:00Z'
 labels:
   - infrastructure
   - cicd
@@ -54,6 +54,8 @@ Initial review found no Azure environments or identities configured in the repos
 Environment register records unresolved inputs and enablement prerequisites; delivery policy specifies ordered automatic promotion, measurable initial gates and recovery ownership. Conflicting production approval statements were updated. Verified with python3 -B scripts/check.py (pass) and git diff --check; no environments or gates have been provisioned.
 
 PR #7 tracks review and hosted checks; final status awaits successful checks on the final head.
+
+PR CI run 41013642505 passed on head c964494; finalization requires a fresh CI run on the resulting head.
 <!-- SECTION:NOTES:END -->
 
 ## Final Summary
