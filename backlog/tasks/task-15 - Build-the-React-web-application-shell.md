@@ -1,11 +1,11 @@
 ---
 id: TASK-15
 title: Build the React web application shell
-status: Done
+status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-10-29T20:07:00Z'
-updated_date: '2026-10-30T13:25:00Z'
+updated_date: '2026-10-31T14:53:00Z'
 labels:
   - frontend
 dependencies: []
@@ -15,6 +15,8 @@ references:
   - .github/workflows/ci.yml
   - apps/web/package.json
   - https://github.com/vkaam/phonebuddy/pull/9
+  - apps/web/src/main.tsx
+  - apps/web/src/style.css
 modified_files:
   - apps/web/package.json
   - apps/web/package-lock.json
@@ -42,7 +44,7 @@ Create the browser product foundation for the internal pilot, with room for orga
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
 - [x] #1 Vite/React/TypeScript builds reproducibly with locked dependencies and integrates with existing CI and static deployment artifacts.
-- [x] #2 Responsive navigation, loading/error/empty states and accessible keyboard focus work for dialer, history and settings routes.
+- [ ] #2 Responsive navigation, loading/error/empty states and accessible keyboard focus work for dialer, history and settings routes.
 - [x] #3 Public runtime configuration contains no secrets; missing required configuration gives an actionable startup error.
 <!-- AC:END -->
 
@@ -52,6 +54,8 @@ Create the browser product foundation for the internal pilot, with room for orga
 1. Create a locked Vite/React/TypeScript application with validated public runtime configuration and a deployable static build.
 2. Implement responsive, keyboard-accessible navigation and clear loading, empty and error states for dialer, history and settings without implying calling is available.
 3. Integrate repeatable build and tests into the existing unprivileged CI quality job; verify behavior and record evidence.
+
+4. Address PR review: restore the default route on Back and prevent tablet grid overflow; verify navigation, skip link, and responsive layout.
 <!-- SECTION:PLAN:END -->
 
 ## Implementation Notes
@@ -62,6 +66,8 @@ Locked install, unit tests and production build passed. Chromium exercised diale
 PR #9 tracks hosted CI and review.
 
 Hosted CI run 41063037362 passed; final task update requires a new run.
+
+PR review fixes: browser Back from history to an empty hash restores Dialer; skip to content retains Settings and focuses main. At 800px the grid is one column and document scroll width equals viewport width. npm ci, tests, build and repository checks passed. npm reports one high severity development dependency advisory.
 <!-- SECTION:NOTES:END -->
 
 ## Final Summary

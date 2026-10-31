@@ -17,7 +17,7 @@ function App() {
   const [page, setPage] = useState<Page>(currentPage);
   const [config, setConfig] = useState<'loading' | 'ready' | string>('loading');
   useEffect(() => {
-    const route = () => { if (pages.some(item => `#${item.id}` === location.hash)) setPage(currentPage()); };
+    const route = () => { if (!location.hash || pages.some(item => `#${item.id}` === location.hash)) setPage(currentPage()); };
     window.addEventListener('hashchange', route);
     const controller = new AbortController();
     fetch(`${import.meta.env.BASE_URL}config.json`, { signal: controller.signal, cache: 'no-store' })
