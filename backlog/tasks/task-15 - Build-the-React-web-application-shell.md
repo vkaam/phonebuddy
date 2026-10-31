@@ -1,11 +1,11 @@
 ---
 id: TASK-15
 title: Build the React web application shell
-status: In Progress
+status: Done
 assignee:
   - '@codex'
 created_date: '2026-10-29T20:07:00Z'
-updated_date: '2026-10-31T14:53:00Z'
+updated_date: '2026-10-31T14:54:00Z'
 labels:
   - frontend
 dependencies: []
@@ -44,7 +44,7 @@ Create the browser product foundation for the internal pilot, with room for orga
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
 - [x] #1 Vite/React/TypeScript builds reproducibly with locked dependencies and integrates with existing CI and static deployment artifacts.
-- [ ] #2 Responsive navigation, loading/error/empty states and accessible keyboard focus work for dialer, history and settings routes.
+- [x] #2 Responsive navigation, loading/error/empty states and accessible keyboard focus work for dialer, history and settings routes.
 - [x] #3 Public runtime configuration contains no secrets; missing required configuration gives an actionable startup error.
 <!-- AC:END -->
 
@@ -68,10 +68,14 @@ PR #9 tracks hosted CI and review.
 Hosted CI run 41063037362 passed; final task update requires a new run.
 
 PR review fixes: browser Back from history to an empty hash restores Dialer; skip to content retains Settings and focuses main. At 800px the grid is one column and document scroll width equals viewport width. npm ci, tests, build and repository checks passed. npm reports one high severity development dependency advisory.
+
+PR review fixes passed hosted Quality and Risk report checks on commit 138adaf; final task update requires fresh checks.
 <!-- SECTION:NOTES:END -->
 
 ## Final Summary
 
 <!-- SECTION:FINAL_SUMMARY:BEGIN -->
 Built the React shell with responsive navigation, public configuration validation and static CI artifacts. Local tests, browser interaction checks, production build, actionlint and hosted CI passed. Authentication and calling remain future work.
+
+PR review fixes restore Back navigation and prevent tablet overflow; browser checks, local tests and hosted checks passed. The existing Vite development dependency has high-severity advisories; review and merge remain pending.
 <!-- SECTION:FINAL_SUMMARY:END -->
