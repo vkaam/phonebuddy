@@ -57,6 +57,12 @@ Carry the assigned work through a pull request, not just a local implementation:
    Report the PR link, final check results, and any remaining review or other
    blockers. A green PR still requires the project's review and merge controls.
 
+## Addressing pull request feedback
+
+When a review comment has been fixed and verified, react with a thumbs-up to
+the comment and resolve its conversation. Leave conversations unresolved when
+the feedback is not fully addressed, and report any blocker.
+
 ## Publishing changes
 
 After completing requested repository changes, including Backlog updates, run the
