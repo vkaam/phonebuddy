@@ -4,6 +4,7 @@ title: Implement durable Backlog scheduling and run reconciliation
 status: To Do
 assignee: []
 created_date: '2026-10-31T18:40:00Z'
+updated_date: '2026-10-31T18:48:00Z'
 labels:
   - factory
   - autonomy
@@ -19,7 +20,7 @@ ordinal: 36000
 ## Description
 
 <!-- SECTION:DESCRIPTION:BEGIN -->
-AGENTS.md tells an interactive agent how to choose work, but there is no persistent controller to wake, claim tasks, or recover after process loss. Cross-branch Backlog state can lag real activity, as illustrated by the existing TASK-5 draft PR.
+AGENTS.md tells an interactive agent how to choose work, but there is no persistent controller to wake, claim tasks, or recover after process loss. Cross-branch Backlog state can differ from main, and a merged PR can leave its task incomplete when live acceptance evidence is blocked, as illustrated by TASK-5.
 <!-- SECTION:DESCRIPTION:END -->
 
 ## Acceptance Criteria

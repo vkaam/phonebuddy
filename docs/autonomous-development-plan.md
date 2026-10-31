@@ -1,7 +1,8 @@
 # Autonomous development: readiness and gap-closure plan
 
 Assessment date: 31 October 2026. Repository baseline:
-`a7c36ab85aad97c1da7eb56810bfcdc0dc7d731c` on `main`.
+`b0d0a9492c8413e48ecd186c0f757de4b44b85f1` on `main`, refreshed after
+the Bicep foundation merged during assessment publication.
 Assessment task: TASK-31. The Backlog is the execution plan of record;
 TASK-32 through TASK-42 capture the missing factory work.
 
@@ -49,7 +50,7 @@ deployed services, model access and billing were not audited.
 | --- | --- | --- |
 | Work instructions and acceptance | `AGENTS.md`, Backlog tasks, work specification and acceptance evidence templates exist. | No unattended intake, approved task-selection policy, immutable specification snapshot or durable run ownership. Instructions require an executing agent. |
 | Source and delivery control plane | GitHub is in use; software-plan section 8 proposes Azure DevOps with GitHub as an alternative. | Decide one source of truth before connecting queues, identities and callbacks. Migration is not required to start. |
-| Hosted checks | `ci.yml` runs Python checks/tests, locked web install, configuration tests, TypeScript/build, actionlint and Gitleaks on disposable hosted runners. The latest assessed main CI succeeded. | No web lint command, browser behavior suite or npm dependency scan/update configuration. API, storage, SIP/media and AI evaluation gates do not exist yet. |
+| Hosted checks | `ci.yml` runs Python checks/tests, locked web install, configuration tests, TypeScript/build, actionlint and Gitleaks on disposable hosted runners. Main CI succeeded for the refreshed baseline. | No web lint command, browser behavior suite or npm dependency scan/update configuration. The new standalone Bicep compiler check is not wired into CI; TASK-7 owns that integration. API, storage, SIP/media and AI evaluation gates do not exist yet. |
 | Local evidence | `scripts/check.py` binds Python baseline results to source manifests and digests. | It omits the web checks performed in CI; passing it does not establish application correctness. It inherits host permissions and cannot bound child process trees. |
 | Effective GitHub protection | Active `Standard main` ruleset targets the default branch, requires PRs, resolved conversations and strict `Quality` from GitHub Actions, blocks deletion/force-push, and lists no bypass actors. | Approval count is **0**; Code Owner review, stale-approval dismissal and last-push approval are **off**. This differs from the documented human-review policy. Classic branch-protection returns 404, which must not be mistaken for absence of ruleset protection. |
 | Review and merge policy | `scripts/pr_safety.py` reads trusted-base policy, checks current commits and CI, and always emits `merge_authorized: false`. | Its positive classification only covers small allowlisted documentation changes with human approval. It provides neither implementation review nor merge execution. Repository auto-merge is off. |
@@ -57,7 +58,7 @@ deployed services, model access and billing were not audited.
 | Coding and review runtime | Software-plan section 8 proposes Azure orchestration, disposable VMs, Foundry inference and separate reviewer contexts. No `factory/` implementation is present. | No provisioned runner path, model/tool proof, sandbox isolation, short-lived gateway authorization or independent review runtime is demonstrated by repository evidence. |
 | Scheduling and repair | The interactive workflow describes task claiming, PR repair and check monitoring. | No persistent scheduler, leases, idempotency, retry accounting, conflict reconciliation or restart/resume controller implements it. |
 | Factory operations | Local bundles use temporary storage; hosted evidence is retained for 14 days. | No durable factory audit store, retention policy, aggregate cost enforcement, kill switch, resource reaper, operator alerts or service owner is implemented here. |
-| Release and recovery | Delivery and recovery contracts are documented. TASK-5 through TASK-14 cover infrastructure and delivery. | No deployment workflow, Bicep on main, proven promotion or rollback is available in this baseline. TASK-5 has an open draft PR and must be reconciled before another agent claims it. |
+| Release and recovery | Delivery and recovery contracts are documented. PR #8 added modular Bicep resource-group/tag foundations, environment parameters and a standalone pinned compiler/preflight check. TASK-5 through TASK-14 cover infrastructure and delivery. | TASK-5 remains assigned and In Progress: parameters contain unresolved inputs and disposable/repeat deployment and isolation evidence remain incomplete. There is no deployment workflow or proven promotion/rollback. Do not equate merged foundation source with provisioned environments or completed dependencies. |
 | Architecture discovery | `.groma/config.json` selects no scanners; `groma view --plain` reports no components. | Architecture ownership links cannot currently guide an agent. Scanner setup and any authorized curation belong in the context/bootstrap work; the assessment did not create or edit a map. |
 
 Other observed settings: Actions are enabled, the default workflow token is
@@ -66,10 +67,12 @@ allowlisting and SHA pinning are not enforced by settings, although the current
 workflow files pin actions. These are evidence to reconcile in the policy work,
 not proof that future workflows will preserve the same restrictions.
 
-The [successful main CI](https://github.com/vkaam/phonebuddy/actions/runs/41230172258)
-and [active ruleset](https://github.com/vkaam/phonebuddy/rules/26155764) ground this
-snapshot. [TASK-5's draft PR](https://github.com/vkaam/phonebuddy/pull/8) remains
-open; its Backlog status is still To Do. The web shell is merged, despite older
+The [successful refreshed-baseline main CI](https://github.com/vkaam/phonebuddy/actions/runs/41230966338)
+and [active ruleset](https://github.com/vkaam/phonebuddy/rules/26155764) ground the
+refreshed snapshot. [TASK-5's foundation PR](https://github.com/vkaam/phonebuddy/pull/8)
+merged during publication; its Backlog status remains In Progress with live
+Azure evidence blocked. The assessment branch integrates that main update and
+requires fresh CI. The web shell is merged, despite older
 prose in `quality-and-delivery.md` saying no application exists. Future agents
 must reconcile dated documentation with source, live PRs and run evidence.
 
@@ -141,7 +144,7 @@ changed by this assessment.
 
 Run the existing product delivery track alongside the factory:
 
-- Reconcile TASK-5 and draft PR #8, then use TASK-6 through TASK-9 for deployment
+- Complete TASK-5's remaining deployment evidence after merged PR #8, then use TASK-6 through TASK-9 for deployment
   identities, infrastructure validation, hosting and data/model foundations.
 - Use TASK-10 through TASK-13 for health gates, immutable automatic promotion,
   recovery and live end-to-end drills. These are prerequisites for claiming
