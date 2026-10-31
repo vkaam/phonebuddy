@@ -186,23 +186,12 @@ exists; a global coverage percentage alone does not qualify a PR for auto-merge.
 
 ## CD rollout contract
 
-No Azure deployment workflow is enabled: Bicep modules, subscription/region,
-federated identities, environment protections, deployable artifacts, and smoke
-tests do not exist yet. Introduce CD alongside the first deployable component:
-
-1. Build once after protected-main CI; retain immutable artifact/image digests,
-   dependency/image scan evidence, and provenance for that exact commit.
-2. Validate Bicep/parameters and run Azure what-if through a dev-only federated
-   identity in a trusted deployment job. PR builds get no cloud identity.
-3. Deploy dev and run smoke/integration/isolation checks. Stop promotion on
-   failures, unknown results, migration issues, or missing evidence.
-4. Promote the same artifact digests to test and production through protected
-   environments with separate least-privilege identities. Human production
-   approval remains required, including for changes merged automatically.
-5. Record environment/config/migration versions, health and rollback evidence.
-   Drain gateway/streaming sessions before replacement; an artifact rollback
-   must not assume destructive SQL migrations are reversible.
-
-Keep deployments off PR and advisory workflows. Use Azure workload identity
-federation rather than stored client secrets. The existing software plan remains
-the source for product acceptance and unresolved pilot inputs.
+The [Azure delivery policy](azure-delivery-policy.md) defines environment
+prerequisites, automatic promotion, initial health gates, and recovery. No Azure
+deployment workflow or environment is enabled yet. After protected-main CI,
+the intended pipeline promotes the same immutable artifacts through dev, test,
+and production with separate least-privilege federated identities. Independent
+PR review occurs before merge; routine production approval is not a promotion
+gate. Failed or unknown checks stop promotion. Stateful recovery and gateway
+session draining must follow the policy; artifact rollback alone does not undo
+schema or data changes.
