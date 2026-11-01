@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-10-29T20:04:00Z'
-updated_date: '2026-10-30T13:35:00Z'
+updated_date: '2026-11-01T10:36:00Z'
 labels:
   - infrastructure
   - cicd
@@ -17,6 +17,7 @@ references:
   - docs/azure-delivery-policy.md
   - infra/main.bicep
   - https://github.com/vkaam/phonebuddy/pull/8
+  - https://github.com/vkaam/phonebuddy/issues/12
 modified_files:
   - infra/main.bicep
   - infra/modules/foundation.bicep
@@ -64,4 +65,6 @@ Added an opt-in deployment-readiness preflight that rejects unresolved owner and
 Region parameters now remain explicitly unresolved rather than suggesting an unapproved geography.
 
 Verified pinned Bicep compilation and invalid environment handling; deployment-ready dev fails on unresolved location as intended. Preflight unit tests, local baseline and diff checks passed. Azure deployment and repeatability remain unverified.
+
+Dev deployment evidence (2026-11-01): user designated this subscription for the dev foundation. Selected Sweden Central; the foundation template creates only the resource group, so no resource cost comparison applies yet. Deployed rg-pb-dev-foundation successfully with environment=dev, service=phonebuddy, owner=mees.vankaam@cereus.be, costCenter=PHONEBUDDY-DEV. Initial what-if predicted only resource-group creation; a later what-if reported no changes; a second deployment succeeded. Created a $20/month USD budget at MCA billing-account scope, filtered to costCenter=PHONEBUDDY-DEV, active 2026-11-01 through 2027-11-01, with 50/80/100 actual and 100 forecast email alerts to the Azure owner. The budget is alert-only; future billable resources must carry the costCenter tag. No application capacity was provisioned.
 <!-- SECTION:NOTES:END -->
