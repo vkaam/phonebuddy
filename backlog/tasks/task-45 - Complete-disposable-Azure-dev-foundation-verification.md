@@ -1,11 +1,11 @@
 ---
 id: TASK-45
 title: Complete disposable Azure dev foundation verification
-status: In Progress
+status: Done
 assignee:
   - '@codex'
 created_date: '2026-11-01T10:30:00Z'
-updated_date: '2026-11-01T10:37:00Z'
+updated_date: '2026-11-01T10:40:00Z'
 labels:
   - infrastructure
   - cicd
@@ -18,6 +18,7 @@ references:
   - infra/main.bicep
   - infra/modules/foundation.bicep
   - scripts/check_bicep.py
+  - https://github.com/vkaam/phonebuddy/pull/50
 modified_files:
   - infra/environments/dev.bicepparam
   - >-
@@ -63,4 +64,12 @@ No credentials or secrets may be committed. Budget alerts are not a spending cap
 
 <!-- SECTION:NOTES:BEGIN -->
 Bicep 0.34.44 baseline and deployment-readiness dev checks passed. The first subscription what-if showed exactly one change: create rg-pb-dev-foundation in Sweden Central with the expected dev/service/owner/costCenter tags. Deployment phonebuddy-dev-foundation-20261101 succeeded. The next what-if reported one no-change result; repeat deployment phonebuddy-dev-foundation-repeat-20261101 also succeeded. Resource-group tags verified. Created and read back phonebuddy-dev-monthly-20usd at MCA billing-account scope: amount 20.0 USD, Monthly, 2026-11-01 through 2027-11-01; filter costCenter=PHONEBUDDY-DEV; actual alerts at 50/80/100 and forecast at 100 to the signed-in Azure owner. Budget is alert-only. The dev baseline creates no billable application capacity; Sweden Central has no cost advantage over West Europe for this resource-group-only deployment.
+
+Draft PR #50 is open. The PR checks were observed in progress on the initial head; final status will be recorded after checks on the published head complete.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Completed the dev Azure foundation slice for issue #12. Deployed the tagged Sweden Central resource group twice, verified the repeat deployment converged, and configured/read back the $20 monthly USD cost-center budget and alerts. Draft PR #50 is open; Quality and Risk report (advisory) passed on head 6d8672042f4f7fe4fa058ace9d073a7de2ce1c98. Broader TASK-5 environment isolation and capacity work remains open; no application capacity was provisioned.
+<!-- SECTION:FINAL_SUMMARY:END -->
