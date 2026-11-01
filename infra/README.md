@@ -84,6 +84,9 @@ federated identity bootstrap, budget setup, external DNS and Entra consent are
 bootstrap exceptions and require documented, reviewed setup; no credentials are
 created here.
 
+For the reviewed dev/test GitHub Actions identity bootstrap and manual GitHub
+environment setup, see [GitHub OIDC bootstrap](github-oidc.md).
+
 For disposable testing use an explicitly designated nonproduction subscription
 and unique test scope, with a named owner, budget and expiry. The fixed
 environment-and-region resource group name makes parallel disposable deployments
