@@ -239,12 +239,20 @@ The [Azure delivery policy](azure-delivery-policy.md) defines independent PR rev
 The [31 October 2026 readiness assessment and gap-closure plan](autonomous-development-plan.md)
 distinguishes the implemented baseline from this proposed factory, records live
 GitHub policy findings, and sequences TASK-32 through TASK-42 with qualification
-gates. Its staged autonomy roadmap retains the current review boundary until a
-separately reviewed policy change permits expansion.
+gates. Its 1 November governance update maps the former roadmap tasks to GitHub
+intent issues #37 through #47. The staged autonomy roadmap retains the current
+review boundary until a separately reviewed policy change permits expansion.
 
 ### Hosting and trust model
 
-Use Azure DevOps Boards, Repos, Pipelines, and Artifacts as the proposed Microsoft-hosted delivery control plane. The existing repository is on GitHub; migration or mirroring is a later decision, with one source of truth chosen before automation. Application hosting and agent execution remain on Azure. If “everything on Azure” permits GitHub for source control, the same factory contract can use GitHub instead without changing the product architecture.
+Use GitHub Issues as the human-owned control plane for problems, priority and
+issue-level acceptance, with native Backlog.md tasks as the factory's atomic
+execution ledger. GitHub repositories, PRs and Actions remain the source/review/delivery
+platform; the earlier Azure DevOps control-plane proposal is superseded.
+Application hosting and the proposed agent execution remain on Azure. Follow
+[Issue and Backlog governance](issue-backlog-governance.md): triage approved issue
+revisions into scoped CLI-managed tasks before coding, preserve native TASK IDs,
+and report execution evidence upward without mirroring human-owned requirements.
 
 Run factory orchestration on ACA, with durable run state in a separate factory database, work on Service Bus, evidence in factory Blob Storage, and coding/review inference through a separate Foundry project/account. Begin with a deterministic state machine rather than recursively self-modifying agents. Model tool-calling capability is a spike requirement.
 
@@ -256,17 +264,27 @@ Separate planner, implementer, and reviewer contexts and permissions. The review
 
 | Step | Agent/system responsibility | Required output |
 | --- | --- | --- |
-| Intake | Planner turns a work item into bounded scope | Specification, assumptions, acceptance criteria, risk and test plan |
+| Intake | Triage an explicitly approved GitHub issue revision into atomic native tasks | Stable issue/task mapping, scoped behavior, native acceptance/dependencies, verification and approval evidence |
 | Design | Architect checks boundaries and dependency changes | ADR when needed; API/event/schema changes |
 | Implement | Coding agent changes an isolated branch | Patch, tests, migration/config changes, updated docs |
 | Verify | Deterministic CI executes the proposed checks | Test logs, scans, build artifacts, Bicep report, AI eval report where relevant |
 | Review | Separate reviewer inspects final diff and evidence | Findings tied to files and acceptance criteria |
 | Propose | Orchestrator opens/updates a PR | Scope, validation, limitations, deployment/rollback notes, run IDs |
 | Release | Protected pipeline promotes reviewed artifacts | Environment checks, migration result, smoke results, release provenance |
+| Complete intent | Trusted controller or human owner verifies aggregate issue acceptance after all required tasks merge | Task/PR evidence and applicable release health; issue closure without rewriting requirements |
 
 Agents may create branches and PRs and iterate on failed checks within bounded attempts. They may not approve their own changes, change protected policy, modify credentials, expand their permissions, merge protected branches, or directly deploy production. After independent PR review and merge, the trusted pipeline automatically promotes through the gates in the delivery policy; routine human production approval is not required.
 
-Use managed identities for Azure-hosted automation and workload identity federation for pipeline deployment connections. Explicitly onboard identities into Azure DevOps and scope repository/project permissions; Azure RBAC alone does not grant Azure Repos access. Separate build identities from deployment identities and run untrusted PR builds without privileged service connections. [Azure DevOps identity access](https://learn.microsoft.com/en-us/azure/devops/integrate/get-started/authentication/service-principal-managed-identity?view=azure-devops), [Pipelines federation](https://learn.microsoft.com/en-gb/azure/devops/pipelines/library/connect-to-azure?view=azure-devops).
+Use managed identities for Azure-hosted automation and workload identity
+federation for trusted GitHub deployment jobs, as specified in the
+[delivery policy](azure-delivery-policy.md). Scope GitHub issue, repository and
+PR permissions separately from Azure access; a coding runner has no merge,
+policy-administration or deployment authority. Separate build and deployment
+identities, and run untrusted PR builds without privileged service connections.
+Durable leases, idempotent triage and reconciliation prevent duplicate work;
+branch-local task status is not a distributed lock. Workers require a recorded
+triage amendment for scope changes. Intermediate PRs reference their parent issue
+without closing it; aggregate acceptance and applicable release gates control closure.
 
 ### Definition of done for the factory
 
@@ -352,7 +370,7 @@ fixed platform cost
 
 Two separate recognizers can approach two audio-minutes of STT per connected call-minute; measure actual billed behavior. Avoid quoting a budget before choosing region/SKU/model and measuring call volume. Set per-environment Azure budgets, user/organization quotas, destination restrictions, model token ceilings, bounded retries, and log retention.
 
-Remaining business inputs: expected users/concurrency and call minutes; supported pilot browsers; retention periods; recording policy; required processing boundary; Azure tenant/subscription and quotas; source-control decision; Fonzer account type and partner contact; and internal pilot owner. These affect sizing and rollout but do not block starting the factory and controlled telephony spike.
+Remaining business inputs: expected users/concurrency and call minutes; supported pilot browsers; retention periods; recording policy; required processing boundary; Azure tenant/subscription and quotas; factory identity and operating ownership; Fonzer account type and partner contact; and internal pilot owner. GitHub source/control and native Backlog execution are the adopted direction. The remaining inputs affect sizing and rollout but do not block starting the factory and controlled telephony spike.
 
 ## 12. Recommended first commitment
 
