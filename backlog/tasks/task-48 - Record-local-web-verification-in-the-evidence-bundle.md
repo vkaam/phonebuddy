@@ -1,11 +1,11 @@
 ---
 id: TASK-48
 title: Record local web verification in the evidence bundle
-status: In Progress
+status: Done
 assignee:
   - '@codex'
 created_date: '2026-11-01T14:49:00Z'
-updated_date: '2026-11-01T14:51:00Z'
+updated_date: '2026-11-01T14:52:00Z'
 labels:
   - factory
 dependencies: []
@@ -39,10 +39,10 @@ Spec: Extend local evidence to include the existing locked web install, web test
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 The local command runs locked web installation, existing web tests and the typecheck/build alongside the existing baseline and records each command, outcome and log.
-- [ ] #2 A missing, failed or timed-out required local step causes the bundle to fail; tests cover failures and source identity behavior.
-- [ ] #3 Evidence records Node and npm versions and clearly identifies outstanding lint, browser, dependency and hosted-only checks without claiming issue-wide completeness.
-- [ ] #4 Declared local checks pass and documentation accurately describes the command and remaining limitations.
+- [x] #1 The local command runs locked web installation, existing web tests and the typecheck/build alongside the existing baseline and records each command, outcome and log.
+- [x] #2 A missing, failed or timed-out required local step causes the bundle to fail; tests cover failures and source identity behavior.
+- [x] #3 Evidence records Node and npm versions and clearly identifies outstanding lint, browser, dependency and hosted-only checks without claiming issue-wide completeness.
+- [x] #4 Declared local checks pass and documentation accurately describes the command and remaining limitations.
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -57,4 +57,12 @@ Spec: Extend local evidence to include the existing locked web install, web test
 Local verification: python3 -B -m unittest discover -s tests -v passed 34 tests; python3 -B scripts/check.py passed all eight checks with unchanged source and evidence at /private/var/folders/zs/9bq4j3rx3wng_vzz52w8hrf80000gn/T/phonebuddy-quality-016s0gqp/report.json; git diff --check passed. Local Node was v26.10.0; hosted CI uses its pinned version. Issue-wide lint, browser smoke, vulnerability scanning, complete hosted evidence and review remain outstanding. This slice does not complete issue #39.
 
 Draft PR: https://github.com/vkaam/phonebuddy/pull/56. Committed source 1aa2abd passed the full local evidence command with a clean checkout; bundle /private/var/folders/zs/9bq4j3rx3wng_vzz52w8hrf80000gn/T/phonebuddy-quality-pkhmeihe/report.json. Hosted checks and independent review are pending; issue #39 remains open for remaining checks and coverage.
+
+Hosted checks on cfbf00d392c5da1a7e0581c465da592532456cba passed: Quality https://github.com/vkaam/phonebuddy/actions/runs/41318281449 and advisory PR safety https://github.com/vkaam/phonebuddy/actions/runs/41318279513. Final task-metadata commit requires fresh hosted checks. Independent human review and merge remain outstanding; this branch-local Done is provisional.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Expanded source-bound local evidence to run the existing locked web install, tests and typecheck/build, record tool and dependency versions, and expose outstanding checks. The 34-test Python suite and local bundle passed; hosted Quality and advisory checks passed on the pre-finalization head. Human review and merge remain outstanding, and broader issue #39 is incomplete.
+<!-- SECTION:FINAL_SUMMARY:END -->
