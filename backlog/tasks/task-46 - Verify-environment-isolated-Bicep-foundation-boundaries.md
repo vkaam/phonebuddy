@@ -1,11 +1,11 @@
 ---
 id: TASK-46
 title: Verify environment-isolated Bicep foundation boundaries
-status: Done
+status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-01T11:26:00Z'
-updated_date: '2026-11-01T11:33:00Z'
+updated_date: '2026-11-01T11:37:00Z'
 labels:
   - infrastructure
   - cicd
@@ -62,6 +62,10 @@ Implemented a compiled-template contract check for the environment-specific depl
 Draft PR #52 is open for TASK-46. The current PR checks must pass on the final published head before proposed completion.
 
 Current published head 9180e6b8331e64ad2cc3ecafe046d224c2022f32 passed required Quality and advisory Risk report checks. Finalization updates only the CLI-managed task record; checks on that final head remain required.
+
+Automated review found the validator did not check that the selected environment parameter was forwarded into the nested foundation module. Fixing that check and adding a negative regression case before proposing completion again.
+
+Addressed the P2 review finding: the compiled deployment contract now requires environment/location/owner/costCenter module inputs to forward the corresponding root parameters and rejects a fixed environment. Added a regression case for a hard-coded dev environment. Reverified: pinned Bicep baseline passed; 10 focused unit tests passed; dev readiness passed; test/prod readiness failed closed on unresolved inputs; git diff --check passed. The updated fix still needs to be published and checked on the PR head.
 <!-- SECTION:NOTES:END -->
 
 ## Final Summary
