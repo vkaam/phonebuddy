@@ -57,4 +57,6 @@ Spec: Introduce a fail-closed Python unittest runner used by the local bundle an
 
 <!-- SECTION:NOTES:BEGIN -->
 Verification: fail-closed Python runner passed 35 tests; regression fixtures exercised passing, empty, skipped, expected-failure, failing and error outcomes. Initial run exposed repository-root imports missing from sys.path; fixed and reran successfully. Full 11-check local bundle passed with unchanged source, including Chromium; evidence /private/var/folders/zs/9bq4j3rx3wng_vzz52w8hrf80000gn/T/phonebuddy-quality-3sbbf8ki/report.json. npm audit reports zero vulnerabilities and git diff --check passed. Hosted checks and independent review pending.
+
+Draft PR https://github.com/vkaam/phonebuddy/pull/67; implementation head 6b7b6d3. Hosted checks and independent review pending; Node unit-test skip detection and aggregate issue #39 acceptance remain outstanding.
 <!-- SECTION:NOTES:END -->
