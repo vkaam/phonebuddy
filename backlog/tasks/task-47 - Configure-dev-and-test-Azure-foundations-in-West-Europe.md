@@ -1,11 +1,11 @@
 ---
 id: TASK-47
 title: Configure dev and test Azure foundations in West Europe
-status: In Progress
+status: Done
 assignee:
   - '@codex'
 created_date: '2026-11-01T12:49:00Z'
-updated_date: '2026-11-01T13:11:00Z'
+updated_date: '2026-11-01T13:13:00Z'
 labels:
   - infrastructure
   - cicd
@@ -66,4 +66,12 @@ For public-repository safety, repository content now uses owner tag PHONEBUDDY-P
 Publication blocker (2026-11-01): sanitized commit db197b7 is local on agent/gh-12-3-configure-test-azure and based on current origin/main. git push -u origin agent/gh-12-3-configure-test-azure returned HTTP 403: GitHub denied write access to vkaam/phonebuddy for the checkout credential mees-vankaam_ravago. No PR exists yet. Keep TASK-47 In Progress. Next action: repository owner must grant this GitHub identity write access or configure an authorized credential; then push this branch and open a PR.
 
 Publication update (2026-11-01): Git push was denied for the checkout credential, so the sanitized branch was published using the connected GitHub tools. Draft PR #53: https://github.com/vkaam/phonebuddy/pull/53 (head f378b5583453e890d252621d2f8d52697a24b25a). The previous publication blocker is resolved; required PR checks and review remain outstanding. Keep TASK-47 In Progress until required checks pass.
+
+Final PR verification (2026-11-01): on PR #53 head 8c5cc5446fcf614436fbcc73dcf53b5b65835092, Quality and Risk report (advisory) both completed successfully. PR review and merge remain repository gates.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Configured and deployed region-qualified West Europe Azure foundations for dev and test, with PHONEBUDDY-NONPROD tags and separate 10 USD monthly budgets. Preserved the legacy Sweden Central dev resource group. Updated Bicep naming, preflight checks, regression tests and the runbook. Verified pinned Bicep 0.34.44 readiness for both environments, 11 focused unit tests, diff checks, repeated deployments, resource tags and budget settings; final what-if for each environment reported no changes. Published sanitized changes in PR #53 using the connected GitHub tools. The latest PR head passed Quality and Risk report (advisory). Budget alerts do not stop spend; production and legacy-group cleanup remain out of scope. PR review and merge are still pending.
+<!-- SECTION:FINAL_SUMMARY:END -->
