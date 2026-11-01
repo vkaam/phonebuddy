@@ -236,6 +236,12 @@ The [Azure delivery policy](azure-delivery-policy.md) defines independent PR rev
 
 ## 8. Agentic software factory: first delivery milestone
 
+The [31 October 2026 readiness assessment and gap-closure plan](autonomous-development-plan.md)
+distinguishes the implemented baseline from this proposed factory, records live
+GitHub policy findings, and sequences TASK-32 through TASK-42 with qualification
+gates. Its staged autonomy roadmap retains the current review boundary until a
+separately reviewed policy change permits expansion.
+
 ### Hosting and trust model
 
 Use Azure DevOps Boards, Repos, Pipelines, and Artifacts as the proposed Microsoft-hosted delivery control plane. The existing repository is on GitHub; migration or mirroring is a later decision, with one source of truth chosen before automation. Application hosting and agent execution remain on Azure. If “everything on Azure” permits GitHub for source control, the same factory contract can use GitHub instead without changing the product architecture.
