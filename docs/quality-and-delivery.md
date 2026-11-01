@@ -39,7 +39,18 @@ python3 -B -m unittest discover -s tests -v
 ```
 
 Or run the baseline and web checks and save a local evidence bundle (requires
-Node.js, npm, and access to the locked npm dependencies):
+Node.js 20 or newer, npm, registry access, and Playwright's pinned Chromium).
+Install the browser after installing the locked web dependencies:
+
+```sh
+cd apps/web
+npm ci --no-audit --no-fund
+npx playwright install chromium
+cd ../..
+```
+
+On Linux, system browser libraries may also be required; CI installs them with
+`npx playwright install --with-deps chromium`. Then run from the repository root:
 
 ```sh
 python3 -B scripts/check.py
@@ -52,8 +63,11 @@ It returns a nonzero exit code for failed, timed-out, or unlaunchable checks,
 source identity errors, or source changes detected between checks. The runner
 also records Node and npm versions, performs `npm ci --no-audit --no-fund`,
 records installed dependency versions, audits the lockfile with `npm audit`,
-lints web JavaScript and TypeScript with `npm run lint`, and runs web tests and
-`npm run build` (which includes TypeScript checking). Checks continue after a
+lints web JavaScript and TypeScript with `npm run lint`, and runs web tests,
+Chromium route/config/keyboard smoke tests, and `npm run build` (which includes
+TypeScript checking). The browser tests use controlled config responses and do
+not prove telephony or backend behavior. A missing browser fails the bundle.
+Checks continue after a
 failure, but any failed or missing step fails the bundle. Each invocation creates
 a fresh directory. The install replaces `apps/web/node_modules`.
 
@@ -67,8 +81,8 @@ identifies local dirty source but does not archive a patch or reproduce it by
 itself: preserve the reviewed patch separately or rerun after committing.
 
 This is a partial local baseline, not a complete issue #39 evidence bundle, an
-isolation boundary, or a hosted CI result. Browser smoke tests,
-actionlint, and Gitleaks are not run by this command;
+isolation boundary, or a hosted CI result. Actionlint and Gitleaks are not run
+by this command;
 the report lists these outstanding gates. A passing bundle does not establish
 that those checks passed.
 It runs repository Python code with the caller's existing permissions and
