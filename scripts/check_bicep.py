@@ -43,6 +43,16 @@ def validate_foundation_isolation(template):
     deployment = deployments[0]
     if deployment.get('name') != FOUNDATION_DEPLOYMENT_NAME:
         raise ValueError('Foundation deployment name must include the environment')
+    module_parameters = deployment.get('properties', {}).get('parameters', {})
+    if module_parameters.get('environment') != {
+            'value': "[parameters('environment')]"}:
+        raise ValueError('Foundation module must forward the selected environment')
+    expected_module_parameters = {
+        name: {'value': f"[parameters('{name}')]"}
+        for name in ('environment', 'location', 'owner', 'costCenter')
+    }
+    if module_parameters != expected_module_parameters:
+        raise ValueError('Foundation module inputs must forward only the selected environment values')
 
     nested = deployment.get('properties', {}).get('template', {})
     if set(nested.get('parameters', {})) != {'environment', 'location', 'owner', 'costCenter'}:
