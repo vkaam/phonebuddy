@@ -1,0 +1,36 @@
+import sys
+import unittest
+from pathlib import Path
+from unittest.mock import patch
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "scripts"))
+import bootstrap_github_oidc as bootstrap  # noqa: E402
+
+
+class AzureOidcBootstrapTests(unittest.TestCase):
+    def test_dry_run_never_calls_azure(self):
+        with patch.object(bootstrap, "az") as az:
+            bootstrap.bootstrap("dev", "subscription-id", apply=False)
+        az.assert_not_called()
+
+    def test_only_approved_nonproduction_environments_are_available(self):
+        self.assertEqual(bootstrap.ENVIRONMENTS, ("dev", "test"))
+        self.assertEqual(bootstrap.ROLE, "Contributor")
+        self.assertEqual(bootstrap.ISSUER, "https://token.actions.githubusercontent.com")
+
+    def test_duplicate_application_matches_fail_closed(self):
+        with self.assertRaisesRegex(RuntimeError, "More than one Azure"):
+            bootstrap.ensure_single([{}, {}], "application")
+
+    def test_workflow_is_main_only_environment_scoped_and_has_no_pr_trigger(self):
+        workflow = (ROOT / ".github/workflows/azure-oidc-smoke.yml").read_text()
+        self.assertIn("github.ref == 'refs/heads/main'", workflow)
+        self.assertIn("environment: ${{ inputs.environment }}", workflow)
+        self.assertIn("id-token: write", workflow)
+        self.assertNotIn("pull_request:", workflow)
+        self.assertIn("AuthorizationFailed", workflow)
+
+
+if __name__ == "__main__":
+    unittest.main()
