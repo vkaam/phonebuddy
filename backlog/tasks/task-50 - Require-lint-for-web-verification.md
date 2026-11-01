@@ -62,4 +62,6 @@ Spec: Add a pinned, meaningful ESLint setup covering web JavaScript and TypeScri
 Blocked: npm audit reports a moderate minimatch vulnerability affecting all releases below 11.0.1; ESLint 10.14.0 and TypeScript ESLint 8.72.1 currently require minimatch 10.x, and npm reports no compatible automatic fix. Do not override the supported range or suppress audit. The user has been asked to approve a triage amendment to replace ESLint with Biome and change the config file scope. Lint passes current source and rejects a deliberately unused variable; 34 Python tests and git diff --check passed, but the required npm audit fails and task remains In Progress.
 
 User decision 2026-11-01: keep ESLint and wait for a compatible fix; do not replace it with Biome or override unsupported minimatch ranges. Required npm audit remains failing, so acceptance is incomplete.
+
+Draft PR https://github.com/vkaam/phonebuddy/pull/63 records the audit blocker and remains in progress until an upstream compatible minimatch fix exists and checks can be rerun.
 <!-- SECTION:NOTES:END -->
