@@ -13,4 +13,8 @@ The [autonomous development assessment and plan](docs/autonomous-development-pla
 records current factory gaps, live GitHub policy findings, and the staged Backlog
 roadmap from unattended PR production to bounded automatic delivery.
 
+The [Issue and Backlog governance](docs/issue-backlog-governance.md) defines
+GitHub Issues as the human-owned control plane and native Backlog.md tasks as
+the factory's execution ledger, with approved intake, scope and completion rules.
+
 Status: delivery foundation in progress. No application or cloud infrastructure has been deployed.

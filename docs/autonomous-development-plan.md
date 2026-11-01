@@ -3,8 +3,12 @@
 Assessment date: 31 October 2026. Repository baseline:
 `b0d0a9492c8413e48ecd186c0f757de4b44b85f1` on `main`, refreshed after
 the Bicep foundation merged during assessment publication.
-Assessment task: TASK-31. The Backlog is the execution plan of record;
-TASK-32 through TASK-42 capture the missing factory work.
+Assessment task: TASK-31. The source and live-settings findings below remain a
+31 October snapshot. Governance updated on 1 November 2026: GitHub Issues own
+high-level intent; native Backlog tasks are the execution plan of record.
+Former TASK-32 through TASK-42 are now intent issues #37 through #47 and require
+fresh atomic decomposition before execution. See
+[Issue and Backlog governance](issue-backlog-governance.md).
 
 PhoneBuddy supports agent-assisted development today. It has useful CI and
 evidence controls, but no demonstrated unattended task-to-PR runtime, independent
@@ -78,15 +82,17 @@ must reconcile dated documentation with source, live PRs and run evidence.
 
 ## Proposed implementation contract
 
-Keep GitHub and Backlog as the initial control plane, subject to TASK-32's
-reviewed decision. Reuse the existing CI and PR conventions. Keep the proposed
+Use GitHub Issues as the human-owned control plane and native Backlog.md as the
+factory-owned execution plane, following the adopted governance. GitHub PRs and
+Actions retain their delivery role; the Azure DevOps control-plane proposal is
+superseded. Reuse the existing CI and PR conventions. Keep the proposed
 Azure factory boundary separate from product environments; prove model access
 and tool execution before investing in a larger platform. Do not make the
 first unattended PR depend on the complete softphone or all production hosting.
 
 Use the deterministic state machine already proposed in the software plan:
 
-`eligible -> leased -> specified -> implementing -> verifying -> reviewing -> PR-ready`
+`approved issue -> triaged atomic tasks -> eligible -> leased -> implementing -> verifying -> reviewing -> PR-ready`
 
 Failures transition to bounded repair, waiting-for-owner, or failed with retained
 evidence. Stage B adds waiting-for-approval, merge, deployment and observation;
@@ -94,6 +100,14 @@ Stage C only removes per-PR approval for a separately approved class. Track PR
 readiness and deployed health as distinct facts so Done cannot imply a release
 that has not happened. Existing Backlog statuses can remain simple while the
 factory records its more detailed run states separately.
+
+Triage pins the approved issue revision, creates an idempotent decomposition and
+records each task's scope, native acceptance and verification gates. Workers
+cannot code directly from issues, widen scope or treat archived dependencies as
+complete. A versioned amendment invalidates affected evidence. A separate
+completion controller aggregates all merged tasks and issue-level acceptance,
+including applicable release health, before closing the parent issue. Intermediate
+PRs use neutral references; progress reporting never rewrites human requirements.
 
 The trusted controller owns leases, policy and limits. Untrusted repository
 commands run in disposable sandboxes. A tool gateway mediates narrowly scoped
@@ -117,28 +131,30 @@ cost.
 
 ## Sequenced work
 
-All new execution tasks are unassigned and To Do. Their detailed acceptance
-criteria and dependencies are stored in Backlog; this table gives the delivery
-order and intended outcome, not an implementation commitment.
+The original roadmap tasks were migrated to GitHub Issues as high-level intent.
+The table now identifies those issues and their coarse dependencies. Historical
+TASK IDs remain provenance, not an executable manifest. Triage approved issues
+into native atomic tasks with explicit dependency mappings before workers run;
+archival of unfinished tasks does not satisfy their dependencies.
 
-| Order | Task and outcome | Direct dependencies | Proposed accountable role |
+| Order | Intent issue and outcome | Coarse issue dependencies | Proposed accountable role |
 | --- | --- | --- | --- |
-| 1 | TASK-32: approve the autonomy contract, control plane, ownership and prerequisites. | None | Maintainer and platform owner |
-| 1 | TASK-34: close local/CI application evidence gaps, including browser behavior and dependency coverage. | None | Application/quality engineer |
-| 2 | TASK-33: align effective GitHub protections and independent policy ownership with the current contract. | TASK-32 | Repository administrator and second maintainer |
-| 2 | TASK-35: prove model/tool execution in a disposable isolated runner with cleanup. | TASK-32 | Platform engineer |
-| 2 | TASK-36: persist scheduling, task/PR reconciliation, leases and recovery. | TASK-32 | Factory engineer |
-| 3 | TASK-37: deliver bounded implementation, CI repair and PR-feedback handling. | TASK-34, TASK-35, TASK-36 | Factory engineer |
-| 3 | TASK-39: enforce budgets, audit retention, cancellation and actionable operations. | TASK-32, TASK-35, TASK-36 | Platform/operations owner |
-| 4 | TASK-38: independently review the final diff using separately executed verification. | TASK-34, TASK-35, TASK-37 | Quality/security engineer |
-| 5 | TASK-40: qualify unattended PR production on fixtures and a real PhoneBuddy task. | TASK-33, TASK-37, TASK-38, TASK-39 | Factory owner and independent evaluator |
-| 6 | TASK-41: merge eligible human-approved PRs through a trusted controller. | TASK-33, TASK-40 | Repository/platform owner |
-| 7 | TASK-42: qualify an explicitly approved class without per-PR human approval, including release and recovery. | TASK-13, TASK-40, TASK-41 | Maintainers and service owner |
+| 1 | #37 (former TASK-32): finish the autonomy contract, ownership and prerequisites under the adopted governance. | None | Maintainer and platform owner |
+| 1 | #39 (former TASK-34): close local/CI application evidence gaps, including browser behavior and dependency coverage. | None | Application/quality engineer |
+| 2 | #38 (former TASK-33): align effective GitHub protections and independent policy ownership with the current contract. | #37 | Repository administrator and second maintainer |
+| 2 | #40 (former TASK-35): prove model/tool execution in a disposable isolated runner with cleanup. | #37 | Platform engineer |
+| 2 | #41 (former TASK-36): persist approved-issue triage, task/PR reconciliation, leases and recovery. | #37 | Factory engineer |
+| 3 | #42 (former TASK-37): deliver scoped implementation, CI repair and PR-feedback handling. | #39, #40, #41 | Factory engineer |
+| 3 | #44 (former TASK-39): enforce budgets, audit retention, cancellation and actionable operations. | #37, #40, #41 | Platform/operations owner |
+| 4 | #43 (former TASK-38): independently review the final diff using separately executed verification. | #39, #40, #42 | Quality/security engineer |
+| 5 | #45 (former TASK-40): qualify approved issue-to-task-to-PR production on fixtures and a real PhoneBuddy task. | #38, #42, #43, #44 | Factory owner and independent evaluator |
+| 6 | #46 (former TASK-41): merge eligible human-approved PRs and reconcile aggregate issue completion. | #38, #45 | Repository/platform owner |
+| 7 | #47 (former TASK-42): qualify an explicitly approved class without per-PR human approval, including release and recovery. | #20, #45, #46 | Maintainers and service owner |
 
-TASK-32 includes build/test instructions, architecture context and the Groma
+#37 includes build/test instructions, architecture context and the Groma
 coverage decision. If setup reports a first scan, ask whether to curate it as
 required by `AGENTS.md`; do not treat scanner output as an authored architecture.
-TASK-33 should update dated protection claims and ownership coverage after its
+#38 should update dated protection claims and ownership coverage after its
 settings are actually verified. No existing task's assignee, status or scope was
 changed by this assessment.
 
@@ -154,10 +170,14 @@ Run the existing product delivery track alongside the factory:
   controlled SIP/media, transcription and summary gates before autonomous changes
   in those areas; TASK-30 remains the complete pilot acceptance gate.
 
-TASK-9 provisions product Speech/Foundry foundations. Factory inference must
-have its own scope and permission boundary; reuse provisioning patterns where
+The historical product TASK references above identify original roadmap scope;
+their migrated issues own intent and fresh execution tasks must carry the actual
+dependency graph. This governance change preserves migration files separately.
+
+TASK-9's migrated intent provisions product Speech/Foundry foundations. Factory
+inference must have its own scope and permission boundary; reuse provisioning patterns where
 appropriate without giving a coding runner the product's data or identities.
-TASK-35 owns that factory proof rather than duplicating the application task.
+#40 owns that factory proof rather than duplicating the application intent.
 
 ## Qualification and expansion gates
 
@@ -188,20 +208,21 @@ infrastructure and evaluation-threshold changes under human review initially.
 
 ## Decisions and practical starting point
 
-TASK-32 should record these inputs before enabling the affected capabilities:
+#37 should record the remaining inputs before enabling the affected capabilities:
 
 | Decision/input | Recommendation or outstanding fact | What it blocks |
 | --- | --- | --- |
-| Control plane | Retain GitHub + Backlog initially; resolve the Azure DevOps proposal explicitly. | Durable integrations and identity design. |
+| Control plane | Adopted: GitHub Issues own intent; native Backlog tasks own execution; PRs/Actions retain delivery. Implement the approved intake, decomposition and completion contract. | Durable integrations and identity design. |
 | Authority | Approve Stage A first; keep existing human review until a later policy decision. | Unattended merge and expansion of eligible classes. |
 | Owners | Name a factory owner, escalation contact and second independent maintainer. | Reliable escalation and enforceable independent human review. |
 | Factory Azure access | Tenant/subscription, EU region, quota, tool-capable coding/review model access and scoped bootstrap identity are unverified. | Live sandbox/inference proof, not local planning or check improvements. |
 | Limits | Approve per-run and daily spend, token/compute/time/retry limits and evidence retention. No monetary ceiling is inferred here. | Unattended cloud execution. |
 | Domain acceptance | Approve pilot browsers, fixtures, isolation/media/evaluation gates and release ownership as components arrive. | Autonomy in those domains and production enablement. |
 
-Begin with TASK-32 and TASK-34. After the contract is approved, implement the
-smallest TASK-35/TASK-36/TASK-37 slice that produces one useful PR; retain human
-review while adding the independent reviewer and operations controls. Do not
+Begin by triaging approved scope from #37 and #39 into atomic execution tasks.
+After the remaining runtime prerequisites are approved, implement the smallest
+#40/#41/#42 slice that produces one useful PR; retain human review while adding
+the independent reviewer and operations controls. Do not
 wait for the complete product, and do not build a generic agent platform first.
 
 For planning capacity, allow roughly 4–7 engineer-weeks for Stage A and the

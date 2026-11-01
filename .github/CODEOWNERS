@@ -8,6 +8,10 @@
 /.groma/ @vkaam
 /docs/software-plan.md @vkaam
 /docs/quality-and-delivery.md @vkaam
+/docs/issue-backlog-governance.md @vkaam
+/docs/autonomous-development-plan.md @vkaam
+/docs/azure-delivery-policy.md @vkaam
+/docs/templates/ @vkaam
 /infra/ @vkaam
 /gateway/ @vkaam
 /pipelines/ @vkaam

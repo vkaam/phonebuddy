@@ -28,10 +28,43 @@ Do not edit Backlog task, draft, document, decision, or milestone markdown files
 </CRITICAL_INSTRUCTION>
 <!-- BACKLOG.MD GUIDELINES END -->
 
+## GitHub Issues and Backlog authority
+
+Follow [Issue and Backlog governance](docs/issue-backlog-governance.md).
+GitHub Issues own human-approved intent, priority and issue-level acceptance;
+native Backlog.md tasks own atomic execution, dependencies, scope and evidence.
+Do not mirror the layers or automatically rewrite issue requirements from task
+changes. Explicitly authorized amendments and upward progress/evidence reporting
+are permitted.
+
+Before application-code work, triage an explicitly approved issue into a native
+CLI-managed task. Every new execution task must reference one primary issue URL
+and record its approved requirements revision, approval evidence, branch,
+explicit file scope, verification commands and native acceptance criteria.
+Use native TASK IDs and dependency fields; one implementation task maps to
+one PR, with additional PRs requiring task splitting through triage.
+Archived unfinished dependencies remain unsatisfied. Reconcile migration
+records rather than restoring broad tasks or treating archival as completion.
+
+Workers may change only approved scope, including explicitly listed tests and
+their own task record. Additional files, changed acceptance or changed required
+checks need a recorded triage amendment; workers cannot expand their own authority.
+Material issue changes require reassessment. Autonomous claims need durable
+exclusive leases; branch-local status alone does not prevent duplicate work.
+
+Commit proposed task completion on its feature branch, never directly on main.
+Branch-local Done is provisional until merge and does not imply deployment.
+Intermediate PRs/commits use neutral issue references such as Refs #123 and must
+not create an auto-closing link. A human owner or authorized trusted completion
+controller closes an issue only after all required tasks merge, aggregate
+acceptance passes and applicable release/health gates are verified.
+These rules do not expand merge, deployment or self-approval permissions.
+
 ## Taking Backlog work through review
 
 When asked to work on the Backlog without a specific task, list the available
-tasks and pick an eligible, unassigned item whose dependencies are satisfied.
+tasks and pick an eligible, unassigned execution item linked to approved issue
+intent at its recorded revision, whose dependencies are satisfied.
 Respect any requested priority or scope, and do not take over someone else's
 active work. If no eligible item can be identified, report the blocker. When a
 task is specified, read it and verify its eligibility before starting. Follow

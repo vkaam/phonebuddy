@@ -8,6 +8,8 @@ use synthetic fixtures or approved access-controlled artifacts.
 ## Candidate identity
 
 - Backlog task and specification:
+- Primary GitHub Issue URL, approved requirements snapshot/digest and approval evidence:
+- Task/spec revision, approved scope and any authorized amendments:
 - PR URL (or local-only):
 - Recorded at (UTC):
 - Author/operator:
@@ -53,9 +55,15 @@ a named reviewer, procedure, observation, and date. Redact sensitive output.
 - Remaining failed/blocked/not-run checks, owner, and next action:
 - Advisory safety decision and reasons, policy/head/base SHAs (or unavailable):
 - Deployment status and environment (including explicitly not deployed):
+- Task completion state: branch-local proposal, merged acceptance, or blocked:
+- Contribution to aggregate issue acceptance; other required tasks or release gates:
+- Parent issue closure: pending, or authorized owner/controller and completion evidence:
 - Migration, rollout, health, and rollback/recovery evidence where applicable:
 - Artifact retention deadline and durable evidence location if needed:
 
 Passing checks do not authorize merging or deployment. Apply the
 [delivery baseline](../quality-and-delivery.md) and current repository protections.
 No missing platform evidence can be replaced by a green repository check.
+Follow [Issue and Backlog governance](../issue-backlog-governance.md): report
+evidence upward without rewriting human requirements. A merged task does not
+complete a multi-task issue; intermediate PRs must not auto-close it.

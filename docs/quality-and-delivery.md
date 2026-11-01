@@ -12,12 +12,24 @@ For each bounded increment, use the
 [work specification template](templates/work-specification.md) to define behavior
 and acceptance cases, and the
 [acceptance evidence template](templates/acceptance-evidence.md) to record results.
-Keep the Backlog task as the plan of record: link specifications and evidence
+Follow [Issue and Backlog governance](issue-backlog-governance.md): GitHub Issues
+own human-approved intent and aggregate acceptance; native Backlog tasks own
+atomic execution. Record the approved issue revision, approval evidence, explicit
+file scope, verification commands and task acceptance before coding.
+Keep the Backlog task as the execution plan of record: link specifications and evidence
 through the CLI, and map evidence to its acceptance criterion IDs. Small changes
 can include the completed evidence directly in the PR body; larger changes can
 link a dedicated record. Record failed and pending checks as well as successes.
 These templates support the Phase 0 delivery loop; cloud execution and independent
 review still require their own evidence.
+
+Task completion on a feature branch is provisional until merge. Intermediate PRs
+must use neutral issue references; a human owner or authorized trusted completion
+controller closes the issue only after all required tasks merge, aggregate
+acceptance passes and applicable release health is verified. Progress/evidence
+reporting does not authorize rewriting human-owned requirements. Runtime triage,
+leases and enforcement remain future factory work; these instructions do not
+claim that automation is installed.
 
 Run from the repository root with Python 3.9 or newer:
 
