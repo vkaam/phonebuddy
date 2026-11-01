@@ -1,11 +1,11 @@
 ---
 id: TASK-53
 title: Reject incomplete Python unit test runs
-status: In Progress
+status: Done
 assignee:
   - '@codex'
 created_date: '2026-11-01T20:15:00Z'
-updated_date: '2026-11-01T20:17:00Z'
+updated_date: '2026-11-01T20:19:00Z'
 labels:
   - factory
 dependencies:
@@ -42,9 +42,9 @@ Spec: Introduce a fail-closed Python unittest runner used by the local bundle an
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 The required Python unit-test runner fails on empty discovery, skips, expected failures, failures and errors, and passes a complete successful suite.
-- [ ] #2 Regression tests exercise real unittest discovery and outcomes; local and hosted verification invoke the fail-closed runner with verbose logs.
-- [ ] #3 Declared local verification and final hosted checks pass; documentation states the Python runner behavior and remaining Node test gap.
+- [x] #1 The required Python unit-test runner fails on empty discovery, skips, expected failures, failures and errors, and passes a complete successful suite.
+- [x] #2 Regression tests exercise real unittest discovery and outcomes; local and hosted verification invoke the fail-closed runner with verbose logs.
+- [x] #3 Declared local verification and final hosted checks pass; documentation states the Python runner behavior and remaining Node test gap.
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -59,4 +59,12 @@ Spec: Introduce a fail-closed Python unittest runner used by the local bundle an
 Verification: fail-closed Python runner passed 35 tests; regression fixtures exercised passing, empty, skipped, expected-failure, failing and error outcomes. Initial run exposed repository-root imports missing from sys.path; fixed and reran successfully. Full 11-check local bundle passed with unchanged source, including Chromium; evidence /private/var/folders/zs/9bq4j3rx3wng_vzz52w8hrf80000gn/T/phonebuddy-quality-3sbbf8ki/report.json. npm audit reports zero vulnerabilities and git diff --check passed. Hosted checks and independent review pending.
 
 Draft PR https://github.com/vkaam/phonebuddy/pull/67; implementation head 6b7b6d3. Hosted checks and independent review pending; Node unit-test skip detection and aggregate issue #39 acceptance remain outstanding.
+
+Hosted Quality https://github.com/vkaam/phonebuddy/actions/runs/41346141132 and PR safety advisory https://github.com/vkaam/phonebuddy/actions/runs/41346138376 passed on head 9aa9b951fdcffcb7fabf2ddb9d986dca6d69a884. Final task metadata commit needs fresh checks. Independent review and merge remain outstanding; branch-local Done is provisional.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Added a fail-closed Python unittest runner to local and hosted checks, with real regression fixtures for incomplete and failing runs. The 35-test suite, 11-check local bundle, npm audit and pre-finalization hosted checks passed. Independent review and merge remain outstanding; Node skip detection and aggregate issue #39 acceptance remain incomplete.
+<!-- SECTION:FINAL_SUMMARY:END -->
