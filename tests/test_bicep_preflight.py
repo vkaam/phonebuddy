@@ -49,19 +49,23 @@ def foundation_template(resource_group_name=FOUNDATION_RESOURCE_GROUP_NAME,
         'resources': [{
             'type': 'Microsoft.Resources/deployments',
             'name': FOUNDATION_DEPLOYMENT_NAME,
-            'properties': {'template': {
-                'parameters': {name: {} for name in
-                               ('environment', 'location', 'owner', 'costCenter')},
-                'resources': [{
-                    'type': 'Microsoft.Resources/resourceGroups',
-                    'name': resource_group_name,
-                    'tags': {'environment': "[parameters('environment')]"},
-                }],
-                'outputs': module_outputs or {
-                    'resourceGroupName': {'type': 'string',
-                                          'value': FOUNDATION_RESOURCE_GROUP_NAME},
+            'properties': {
+                'parameters': {name: {'value': f"[parameters('{name}')]"}
+                              for name in ('environment', 'location', 'owner', 'costCenter')},
+                'template': {
+                    'parameters': {name: {} for name in
+                                   ('environment', 'location', 'owner', 'costCenter')},
+                    'resources': [{
+                        'type': 'Microsoft.Resources/resourceGroups',
+                        'name': resource_group_name,
+                        'tags': {'environment': "[parameters('environment')]"},
+                    }],
+                    'outputs': module_outputs or {
+                        'resourceGroupName': {'type': 'string',
+                                              'value': FOUNDATION_RESOURCE_GROUP_NAME},
+                    },
                 },
-            }},
+            },
         }],
         'outputs': {'resourceGroupName': {
             'type': 'string', 'value': FOUNDATION_RESOURCE_GROUP_OUTPUT,
@@ -78,6 +82,14 @@ class FoundationIsolationTests(unittest.TestCase):
             'prod': 'rg-pb-prod-foundation',
         })
         self.assertEqual(len(set(names.values())), 3)
+
+    def test_module_must_receive_selected_environment(self):
+        template = foundation_template()
+        template['resources'][0]['properties']['parameters']['environment'] = {
+            'value': 'dev',
+        }
+        with self.assertRaisesRegex(ValueError, 'forward the selected environment'):
+            validate_foundation_isolation(template)
 
     def test_fixed_resource_group_name_fails(self):
         with self.assertRaisesRegex(ValueError, 'resource group name'):
