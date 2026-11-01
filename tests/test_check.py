@@ -58,7 +58,7 @@ class RunnerTests(unittest.TestCase):
                 self.assertEqual(saved, report)
                 self.assertFalse(saved["hosted_ci"])
                 self.assertEqual(saved["independent_review"], "not run")
-                self.assertIn("browser smoke", saved["outstanding_checks"])
+                self.assertIn("hosted CI", saved["outstanding_checks"])
 
     def test_main_registers_web_checks_as_required(self):
         with patch.object(check, "write_bundle", return_value={"status": "pass"}) as bundle:
@@ -73,6 +73,8 @@ class RunnerTests(unittest.TestCase):
         self.assertEqual(checks["web-dependencies"][-2:], ["--all", "--json"])
         self.assertEqual(checks["web-audit"], ["npm", "--prefix", "apps/web", "audit"])
         self.assertEqual(checks["web-lint"], ["npm", "--prefix", "apps/web", "run", "lint"])
+        self.assertEqual(checks["web-browser"],
+                         ["npm", "--prefix", "apps/web", "run", "test:browser"])
 
     def test_missing_required_check_fails_bundle(self):
         with patch.object(check, "snapshot", return_value={"head": "a"}):
