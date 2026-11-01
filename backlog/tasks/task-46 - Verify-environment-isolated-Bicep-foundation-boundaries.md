@@ -1,11 +1,11 @@
 ---
 id: TASK-46
 title: Verify environment-isolated Bicep foundation boundaries
-status: In Progress
+status: Done
 assignee:
   - '@codex'
 created_date: '2026-11-01T11:26:00Z'
-updated_date: '2026-11-01T11:32:00Z'
+updated_date: '2026-11-01T11:33:00Z'
 labels:
   - infrastructure
   - cicd
@@ -39,9 +39,9 @@ This task verifies and documents the existing foundation-only isolation boundari
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 Pinned Bicep checks validate all environment parameter files and prove exact environment selection, distinct deterministic foundation resource-group identity, and a secret-free output surface.
-- [ ] #2 Automated preflight checks cover mismatches and unresolved values; configured dev passes while test and prod remain not deployment-ready.
-- [ ] #3 The deployment guide documents the verified isolation boundary, absence of application capacity, and separate approvals and cleanup constraints for test/prod.
+- [x] #1 Pinned Bicep checks validate all environment parameter files and prove exact environment selection, distinct deterministic foundation resource-group identity, and a secret-free output surface.
+- [x] #2 Automated preflight checks cover mismatches and unresolved values; configured dev passes while test and prod remain not deployment-ready.
+- [x] #3 The deployment guide documents the verified isolation boundary, absence of application capacity, and separate approvals and cleanup constraints for test/prod.
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -60,4 +60,12 @@ This task verifies and documents the existing foundation-only isolation boundari
 Implemented a compiled-template contract check for the environment-specific deployment and resource-group names, environment tag, exact foundation input set, and sole resource-group-name output. Added positive and negative unit cases, including secret inputs/outputs and environment mismatch/unresolved values. Updated infra/README.md to describe the verified naming boundary, current dev resource-group-only deployment, and unresolved test/prod gates. Verification: pinned Bicep baseline passed; 9 focused unit tests passed; dev deployment-readiness passed; test and prod deployment-readiness both failed as expected on unresolved location; git diff --check passed. No Azure resources or billable application capacity were provisioned.
 
 Draft PR #52 is open for TASK-46. The current PR checks must pass on the final published head before proposed completion.
+
+Current published head 9180e6b8331e64ad2cc3ecafe046d224c2022f32 passed required Quality and advisory Risk report checks. Finalization updates only the CLI-managed task record; checks on that final head remain required.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Verified and documented the Bicep foundation boundary: each environment has a distinct deployment/resource-group identity and environment tag, only the resource-group name is exposed, and test/prod remain blocked until their inputs are approved. Pinned Bicep validation and all 9 focused unit tests passed; dev deployment readiness passed while test/prod failed closed on unresolved inputs. No application capacity or additional Azure resources were provisioned. PR #52 carries this change for review.
+<!-- SECTION:FINAL_SUMMARY:END -->
