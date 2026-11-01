@@ -1,11 +1,11 @@
 ---
 id: TASK-54
 title: Reject incomplete Node unit test runs
-status: In Progress
+status: Done
 assignee:
   - '@codex'
 created_date: '2026-11-01T20:29:00Z'
-updated_date: '2026-11-01T20:32:00Z'
+updated_date: '2026-11-01T20:39:00Z'
 labels:
   - factory
 dependencies:
@@ -39,9 +39,9 @@ Spec: Make the existing required Node unit test command fail on skipped, todo, c
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 Required Node unit tests pass only when at least one test ran and every test passed without skipped, todo or cancelled tests; errors and inconclusive output fail.
-- [ ] #2 Regression fixtures exercise real Node test-runner success, skip, todo, failure, and empty-discovery outcomes, with useful output retained.
-- [ ] #3 Local and hosted verification use the required Node test command; declared checks and final-hosted checks pass, and documentation describes the completeness rule.
+- [x] #1 Required Node unit tests pass only when at least one test ran and every test passed without skipped, todo or cancelled tests; errors and inconclusive output fail.
+- [x] #2 Regression fixtures exercise real Node test-runner success, skip, todo, failure, and empty-discovery outcomes, with useful output retained.
+- [x] #3 Local and hosted verification use the required Node test command; declared checks and final-hosted checks pass, and documentation describes the completeness rule.
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -56,4 +56,12 @@ Spec: Make the existing required Node unit test command fail on skipped, todo, c
 Verification: required Node runner passed five tests under local Node 26.10.0 and CI Node 22.15.1; subprocess fixtures confirmed success and rejection of skip, todo, failure, cancelled, duplicate/inconclusive summary and empty discovery. Python runner passed 35 tests; full 11-check evidence bundle passed with unchanged source at /private/var/folders/zs/9bq4j3rx3wng_vzz52w8hrf80000gn/T/phonebuddy-quality-l415anl7/report.json; npm audit reported zero vulnerabilities; git diff --check passed. Initial fixture issues involving inherited NODE_TEST_CONTEXT and an unresolved cancellation were corrected before final verification. Hosted CI and independent review pending.
 
 Draft PR https://github.com/vkaam/phonebuddy/pull/68; implementation head 7514994. Hosted checks and independent review remain pending; aggregate issue #39 acceptance is outstanding.
+
+Hosted Quality https://github.com/vkaam/phonebuddy/actions/runs/41347399670 and PR safety advisory https://github.com/vkaam/phonebuddy/actions/runs/41347398206 passed on head 9dcf5363de439647d18dfe39d286999d548b0da1. Final task metadata commit requires fresh checks. Independent review and merge remain outstanding; branch-local Done is provisional.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Added a fail-closed Node test command that validates TAP counts and rejects empty, skipped, todo, cancelled, failed and inconclusive runs. Real subprocess fixtures, Node 22 and 26 verification, the full local bundle, npm audit and pre-finalization hosted checks passed. Independent review and merge remain outstanding; broader issue #39 acceptance remains incomplete.
+<!-- SECTION:FINAL_SUMMARY:END -->
