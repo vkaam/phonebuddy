@@ -6,6 +6,7 @@ from scripts.check_bicep import (
     FOUNDATION_RESOURCE_GROUP_NAME,
     FOUNDATION_RESOURCE_GROUP_OUTPUT,
     deployment_ready,
+    expected_resource_group_names,
     validate_foundation_isolation,
 )
 
@@ -75,13 +76,24 @@ def foundation_template(resource_group_name=FOUNDATION_RESOURCE_GROUP_NAME,
 
 class FoundationIsolationTests(unittest.TestCase):
     def test_environment_scoped_names_are_distinct(self):
-        names = validate_foundation_isolation(foundation_template())
+        validate_foundation_isolation(foundation_template())
+        names = expected_resource_group_names({
+            'dev': 'westeurope',
+            'test': 'westeurope',
+            'prod': 'unresolved',
+        })
         self.assertEqual(names, {
-            'dev': 'rg-pb-dev-foundation',
-            'test': 'rg-pb-test-foundation',
-            'prod': 'rg-pb-prod-foundation',
+            'dev': 'rg-pb-dev-westeurope-foundation',
+            'test': 'rg-pb-test-westeurope-foundation',
+            'prod': 'rg-pb-prod-unresolved-foundation',
         })
         self.assertEqual(len(set(names.values())), 3)
+
+    def test_regionless_or_fixed_resource_group_name_fails(self):
+        for name in ('rg-pb-dev-foundation', 'rg-pb-test-westeurope-foundation'):
+            with self.subTest(name=name):
+                with self.assertRaisesRegex(ValueError, 'resource group name'):
+                    validate_foundation_isolation(foundation_template(name))
 
     def test_module_must_receive_selected_environment(self):
         template = foundation_template()

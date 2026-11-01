@@ -11,11 +11,18 @@ import tempfile
 ROOT = Path(__file__).resolve().parents[1]
 VERSION = '0.34.44'
 ENVIRONMENTS = ('dev', 'test', 'prod')
-FOUNDATION_DEPLOYMENT_NAME = "[format('phonebuddy-{0}-foundation', parameters('environment'))]"
-FOUNDATION_RESOURCE_GROUP_NAME = "[format('rg-pb-{0}-foundation', parameters('environment'))]"
+FOUNDATION_DEPLOYMENT_NAME = (
+    "[format('phonebuddy-{0}-{1}-foundation', parameters('environment'), "
+    "parameters('location'))]"
+)
+FOUNDATION_RESOURCE_GROUP_NAME = (
+    "[format('rg-pb-{0}-{1}-foundation', parameters('environment'), "
+    "parameters('location'))]"
+)
 FOUNDATION_RESOURCE_GROUP_OUTPUT = (
     "[reference(subscriptionResourceId('Microsoft.Resources/deployments', "
-    "format('phonebuddy-{0}-foundation', parameters('environment'))), "
+    "format('phonebuddy-{0}-{1}-foundation', parameters('environment'), "
+    "parameters('location'))), "
     "'2022-09-01').outputs.resourceGroupName.value]"
 )
 
@@ -32,6 +39,16 @@ def deployment_ready(environment, parameters):
         value = parameters[field]['value']
         if not isinstance(value, str) or not value.strip() or value.strip().upper() == 'UNRESOLVED':
             raise ValueError(f'{field} must be supplied before deployment')
+
+
+def expected_resource_group_names(locations):
+    """Build the stable environment- and region-qualified foundation names."""
+    if set(locations) != set(ENVIRONMENTS):
+        raise ValueError('Locations must be supplied for every environment')
+    return {
+        environment: f'rg-pb-{environment}-{locations[environment]}-foundation'
+        for environment in ENVIRONMENTS
+    }
 
 
 def validate_foundation_isolation(template):
@@ -74,7 +91,6 @@ def validate_foundation_isolation(template):
         raise ValueError('Foundation module outputs may expose only the resource-group name')
     if nested['outputs']['resourceGroupName'].get('value') != FOUNDATION_RESOURCE_GROUP_NAME:
         raise ValueError('Foundation output must resolve to the environment resource group')
-    return {environment: f'rg-pb-{environment}-foundation' for environment in ENVIRONMENTS}
 
 
 def main():
@@ -91,17 +107,21 @@ def main():
     allowed = template['parameters']['environment']['allowedValues']
     if allowed != list(ENVIRONMENTS):
         raise ValueError('Unexpected environment allowlist')
-    resource_group_names = validate_foundation_isolation(template)
-    if len(set(resource_group_names.values())) != len(ENVIRONMENTS):
-        raise ValueError('Foundation resource-group names must be unique per environment')
+    validate_foundation_isolation(template)
+    locations = {}
     for env in allowed:
         params = json.loads(run(binary, 'build-params',
                                 f'infra/environments/{env}.bicepparam', '--stdout'))
         values = json.loads(params['parametersJson'])['parameters']
         if values['environment']['value'] != env:
             raise ValueError(f'{env} parameter file selects a different environment')
+        location = values['location']['value']
+        locations[env] = location
         if options.deployment_ready == env:
             deployment_ready(env, values)
+    resource_group_names = expected_resource_group_names(locations)
+    if len(set(resource_group_names.values())) != len(ENVIRONMENTS):
+        raise ValueError('Foundation resource-group names must be unique by environment and region')
     # Compiler must reject an invalid environment rather than only warn.
     with tempfile.TemporaryDirectory() as tmp:
         bad = Path(tmp) / 'invalid.bicepparam'
