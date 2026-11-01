@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-01T11:26:00Z'
-updated_date: '2026-11-01T11:30:00Z'
+updated_date: '2026-11-01T11:32:00Z'
 labels:
   - infrastructure
   - cicd
@@ -18,6 +18,7 @@ references:
   - scripts/check_bicep.py
   - tests/test_bicep_preflight.py
   - infra/README.md
+  - https://github.com/vkaam/phonebuddy/pull/52
 modified_files:
   - >-
     backlog/tasks/task-46 -
@@ -57,4 +58,6 @@ This task verifies and documents the existing foundation-only isolation boundari
 
 <!-- SECTION:NOTES:BEGIN -->
 Implemented a compiled-template contract check for the environment-specific deployment and resource-group names, environment tag, exact foundation input set, and sole resource-group-name output. Added positive and negative unit cases, including secret inputs/outputs and environment mismatch/unresolved values. Updated infra/README.md to describe the verified naming boundary, current dev resource-group-only deployment, and unresolved test/prod gates. Verification: pinned Bicep baseline passed; 9 focused unit tests passed; dev deployment-readiness passed; test and prod deployment-readiness both failed as expected on unresolved location; git diff --check passed. No Azure resources or billable application capacity were provisioned.
+
+Draft PR #52 is open for TASK-46. The current PR checks must pass on the final published head before proposed completion.
 <!-- SECTION:NOTES:END -->
