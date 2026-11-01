@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-10-29T20:04:00Z'
-updated_date: '2026-11-01T14:22:00Z'
+updated_date: '2026-11-01T14:49:00Z'
 labels:
   - infrastructure
   - cicd
@@ -60,4 +60,6 @@ Verify with the focused Python tests, repository quality checks, workflow lint, 
 Implemented a dry-run-by-default Azure bootstrap script, dev/test environment OIDC smoke workflow, focused authorization policy tests, and a runbook with the repository-owner environment setup keys. Local verification: scripts/check.py and scripts/quality.py pass; full unittest suite passes (36 tests); git diff --check passes. actionlint is not installed locally and will be checked by PR CI. Azure identities and GitHub environments are not yet configured; the live OIDC success and cross-environment denial checks remain outstanding pending reviewed bootstrap and owner setup.
 
 Published draft PR #55: https://github.com/vkaam/phonebuddy/pull/55. PR CI initially identified shellcheck SC2209 in the new workflow; fixed the assignment and reran on head 5bb5e4efe4231c0fae3ff0d103bf200a42957ad4. Quality and advisory risk checks both pass on that head. Bootstrap/runbook review, GitHub environment secrets/restrictions, Azure role/FIC readback, and live dev/test OIDC smoke runs remain outstanding.
+
+Addressed both inline review findings in commit 921da72eb080e132968254a4cfc2573fac909bf3: bootstrap now validates the complete federated-credential list before any role assignment, and Azure CLI failures report only a sanitized exit status. Added regression coverage for unexpected/multiple trusts and command-argument redaction. Local full suite passes (38 tests), repository quality checks pass, and PR CI plus advisory risk checks pass on this revision. Both review threads were reacted to and resolved.
 <!-- SECTION:NOTES:END -->
