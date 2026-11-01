@@ -132,9 +132,9 @@ python3 -B scripts/check.py
 ```
 
 This runs the repository quality checks, Python unit suite, locked web install,
-web tests, npm audit, and typecheck/build, and creates a local evidence bundle with Node,
+web tests, npm audit, lint, and typecheck/build, and creates a local evidence bundle with Node,
 npm, and installed dependency versions. It requires Node, npm, and access to the
-locked dependencies and the npm audit registry. Lint, browser smoke,
+locked dependencies and the npm audit registry. Browser smoke
 and hosted-only checks remain outstanding; a local pass is not complete issue
 #39 evidence. For the web application, CI uses Node.js 22.15.1 and runs from
 `apps/web`:
@@ -142,6 +142,7 @@ and hosted-only checks remain outstanding; a local pass is not complete issue
 ```sh
 npm ci --no-audit --no-fund
 npm audit
+npm run lint
 npm test
 npm run build
 ```

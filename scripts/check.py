@@ -80,7 +80,7 @@ def write_bundle(root, output, checks, timeout):
         "python": sys.version, "platform": platform.platform(),
         "kind": "local-baseline", "hosted_ci": False,
         "independent_review": "not run", "checks": [], "errors": [],
-        "outstanding_checks": ["lint", "browser smoke", "hosted CI", "actionlint",
+        "outstanding_checks": ["browser smoke", "hosted CI", "actionlint",
                                "Gitleaks"],
     }
     try:
@@ -122,6 +122,7 @@ def main(argv=None):
         ("web-install", ["npm", "--prefix", "apps/web", "ci", "--no-audit", "--no-fund"]),
         ("web-dependencies", ["npm", "--prefix", "apps/web", "ls", "--all", "--json"]),
         ("web-audit", ["npm", "--prefix", "apps/web", "audit"]),
+        ("web-lint", ["npm", "--prefix", "apps/web", "run", "lint"]),
         ("web-test", ["npm", "--prefix", "apps/web", "test"]),
         ("web-build", ["npm", "--prefix", "apps/web", "run", "build"]),
     ]

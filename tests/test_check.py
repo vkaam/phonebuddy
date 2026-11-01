@@ -72,6 +72,7 @@ class RunnerTests(unittest.TestCase):
         self.assertEqual(checks["web-build"][-2:], ["run", "build"])
         self.assertEqual(checks["web-dependencies"][-2:], ["--all", "--json"])
         self.assertEqual(checks["web-audit"], ["npm", "--prefix", "apps/web", "audit"])
+        self.assertEqual(checks["web-lint"], ["npm", "--prefix", "apps/web", "run", "lint"])
 
     def test_missing_required_check_fails_bundle(self):
         with patch.object(check, "snapshot", return_value={"head": "a"}):
