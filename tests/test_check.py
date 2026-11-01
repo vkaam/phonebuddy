@@ -58,6 +58,30 @@ class RunnerTests(unittest.TestCase):
                 self.assertEqual(saved, report)
                 self.assertFalse(saved["hosted_ci"])
                 self.assertEqual(saved["independent_review"], "not run")
+                self.assertIn("hosted CI", saved["outstanding_checks"])
+
+    def test_main_registers_web_checks_as_required(self):
+        with patch.object(check, "write_bundle", return_value={"status": "pass"}) as bundle:
+            self.assertEqual(check.main(["--output-parent", str(self.root)]), 0)
+        checks = dict(bundle.call_args.args[2])
+        self.assertEqual(checks["node-version"], ["node", "--version"])
+        self.assertEqual(checks["npm-version"], ["npm", "--version"])
+        self.assertEqual(checks["web-install"],
+                         ["npm", "--prefix", "apps/web", "ci", "--no-audit", "--no-fund"])
+        self.assertEqual(checks["web-test"][-1], "test")
+        self.assertEqual(checks["web-build"][-2:], ["run", "build"])
+        self.assertEqual(checks["web-dependencies"][-2:], ["--all", "--json"])
+        self.assertEqual(checks["web-audit"], ["npm", "--prefix", "apps/web", "audit"])
+        self.assertEqual(checks["web-lint"], ["npm", "--prefix", "apps/web", "run", "lint"])
+        self.assertEqual(checks["web-browser"],
+                         ["npm", "--prefix", "apps/web", "run", "test:browser"])
+
+    def test_missing_required_check_fails_bundle(self):
+        with patch.object(check, "snapshot", return_value={"head": "a"}):
+            report = check.write_bundle(self.root, self.root,
+                                        [("web-install", [str(self.root / "missing")])], 1)
+        self.assertEqual(report["status"], "fail")
+        self.assertEqual(report["checks"][0]["status"], "error")
 
     def test_snapshot_error_still_writes_failed_report(self):
         with patch.object(check, "snapshot", side_effect=ValueError("unavailable")):

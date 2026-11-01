@@ -131,14 +131,23 @@ From the repository root, the local baseline is:
 python3 -B scripts/check.py
 ```
 
-This runs the repository quality checks and Python unit suite and creates a
-local evidence bundle. For the web application, CI uses Node.js 22.15.1 and
-runs from `apps/web`:
+This runs the repository quality checks, Python unit suite, locked web install,
+web tests, Chromium smoke tests, npm audit, lint, and typecheck/build, and creates
+a local evidence bundle with Node, npm, and installed dependency versions. It
+requires Node, npm, access to the locked dependencies and audit registry, and the
+Playwright Chromium browser installed as described in `docs/quality-and-delivery.md`.
+Hosted-only checks remain outstanding; a local pass is not complete issue
+#39 evidence. For the web application, CI uses Node.js 22.15.1 and runs from
+`apps/web`:
 
 ```sh
 npm ci --no-audit --no-fund
+npm audit
+npm run lint
 npm test
 npm run build
+npx playwright install --with-deps chromium
+npm run test:browser
 ```
 
 The hosted `Quality` workflow runs on pull requests, pushes to `main`, merge
