@@ -33,7 +33,7 @@ jobs:
         run: |
           mkdir -p artifacts
           python3 scripts/quality.py 2>&1 | tee artifacts/quality.txt
-          python3 -B -m unittest discover -s tests -v 2>&1 | tee artifacts/tests.txt
+          python3 -B scripts/run_required_unittests.py 2>&1 | tee artifacts/tests.txt
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '22.15.1'

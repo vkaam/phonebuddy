@@ -35,7 +35,7 @@ Run from the repository root with Python 3.9 or newer:
 
 ```sh
 python3 -B scripts/quality.py
-python3 -B -m unittest discover -s tests -v
+python3 -B scripts/run_required_unittests.py
 ```
 
 Or run the baseline and web checks and save a local evidence bundle (requires
@@ -67,9 +67,10 @@ lints web JavaScript and TypeScript with `npm run lint`, and runs web tests,
 Chromium route/config/keyboard smoke tests, and `npm run build` (which includes
 TypeScript checking). The browser tests use controlled config responses and do
 not prove telephony or backend behavior. A missing browser fails the bundle.
-The required browser suite also fails if tests are skipped, absent, or return
-non-passing results, and focused `test.only` cases are forbidden. This rule applies to browser smoke
-tests; it does not yet enforce skip detection for every other test runner.
+The required Python suite fails on empty discovery, skipped tests, expected
+failures, errors, or failures. The required browser suite fails if tests are
+skipped, absent, or return non-passing results, and focused `test.only` cases
+are forbidden. The Node unit-test runner does not yet enforce skip detection.
 Checks continue after a
 failure, but any failed or missing step fails the bundle. Each invocation creates
 a fresh directory. The install replaces `apps/web/node_modules`.
