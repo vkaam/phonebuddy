@@ -80,6 +80,8 @@ def write_bundle(root, output, checks, timeout):
         "python": sys.version, "platform": platform.platform(),
         "kind": "local-baseline", "hosted_ci": False,
         "independent_review": "not run", "checks": [], "errors": [],
+        "outstanding_checks": ["lint", "browser smoke", "dependency vulnerability scan",
+                               "hosted CI", "actionlint", "Gitleaks"],
     }
     try:
         report["source_before"] = snapshot(root)
@@ -115,6 +117,12 @@ def main(argv=None):
     checks = [
         ("repository", [sys.executable, "-B", "scripts/quality.py"]),
         ("tests", [sys.executable, "-B", "-m", "unittest", "discover", "-s", "tests", "-v"]),
+        ("node-version", ["node", "--version"]),
+        ("npm-version", ["npm", "--version"]),
+        ("web-install", ["npm", "--prefix", "apps/web", "ci", "--no-audit", "--no-fund"]),
+        ("web-dependencies", ["npm", "--prefix", "apps/web", "ls", "--all", "--json"]),
+        ("web-test", ["npm", "--prefix", "apps/web", "test"]),
+        ("web-build", ["npm", "--prefix", "apps/web", "run", "build"]),
     ]
     report = write_bundle(ROOT, output, checks, args.timeout)
     print(f"Local baseline: {report['status']}; evidence: {output / 'report.json'}")

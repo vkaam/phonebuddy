@@ -38,7 +38,8 @@ python3 -B scripts/quality.py
 python3 -B -m unittest discover -s tests -v
 ```
 
-Or run both checks and save a local evidence bundle:
+Or run the baseline and web checks and save a local evidence bundle (requires
+Node.js, npm, and access to the locked npm dependencies):
 
 ```sh
 python3 -B scripts/check.py
@@ -48,8 +49,12 @@ The command prints a unique directory under the system temporary directory.
 Use `--output-parent /existing/directory` to choose another location outside the
 checkout, and `--timeout 120` to set each check's timeout (1–600 seconds).
 It returns a nonzero exit code for failed, timed-out, or unlaunchable checks,
-source identity errors, or source changes detected between checks. Both checks
-run even if the first fails. Each invocation creates a fresh directory.
+source identity errors, or source changes detected between checks. The runner
+also records Node and npm versions, performs `npm ci --no-audit --no-fund`,
+records installed dependency versions, and runs the existing web tests and
+`npm run build` (which includes TypeScript checking). Checks continue after a
+failure, but any failed or missing step fails the bundle. Each invocation creates
+a fresh directory. The install replaces `apps/web/node_modules`.
 
 `report.json` records the head SHA, Git status, before/after file manifests and
 their SHA-256 digests, Python/platform version, exact commands, working directory,
@@ -60,7 +65,11 @@ the final snapshot cannot be detected; run against a stable checkout. The report
 identifies local dirty source but does not archive a patch or reproduce it by
 itself: preserve the reviewed patch separately or rerun after committing.
 
-This is a local baseline runner, not an isolation boundary or a hosted CI result.
+This is a partial local baseline, not a complete issue #39 evidence bundle, an
+isolation boundary, or a hosted CI result. Lint, browser smoke tests, dependency
+vulnerability scanning, actionlint, and Gitleaks are not run by this command;
+the report lists these outstanding gates. A passing bundle does not establish
+that those checks passed.
 It runs repository Python code with the caller's existing permissions and
 environment. The timeout bounds each direct check process, not arbitrary child
 process trees. Run untrusted code only in the disposable environment described
