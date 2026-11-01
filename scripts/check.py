@@ -80,8 +80,7 @@ def write_bundle(root, output, checks, timeout):
         "python": sys.version, "platform": platform.platform(),
         "kind": "local-baseline", "hosted_ci": False,
         "independent_review": "not run", "checks": [], "errors": [],
-        "outstanding_checks": ["browser smoke", "hosted CI", "actionlint",
-                               "Gitleaks"],
+        "outstanding_checks": ["hosted CI", "actionlint", "Gitleaks"],
     }
     try:
         report["source_before"] = snapshot(root)
@@ -124,6 +123,7 @@ def main(argv=None):
         ("web-audit", ["npm", "--prefix", "apps/web", "audit"]),
         ("web-lint", ["npm", "--prefix", "apps/web", "run", "lint"]),
         ("web-test", ["npm", "--prefix", "apps/web", "test"]),
+        ("web-browser", ["npm", "--prefix", "apps/web", "run", "test:browser"]),
         ("web-build", ["npm", "--prefix", "apps/web", "run", "build"]),
     ]
     report = write_bundle(ROOT, output, checks, args.timeout)
