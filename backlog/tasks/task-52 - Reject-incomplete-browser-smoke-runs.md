@@ -1,11 +1,11 @@
 ---
 id: TASK-52
 title: Reject incomplete browser smoke runs
-status: In Progress
+status: Done
 assignee:
   - '@codex'
 created_date: '2026-11-01T19:57:00Z'
-updated_date: '2026-11-01T20:01:00Z'
+updated_date: '2026-11-01T20:03:00Z'
 labels:
   - factory
 dependencies:
@@ -38,9 +38,9 @@ Spec: Make the required Playwright suite fail for skipped or empty runs and focu
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 The required browser suite fails on skipped tests, empty selections or focused tests and retains normal test output.
-- [ ] #2 Regression tests demonstrate successful and unsuccessful reporter outcomes, including skipped and empty test suites; actual browser smoke still passes.
-- [ ] #3 The declared local checks and final-head hosted Quality and advisory checks pass, and documentation states the behavior and limits.
+- [x] #1 The required browser suite fails on skipped tests, empty selections or focused tests and retains normal test output.
+- [x] #2 Regression tests demonstrate successful and unsuccessful reporter outcomes, including skipped and empty test suites; actual browser smoke still passes.
+- [x] #3 The declared local checks and final-head hosted Quality and advisory checks pass, and documentation states the behavior and limits.
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -57,4 +57,12 @@ Verification: npm test passed four tests, including reporter outcomes; real Play
 Draft PR https://github.com/vkaam/phonebuddy/pull/66; implementation head a04a5c6. Hosted checks and independent review remain pending; other test runners and aggregate issue #39 acceptance remain outstanding.
 
 Strengthened the guard to reject any non-passing result, including an expected failure, and added a regression case. npm test and git diff --check passed; the full 11-check bundle passed after the change (evidence /private/var/folders/zs/9bq4j3rx3wng_vzz52w8hrf80000gn/T/phonebuddy-quality-vd4cuwhr/report.json). Rechecking hosted CI on the revised head.
+
+Hosted Quality https://github.com/vkaam/phonebuddy/actions/runs/41344713222 and PR safety advisory https://github.com/vkaam/phonebuddy/actions/runs/41344710312 passed on revised head 08444002485a3682ba90bc08eff1e3525b6e96cf. Final task metadata commit requires fresh checks. Human review and merge remain outstanding; branch-local Done is provisional.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Added a required Playwright reporter that rejects skipped, missing and non-passing browser tests, and forbids focused tests. Reporter regression tests, real negative Playwright fixtures, the full local evidence bundle, npm audit and pre-finalization hosted checks passed. Independent review and merge remain outstanding; other runners and aggregate issue #39 acceptance remain incomplete.
+<!-- SECTION:FINAL_SUMMARY:END -->
