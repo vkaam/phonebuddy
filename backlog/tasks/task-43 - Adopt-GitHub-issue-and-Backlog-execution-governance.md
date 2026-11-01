@@ -1,17 +1,18 @@
 ---
 id: TASK-43
 title: Adopt GitHub issue and Backlog execution governance
-status: In Progress
+status: Done
 assignee:
   - '@codex'
 created_date: '2026-11-01T09:47:00Z'
-updated_date: '2026-11-01T09:55:00Z'
+updated_date: '2026-11-01T09:58:00Z'
 labels:
   - factory
   - governance
 dependencies: []
 references:
   - https://github.com/vkaam/phonebuddy/issues/37
+  - https://github.com/vkaam/phonebuddy/pull/48
 documentation:
   - docs/issue-backlog-governance.md
 modified_files:
@@ -48,7 +49,7 @@ Spec: Preserve native Backlog IDs and CLI ownership, human issue authority, stag
 - [x] #1 Repository instructions and templates consistently separate human-owned issue intent from CLI-managed atomic execution, including issue revision, scope, verification and acceptance evidence.
 - [x] #2 Governance defines approved intake, idempotent decomposition, dependency and lease handling, controlled amendments, branch-local completion and aggregate issue closure without changing merge authority.
 - [x] #3 The autonomy and software plans and relevant GitHub issue requirements align with the governance; archived migration records and unrelated working-tree changes remain unchanged.
-- [ ] #4 Documentation and native task records pass relevant local checks and current-head hosted CI and are published through a reviewable PR that references the parent issue without closing it.
+- [x] #4 Documentation and native task records pass relevant local checks and current-head hosted CI and are published through a reviewable PR that references the parent issue without closing it.
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -66,4 +67,14 @@ Spec: Preserve native Backlog IDs and CLI ownership, human issue authority, stag
 Updated governance acceptance requirements in issues #37, #41, #42, #45, #46 and #47 under the user instruction. Preserved original acceptance states and all dependency/block/reference sections; imported Backlog lifecycle metadata is explicitly historical. Parent issue stays open. Refreshed the approved requirements snapshot after these authorized amendments.
 
 AC1/AC2: reviewed AGENTS, detailed governance, plan and specification/evidence/PR templates for native task schema, approved revisions, bounded scope, amendments, leases and aggregate closure. Native TASK-43 metadata validated through CLI JSON. AC3: six relevant GitHub issue bodies re-read and verified, original criteria/states and dependency sections preserved; adopted GitHub direction supersedes the Azure DevOps proposal. All 72 pre-existing migration paths match their preservation hashes. Local scripts/check.py passed repository checks and 24 Python tests with stable source; git diff --check passed. Runtime enforcement is explicitly future work. AC4 awaits publication and final-head hosted CI.
+
+Published draft PR https://github.com/vkaam/phonebuddy/pull/48 with neutral Refs #37 linkage; it does not close the parent. The existing archive migration remains unstaged and unchanged. Hosted checks are pending; maintainer review and runtime enforcement remain outstanding.
+
+AC4: draft PR #48 published with no auto-closing issue references (GitHub GraphQL closingIssuesReferences empty). Commit c79253a passed Quality (CI run 41295294958) and advisory reporting (41295294979), verified by commit-bound check-run API. Final Backlog metadata will be committed and pushed, then all checks reverified for the final head. Parent issue #37 and all five related issues remain open; maintainer review is outstanding. Existing archive migration stays unstaged.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Adopted the user-approved GitHub Issues control plane and native Backlog execution governance across AGENTS, the detailed policy, plans, quality guidance and templates, with policy owner coverage. Updated governance requirements in issues #37, #41, #42, #45, #46 and #47 while preserving existing criteria, dependencies and open states. TASK-43 is the atomic issue-linked execution slice; its completion remains proposed until PR merge and does not close #37. Local repository checks and 24 Python tests passed, native metadata and issue linkage validated, all 72 pre-existing migration paths preserved, and initial hosted Quality/advisory reporting passed. PR: https://github.com/vkaam/phonebuddy/pull/48. Maintainer review and future runtime enforcement remain outstanding; no protection, merge or deployment authority changed.
+<!-- SECTION:FINAL_SUMMARY:END -->
