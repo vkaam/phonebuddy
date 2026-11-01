@@ -51,7 +51,7 @@ checkout, and `--timeout 120` to set each check's timeout (1–600 seconds).
 It returns a nonzero exit code for failed, timed-out, or unlaunchable checks,
 source identity errors, or source changes detected between checks. The runner
 also records Node and npm versions, performs `npm ci --no-audit --no-fund`,
-records installed dependency versions, and runs the existing web tests and
+records installed dependency versions, audits the lockfile with `npm audit`, and runs the existing web tests and
 `npm run build` (which includes TypeScript checking). Checks continue after a
 failure, but any failed or missing step fails the bundle. Each invocation creates
 a fresh directory. The install replaces `apps/web/node_modules`.
@@ -66,8 +66,8 @@ identifies local dirty source but does not archive a patch or reproduce it by
 itself: preserve the reviewed patch separately or rerun after committing.
 
 This is a partial local baseline, not a complete issue #39 evidence bundle, an
-isolation boundary, or a hosted CI result. Lint, browser smoke tests, dependency
-vulnerability scanning, actionlint, and Gitleaks are not run by this command;
+isolation boundary, or a hosted CI result. Lint, browser smoke tests,
+actionlint, and Gitleaks are not run by this command;
 the report lists these outstanding gates. A passing bundle does not establish
 that those checks passed.
 It runs repository Python code with the caller's existing permissions and
@@ -94,7 +94,16 @@ manual dispatch, and merge groups. Its single stable check is `Quality`. It:
   for 14 days, identified by run ID and attempt. Failed steps fail `Quality`.
 
 Actions use immutable revisions; downloaded tools have pinned SHA-256 hashes.
-Dependabot proposes weekly action updates. Tool versions/checksums require
+Dependabot proposes weekly action and web npm updates. The local bundle and
+hosted Quality run `npm audit` against the locked web dependency graph; any
+reported severity or registry failure fails the check. CI retains the audit
+log with its QA evidence. A maintainer reviews each finding, affected usage,
+and proposed update, applies a verified fix, and reruns the checks. If a fix is
+unavailable or the registry cannot be reached, record the finding or outage,
+impact, owner and remediation plan; do not present the check as passing or
+silently suppress it. A clean audit reflects the registry's current advisory
+data, not proof that dependencies have no vulnerabilities.
+Tool versions/checksums require
 reviewed updates in the workflow. CI has a read-only token, no Azure credentials,
 no privileged connections, no shared cache, and a ten-minute job limit.
 Run untrusted PRs only on GitHub-hosted disposable runners.
