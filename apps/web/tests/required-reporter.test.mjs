@@ -20,6 +20,9 @@ test('required browser reporter rejects skipped, empty and incomplete runs', asy
   const skipped = reporterWithTests(['a']);
   skipped.onTestEnd({ id: 'a' }, { status: 'skipped' });
   assert.deepEqual(await skipped.onEnd({ status: 'passed' }), { status: 'failed' });
+  const expectedFailure = reporterWithTests(['a']);
+  expectedFailure.onTestEnd({ id: 'a' }, { status: 'failed' });
+  assert.deepEqual(await expectedFailure.onEnd({ status: 'passed' }), { status: 'failed' });
   assert.deepEqual(await reporterWithTests([]).onEnd({ status: 'passed' }), { status: 'failed' });
   assert.deepEqual(await reporterWithTests(['a']).onEnd({ status: 'passed' }), { status: 'failed' });
 });

@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-01T19:57:00Z'
-updated_date: '2026-11-01T19:59:00Z'
+updated_date: '2026-11-01T20:01:00Z'
 labels:
   - factory
 dependencies:
@@ -55,4 +55,6 @@ Spec: Make the required Playwright suite fail for skipped or empty runs and focu
 Verification: npm test passed four tests, including reporter outcomes; real Playwright runs with skipped, focused and empty selections all returned nonzero, with the reporter detecting skipped and empty cases. The full local evidence bundle passed all 11 checks including three real Chromium smoke tests, with unchanged source: /private/var/folders/zs/9bq4j3rx3wng_vzz52w8hrf80000gn/T/phonebuddy-quality-hyhx1zbv/report.json. 34 Python tests, npm audit (zero vulnerabilities) and git diff --check passed. Hosted checks and independent review pending.
 
 Draft PR https://github.com/vkaam/phonebuddy/pull/66; implementation head a04a5c6. Hosted checks and independent review remain pending; other test runners and aggregate issue #39 acceptance remain outstanding.
+
+Strengthened the guard to reject any non-passing result, including an expected failure, and added a regression case. npm test and git diff --check passed; the full 11-check bundle passed after the change (evidence /private/var/folders/zs/9bq4j3rx3wng_vzz52w8hrf80000gn/T/phonebuddy-quality-vd4cuwhr/report.json). Rechecking hosted CI on the revised head.
 <!-- SECTION:NOTES:END -->

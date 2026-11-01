@@ -67,8 +67,8 @@ lints web JavaScript and TypeScript with `npm run lint`, and runs web tests,
 Chromium route/config/keyboard smoke tests, and `npm run build` (which includes
 TypeScript checking). The browser tests use controlled config responses and do
 not prove telephony or backend behavior. A missing browser fails the bundle.
-The required browser suite also fails if tests are skipped or absent, and
-focused `test.only` cases are forbidden. This rule applies to browser smoke
+The required browser suite also fails if tests are skipped, absent, or return
+non-passing results, and focused `test.only` cases are forbidden. This rule applies to browser smoke
 tests; it does not yet enforce skip detection for every other test runner.
 Checks continue after a
 failure, but any failed or missing step fails the bundle. Each invocation creates
