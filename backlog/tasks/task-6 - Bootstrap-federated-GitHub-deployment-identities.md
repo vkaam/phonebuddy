@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-10-29T20:04:00Z'
-updated_date: '2026-11-01T14:49:00Z'
+updated_date: '2026-11-01T20:20:00Z'
 labels:
   - infrastructure
   - cicd
@@ -62,4 +62,6 @@ Implemented a dry-run-by-default Azure bootstrap script, dev/test environment OI
 Published draft PR #55: https://github.com/vkaam/phonebuddy/pull/55. PR CI initially identified shellcheck SC2209 in the new workflow; fixed the assignment and reran on head 5bb5e4efe4231c0fae3ff0d103bf200a42957ad4. Quality and advisory risk checks both pass on that head. Bootstrap/runbook review, GitHub environment secrets/restrictions, Azure role/FIC readback, and live dev/test OIDC smoke runs remain outstanding.
 
 Addressed both inline review findings in commit 921da72eb080e132968254a4cfc2573fac909bf3: bootstrap now validates the complete federated-credential list before any role assignment, and Azure CLI failures report only a sanitized exit status. Added regression coverage for unexpected/multiple trusts and command-argument redaction. Local full suite passes (38 tests), repository quality checks pass, and PR CI plus advisory risk checks pass on this revision. Both review threads were reacted to and resolved.
+
+After integrating origin/main, local scripts/quality.py and all 40 Python tests passed; npm audit passed when rerun with network access. Local bundled browser verification could not launch because Playwright Chromium is not installed on this workstation; the hosted Quality check passed browser build/test and workflow lint on PR head 412d167fa6e97bd3c67685f30fa954d15df10e24, and advisory Risk report passed. PR #55 is current with main and review findings are resolved. TASK-6 remains In Progress pending reviewed Azure identity bootstrap, GitHub dev/test environment configuration, Azure federation/RBAC readback, and successful trusted dev/test OIDC smoke runs.
 <!-- SECTION:NOTES:END -->
