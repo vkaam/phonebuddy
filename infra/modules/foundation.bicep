@@ -11,7 +11,7 @@ param owner string
 param costCenter string
 
 resource resourceGroup 'Microsoft.Resources/resourceGroups@2024-03-01' = {
-  name: 'rg-pb-${environment}-foundation'
+  name: 'rg-pb-${environment}-${location}-foundation'
   location: location
   tags: {
     environment: environment

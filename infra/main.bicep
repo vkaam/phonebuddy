@@ -8,7 +8,7 @@ targetScope = 'subscription'
 param environment string
 
 @minLength(1)
-@maxLength(40)
+@maxLength(37)
 param location string
 
 @minLength(1)
@@ -21,7 +21,7 @@ param costCenter string
 
 // One deployment owns only its environment's foundation resource group.
 module foundation './modules/foundation.bicep' = {
-  name: 'phonebuddy-${environment}-foundation'
+  name: 'phonebuddy-${environment}-${location}-foundation'
   params: {
     environment: environment
     location: location
