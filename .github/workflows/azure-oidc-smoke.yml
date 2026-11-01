@@ -41,7 +41,7 @@ jobs:
           own_group="rg-pb-${TARGET_ENVIRONMENT}-westeurope-foundation"
           az group show --name "$own_group" --query name --output tsv >/dev/null
 
-          if [[ "$TARGET_ENVIRONMENT" == "dev" ]]; then other_environment=test; else other_environment=dev; fi
+          if [[ "$TARGET_ENVIRONMENT" == "dev" ]]; then other_environment='test'; else other_environment='dev'; fi
           other_group="rg-pb-${other_environment}-westeurope-foundation"
           probe="oidc-cross-env-probe-${GITHUB_RUN_ID}"
           template="$RUNNER_TEMP/empty-template.json"
