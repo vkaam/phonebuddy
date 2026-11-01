@@ -1,11 +1,11 @@
 ---
 id: TASK-51
 title: Verify web shell behavior in a real browser
-status: In Progress
+status: Done
 assignee:
   - '@codex'
 created_date: '2026-11-01T15:25:00Z'
-updated_date: '2026-11-01T15:28:00Z'
+updated_date: '2026-11-01T15:31:00Z'
 labels:
   - factory
 dependencies:
@@ -46,10 +46,10 @@ Spec: Add deterministic real Chromium smoke tests for application routes, missin
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 Pinned real-browser smoke tests verify the dialer, history and settings routes with controlled valid configuration; missing configuration produces the user-facing setup error.
-- [ ] #2 Keyboard-only navigation and the skip link are exercised, with observable focus and route assertions.
-- [ ] #3 Local evidence and hosted Quality execute the browser suite, retain logs and fail for missing browsers or failing tests; setup prerequisites are documented.
-- [ ] #4 The locked install, browser and existing checks, npm audit and declared Python tests pass; remaining hosted-only and issue-wide evidence gaps are explicit.
+- [x] #1 Pinned real-browser smoke tests verify the dialer, history and settings routes with controlled valid configuration; missing configuration produces the user-facing setup error.
+- [x] #2 Keyboard-only navigation and the skip link are exercised, with observable focus and route assertions.
+- [x] #3 Local evidence and hosted Quality execute the browser suite, retain logs and fail for missing browsers or failing tests; setup prerequisites are documented.
+- [x] #4 The locked install, browser and existing checks, npm audit and declared Python tests pass; remaining hosted-only and issue-wide evidence gaps are explicit.
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -64,4 +64,12 @@ Spec: Add deterministic real Chromium smoke tests for application routes, missin
 Local verification: three Chromium tests passed for routes, missing configuration and keyboard skip/navigation; an intentionally empty browser path caused the suite to fail with a missing executable error. npm audit reported zero vulnerabilities; 34 Python tests and git diff --check passed. Full 11-check local bundle passed with unchanged source; evidence /private/var/folders/zs/9bq4j3rx3wng_vzz52w8hrf80000gn/T/phonebuddy-quality-ikm2egf3/report.json. Chromium was installed under /private/tmp/phonebuddy-playwright-browsers for this run. Hosted checks and independent review remain pending.
 
 Draft PR https://github.com/vkaam/phonebuddy/pull/64; implementation head 5daa8b0. Hosted Quality and advisory checks and independent review are pending. Issue #39 remains open for aggregate acceptance.
+
+Hosted Quality https://github.com/vkaam/phonebuddy/actions/runs/41321436397 and PR safety advisory https://github.com/vkaam/phonebuddy/actions/runs/41321434801 passed on head ce0c336976008a72c8d7da7b348253e7f87d404a. Final metadata commit requires fresh checks. Independent review and merge remain outstanding; branch-local Done is provisional.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Added pinned Playwright Chromium smoke tests for workspace routes, missing configuration and keyboard access, and registered them in local evidence and hosted Quality. Three browser tests, missing-browser failure, eleven local checks, npm audit, 34 Python tests and pre-finalization hosted checks were verified. Independent review and merge remain outstanding; issue #39 requires aggregate acceptance.
+<!-- SECTION:FINAL_SUMMARY:END -->
