@@ -41,6 +41,7 @@ jobs:
         working-directory: apps/web
         run: |
           npm ci --no-audit --no-fund
+          npm audit 2>&1 | tee ../../artifacts/web-audit.txt
           npm test
           npm run build
       - name: Retain web build
