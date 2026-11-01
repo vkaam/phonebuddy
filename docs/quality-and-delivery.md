@@ -51,7 +51,8 @@ checkout, and `--timeout 120` to set each check's timeout (1–600 seconds).
 It returns a nonzero exit code for failed, timed-out, or unlaunchable checks,
 source identity errors, or source changes detected between checks. The runner
 also records Node and npm versions, performs `npm ci --no-audit --no-fund`,
-records installed dependency versions, audits the lockfile with `npm audit`, and runs the existing web tests and
+records installed dependency versions, audits the lockfile with `npm audit`,
+lints web JavaScript and TypeScript with `npm run lint`, and runs web tests and
 `npm run build` (which includes TypeScript checking). Checks continue after a
 failure, but any failed or missing step fails the bundle. Each invocation creates
 a fresh directory. The install replaces `apps/web/node_modules`.
@@ -66,7 +67,7 @@ identifies local dirty source but does not archive a patch or reproduce it by
 itself: preserve the reviewed patch separately or rerun after committing.
 
 This is a partial local baseline, not a complete issue #39 evidence bundle, an
-isolation boundary, or a hosted CI result. Lint, browser smoke tests,
+isolation boundary, or a hosted CI result. Browser smoke tests,
 actionlint, and Gitleaks are not run by this command;
 the report lists these outstanding gates. A passing bundle does not establish
 that those checks passed.
