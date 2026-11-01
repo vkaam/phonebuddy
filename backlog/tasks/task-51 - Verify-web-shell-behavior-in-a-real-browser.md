@@ -62,4 +62,6 @@ Spec: Add deterministic real Chromium smoke tests for application routes, missin
 
 <!-- SECTION:NOTES:BEGIN -->
 Local verification: three Chromium tests passed for routes, missing configuration and keyboard skip/navigation; an intentionally empty browser path caused the suite to fail with a missing executable error. npm audit reported zero vulnerabilities; 34 Python tests and git diff --check passed. Full 11-check local bundle passed with unchanged source; evidence /private/var/folders/zs/9bq4j3rx3wng_vzz52w8hrf80000gn/T/phonebuddy-quality-ikm2egf3/report.json. Chromium was installed under /private/tmp/phonebuddy-playwright-browsers for this run. Hosted checks and independent review remain pending.
+
+Draft PR https://github.com/vkaam/phonebuddy/pull/64; implementation head 5daa8b0. Hosted Quality and advisory checks and independent review are pending. Issue #39 remains open for aggregate acceptance.
 <!-- SECTION:NOTES:END -->
