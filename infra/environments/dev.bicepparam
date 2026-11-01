@@ -1,6 +1,6 @@
 using '../main.bicep'
 
 param environment = 'dev'
-param location = 'UNRESOLVED' // Set only after geography and quota approval.
-param owner = 'UNRESOLVED'
-param costCenter = 'UNRESOLVED'
+param location = 'swedencentral'
+param owner = 'mees.vankaam@cereus.be'
+param costCenter = 'PHONEBUDDY-DEV'
