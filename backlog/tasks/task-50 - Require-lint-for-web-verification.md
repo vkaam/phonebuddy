@@ -1,11 +1,11 @@
 ---
 id: TASK-50
 title: Require lint for web verification
-status: In Progress
+status: Done
 assignee:
   - '@codex'
 created_date: '2026-11-01T15:05:00Z'
-updated_date: '2026-11-01T15:18:00Z'
+updated_date: '2026-11-01T15:19:00Z'
 labels:
   - factory
 dependencies:
@@ -48,9 +48,9 @@ Spec: Add a pinned, meaningful Biome lint setup covering web JavaScript and Type
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 A pinned lint command checks the web JavaScript and TypeScript source and rejects a demonstrated invalid sample.
-- [ ] #2 Local evidence and hosted Quality require lint, retain its output and fail when it fails.
-- [ ] #3 The locked install, lint, tests, build, npm audit and declared Python checks pass; documentation retains the outstanding browser and hosted-only gates.
+- [x] #1 A pinned lint command checks the web JavaScript and TypeScript source and rejects a demonstrated invalid sample.
+- [x] #2 Local evidence and hosted Quality require lint, retain its output and fail when it fails.
+- [x] #3 The locked install, lint, tests, build, npm audit and declared Python checks pass; documentation retains the outstanding browser and hosted-only gates.
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -71,4 +71,12 @@ Draft PR https://github.com/vkaam/phonebuddy/pull/63 records the audit blocker a
 Triage amendment v2: user approved replacing ESLint with Biome on 2026-11-01; added apps/web/biome.json and ESLint config removal to the scoped paths. Re-run all checks for the revised dependency and source identity.
 
 Amendment v2 validation: Biome 2.6.4 checks both web source files and exits nonzero for a temporary TypeScript sample containing an unused variable. npm audit reports zero vulnerabilities; 34 Python tests passed and python3 -B scripts/check.py passed all ten checks with unchanged source (evidence /private/var/folders/zs/9bq4j3rx3wng_vzz52w8hrf80000gn/T/phonebuddy-quality-768p3t6d/report.json); git diff --check passed. Awaiting hosted validation on the revised PR head and independent review.
+
+Quality https://github.com/vkaam/phonebuddy/actions/runs/41320601378 and PR safety advisory https://github.com/vkaam/phonebuddy/actions/runs/41320612013 passed on revised head 5071b64f2bf64d86143a6a34c70d535ab75b1560. Final task metadata commit requires fresh hosted checks. Human review and merge remain outstanding; branch-local Done is provisional.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Added pinned Biome linting for web JavaScript and TypeScript to local and hosted evidence. The ten-check local bundle, 34 Python tests, clean npm audit, negative lint fixture and pre-finalization hosted checks passed. Independent review and merge remain outstanding; browser smoke and broader issue #39 evidence remain incomplete.
+<!-- SECTION:FINAL_SUMMARY:END -->
