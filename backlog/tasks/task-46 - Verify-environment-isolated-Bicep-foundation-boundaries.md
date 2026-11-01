@@ -1,11 +1,11 @@
 ---
 id: TASK-46
 title: Verify environment-isolated Bicep foundation boundaries
-status: In Progress
+status: Done
 assignee:
   - '@codex'
 created_date: '2026-11-01T11:26:00Z'
-updated_date: '2026-11-01T11:37:00Z'
+updated_date: '2026-11-01T11:38:00Z'
 labels:
   - infrastructure
   - cicd
@@ -66,10 +66,12 @@ Current published head 9180e6b8331e64ad2cc3ecafe046d224c2022f32 passed required 
 Automated review found the validator did not check that the selected environment parameter was forwarded into the nested foundation module. Fixing that check and adding a negative regression case before proposing completion again.
 
 Addressed the P2 review finding: the compiled deployment contract now requires environment/location/owner/costCenter module inputs to forward the corresponding root parameters and rejects a fixed environment. Added a regression case for a hard-coded dev environment. Reverified: pinned Bicep baseline passed; 10 focused unit tests passed; dev readiness passed; test/prod readiness failed closed on unresolved inputs; git diff --check passed. The updated fix still needs to be published and checked on the PR head.
+
+The P2 review comment is fixed and regression-tested. Published head 778b67e0880ff137a00a16bca69867ea3a341068 passed Quality and advisory Risk report; the review thread is resolved. Finalization is now updating the task record, so recheck the resulting PR head before treating branch-local Done as complete.
 <!-- SECTION:NOTES:END -->
 
 ## Final Summary
 
 <!-- SECTION:FINAL_SUMMARY:BEGIN -->
-Verified and documented the Bicep foundation boundary: each environment has a distinct deployment/resource-group identity and environment tag, only the resource-group name is exposed, and test/prod remain blocked until their inputs are approved. Pinned Bicep validation and all 9 focused unit tests passed; dev deployment readiness passed while test/prod failed closed on unresolved inputs. No application capacity or additional Azure resources were provisioned. PR #52 carries this change for review.
+Hardened the pinned Bicep check to enforce environment-specific deployment/resource-group names, correct root-to-module parameter forwarding, environment tags, and a resource-group-name-only output. Added negative coverage for hard-coded environments, secret inputs/outputs, mismatches, and unresolved test/prod values. Updated the runbook to state the verified naming boundary and remaining isolation/capacity limits. Pinned Bicep checks and all 10 focused tests passed; dev readiness passed and test/prod correctly failed closed. No application capacity was provisioned. PR #52 is ready for review.
 <!-- SECTION:FINAL_SUMMARY:END -->
