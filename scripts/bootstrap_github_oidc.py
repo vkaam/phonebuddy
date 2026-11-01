@@ -19,11 +19,22 @@ ISSUER = "https://token.actions.githubusercontent.com"
 AUDIENCE = "api://AzureADTokenExchange"
 
 
+class AzCommandError(Exception):
+    """A sanitized Azure CLI failure that does not retain command arguments."""
+
+    def __init__(self, returncode):
+        self.returncode = returncode
+        super().__init__(f"Azure CLI command failed (exit status {returncode}).")
+
+
 def az(*args, json_output=False):
     command = ["az", *args]
     if json_output:
         command.extend(("--output", "json"))
-    result = subprocess.run(command, check=True, capture_output=True, text=True)
+    try:
+        result = subprocess.run(command, check=True, capture_output=True, text=True)
+    except subprocess.CalledProcessError as error:
+        raise AzCommandError(error.returncode) from None
     return json.loads(result.stdout) if json_output and result.stdout.strip() else result.stdout.strip()
 
 
@@ -31,6 +42,19 @@ def ensure_single(items, label):
     if len(items) > 1:
         raise RuntimeError(f"More than one Azure {label} matched; resolve duplicates before retrying.")
     return items[0] if items else None
+
+
+def validate_federated_credentials(credentials, expected):
+    """Accept no trust or exactly the expected GitHub trust; reject all others."""
+    if len(credentials) > 1:
+        raise RuntimeError("Application has multiple federated credentials; review them manually before granting access.")
+    if not credentials:
+        return None
+    credential = credentials[0]
+    actual = {key: credential.get(key) for key in expected}
+    if credential.get("name") != "github-environment" or actual != expected:
+        raise RuntimeError("Application has an unexpected federated credential; review it manually before granting access.")
+    return credential
 
 
 def bootstrap(environment, subscription_id, apply):
@@ -64,12 +88,8 @@ def bootstrap(environment, subscription_id, apply):
         print(f"Created service principal for {environment}.")
 
     federated = az("ad", "app", "federated-credential", "list", "--id", object_id, json_output=True)
-    credential = next((entry for entry in federated if entry.get("name") == "github-environment"), None)
     expected = {"issuer": ISSUER, "subject": subject, "audiences": [AUDIENCE]}
-    if credential:
-        actual = {key: credential.get(key) for key in expected}
-        if actual != expected:
-            raise RuntimeError("Existing GitHub federation trust differs from the expected repository/environment subject; review it manually.")
+    credential = validate_federated_credentials(federated, expected)
     if not credential:
         payload = {"name": "github-environment", **expected}
         az("ad", "app", "federated-credential", "create", "--id", object_id, "--parameters", json.dumps(payload), json_output=True)
@@ -94,7 +114,10 @@ def main(argv=None):
     args = parser.parse_args(argv)
     try:
         bootstrap(args.environment, args.subscription_id, args.apply)
-    except (subprocess.CalledProcessError, KeyError, RuntimeError) as error:
+    except AzCommandError as error:
+        print(f"Bootstrap failed: {error}", file=sys.stderr)
+        return 1
+    except (KeyError, RuntimeError) as error:
         print(f"Bootstrap failed: {error}", file=sys.stderr)
         return 1
     return 0
