@@ -1,11 +1,11 @@
 ---
 id: TASK-49
 title: Audit and monitor web dependencies
-status: In Progress
+status: Done
 assignee:
   - '@codex'
 created_date: '2026-11-01T14:59:00Z'
-updated_date: '2026-11-01T15:01:00Z'
+updated_date: '2026-11-01T15:02:00Z'
 labels:
   - factory
 dependencies:
@@ -48,10 +48,10 @@ Spec: Add locked npm audit to local and hosted checks, enable Dependabot npm upd
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 Local and hosted verification run npm audit against the locked web dependencies; findings or an unavailable audit cause failure and leave accessible evidence.
-- [ ] #2 The current Vite high-severity audit finding is addressed without a major version upgrade; locked install, web tests and build pass.
-- [ ] #3 Dependabot proposes npm updates, and documentation describes how owners review findings and handle unresolved or unavailable scans.
-- [ ] #4 Declared verification and hosted checks pass; remaining browser, lint and issue-wide evidence gaps remain explicit.
+- [x] #1 Local and hosted verification run npm audit against the locked web dependencies; findings or an unavailable audit cause failure and leave accessible evidence.
+- [x] #2 The current Vite high-severity audit finding is addressed without a major version upgrade; locked install, web tests and build pass.
+- [x] #3 Dependabot proposes npm updates, and documentation describes how owners review findings and handle unresolved or unavailable scans.
+- [x] #4 Declared verification and hosted checks pass; remaining browser, lint and issue-wide evidence gaps remain explicit.
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -66,4 +66,12 @@ Spec: Add locked npm audit to local and hosted checks, enable Dependabot npm upd
 Local validation: 34 Python tests passed; npm audit reports zero vulnerabilities after updating Vite 6.3.5 to 6.4.5; python3 -B scripts/check.py passed all nine checks with unchanged source, evidence /private/var/folders/zs/9bq4j3rx3wng_vzz52w8hrf80000gn/T/phonebuddy-quality-myth52wo/report.json; git diff --check passed. CI, independent review, lint and browser smoke remain outstanding.
 
 Draft PR: https://github.com/vkaam/phonebuddy/pull/57. Implementation commit 8461323; hosted checks and independent review pending. Issue #39 remains open for lint, browser smoke and remaining evidence requirements.
+
+Hosted Quality https://github.com/vkaam/phonebuddy/actions/runs/41319088961 and PR safety advisory https://github.com/vkaam/phonebuddy/actions/runs/41319087569 passed on head 02f34bbd5f01fee481a5128f1fea81c1c9e80b66. Final task metadata commit requires fresh checks. Independent human review and merge remain outstanding; branch-local Done is provisional.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Added local and hosted npm auditing with retained logs, weekly Dependabot npm updates, a Vite security update, and owner handling guidance. The local nine-check bundle, zero-vulnerability audit, 34 Python tests and pre-finalization hosted checks passed. Independent review and merge remain outstanding; broader issue #39 is not complete.
+<!-- SECTION:FINAL_SUMMARY:END -->
