@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-02T16:35:00Z'
-updated_date: '2026-11-02T20:31:00Z'
+updated_date: '2026-11-02T20:36:00Z'
 labels:
   - infrastructure
   - cicd
@@ -80,4 +80,6 @@ After integrating origin/main, local scripts/quality.py and all 40 Python tests 
 TASK-67 metadata reconciliation integrated main d015e6a into existing PR #55 without changing its five implementation files relative to the prior PR head. The full local scripts/check.py bundle passed on the integrated source (evidence: /private/var/folders/zs/9bq4j3rx3wng_vzz52w8hrf80000gn/T/phonebuddy-quality-93yvg6in/report.json). TASK-57 replaces the historical TASK-6 PR record; TASK-6 matches main and remains archived. Acceptance remains unchecked pending all existing live identity gates. Current-head hosted CI is required after push.
 
 Verification 2026-11-02: owner reports acceptance setup complete. Read-only checks found dev and test GitHub environments and all three required Azure secret names, but GitHub reports no deployment branch policy for either. The signed-in Azure tenant returned zero exact-name matches for PhoneBuddy GitHub Deploy dev and test; this does not exclude differently named registrations or another tenant. No Azure OIDC authorization smoke workflow runs were found, and its workflow is not present on default branch; documented smoke requires main. Federation/RBAC and trusted success/cross-environment denial remain unverified. PR #55 head 6c94826 passed Quality run 41519243709 and advisory run 41519243907. Acceptance remains unchecked pending evidence and review; no bootstrap or environment mutation performed.
+
+Further owner-supplied evidence: the named app registration was found in the active subscription tenant, which matches the supplied tenant. Read-only inspection found two GitHub Actions federated credentials on this single app, one for each dev/test environment, using repository-ID-qualified subjects and the Azure token-exchange audience. No role assignments for its service principal were returned in the active subscription. The task requires distinct environment identities and verified least-privilege roles; this inspection does not establish either. Main-only environment restrictions and live OIDC success/denial evidence remain unverified.
 <!-- SECTION:NOTES:END -->
