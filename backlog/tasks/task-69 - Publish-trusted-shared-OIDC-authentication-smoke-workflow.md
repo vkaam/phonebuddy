@@ -11,6 +11,7 @@ dependencies: []
 references:
   - https://github.com/vkaam/phonebuddy/issues/13
   - .github/workflows/azure-oidc-smoke.yml
+  - https://github.com/vkaam/phonebuddy/pull/75
 modified_files:
   - >-
     backlog/tasks/task-57 -
@@ -51,4 +52,6 @@ Spec: Workflow is manual and main-only, uses GitHub environments and least-privi
 
 <!-- SECTION:NOTES:BEGIN -->
 Workflow and boundary regression prepared from existing draft PR #55. Local 63 Python tests, repository checks, actionlint, offline guard and git diff --check passed. TASK-57 is paused on this prerequisite and its existing PR claim is retained. Live authentication is explicitly deferred until after this enabling PR is reviewed and merged.
+
+Draft PR #75 opened; awaiting hosted Quality and advisory checks on the current head. The workflow must reach main through review before either live smoke run can be collected.
 <!-- SECTION:NOTES:END -->
