@@ -80,7 +80,7 @@ def write_bundle(root, output, checks, timeout):
         "python": sys.version, "platform": platform.platform(),
         "kind": "local-baseline", "hosted_ci": False,
         "independent_review": "not run", "checks": [], "errors": [],
-        "outstanding_checks": ["hosted CI", "actionlint", "Gitleaks"],
+        "outstanding_checks": ["hosted CI", "actionlint", "Gitleaks", "live Backlog claim validation"],
     }
     try:
         report["source_before"] = snapshot(root)
@@ -115,6 +115,7 @@ def main(argv=None):
     output = Path(tempfile.mkdtemp(prefix="phonebuddy-quality-", dir=parent))
     checks = [
         ("repository", [sys.executable, "-B", "scripts/quality.py"]),
+        ("backlog-structure", [sys.executable, "-B", "scripts/backlog_consistency.py", "--offline"]),
         ("tests", [sys.executable, "-B", "scripts/run_required_unittests.py"]),
         ("node-version", ["node", "--version"]),
         ("npm-version", ["npm", "--version"]),

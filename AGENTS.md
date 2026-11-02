@@ -70,6 +70,14 @@ active work. If no eligible item can be identified, report the blocker. When a
 task is specified, read it and verify its eligibility before starting. Follow
 the execution guide to claim it, record a plan, and keep progress in Backlog.
 
+Immediately before claiming or resuming a task, fetch origin and run
+`python3 -B scripts/backlog_consistency.py --base origin/main --task TASK-ID --branch RECORDED-BRANCH`
+with the actual native ID and approved feature branch. Require exit zero and
+`claim_verified: true`; offline checks and native `--ready` alone cannot
+authorize execution. Resolve reported approval, dependency, migration or competing
+claim blockers through triage. The command is a read-only snapshot, not an atomic
+lease; autonomous scheduling still requires the durable lease service.
+
 Carry the assigned work through a pull request, not just a local implementation:
 
 1. Verify the acceptance criteria and record evidence using the finalization

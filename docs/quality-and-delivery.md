@@ -38,6 +38,17 @@ python3 -B scripts/quality.py
 python3 -B scripts/run_required_unittests.py
 ```
 
+Backlog consistency is an explicit required check. CI runs
+`python3 -B scripts/backlog_consistency.py` against the fresh default-branch
+commit with read-only GitHub access and retains `artifacts/backlog-consistency.json`.
+It checks native task specifications, approved issue revisions, dependencies,
+branch/PR claims, migrations and changed-path scope. The local bundle registers
+`--offline` structural validation; live claim validation remains an outstanding
+gate until run separately. Immediately before claiming/resuming use the same
+command with `--base origin/main --task TASK-ID --branch RECORDED-BRANCH` after
+fetching origin. Require `claim_verified: true`. See the
+[guard contract and limits](issue-backlog-governance.md#executable-consistency-guard).
+
 Or run the baseline and web checks and save a local evidence bundle (requires
 Node.js 20 or newer, npm, registry access, and Playwright's pinned Chromium).
 Install the browser after installing the locked web dependencies:
@@ -287,6 +298,11 @@ on trusted code; see [secure use of Actions](https://docs.github.com/en/actions/
 ## Platform QA gates to implement with each component
 
 These gates are pending; no placeholder job currently claims they pass.
+
+When adding a component, explicitly register its deterministic required checks
+in the local evidence command and hosted Quality, add meaningful domain tests
+including relevant failure cases, and record the commands and prerequisites in
+its approved task. Existing web coverage does not qualify another component.
 
 | Component/change | Evidence required before pilot release |
 | --- | --- |
