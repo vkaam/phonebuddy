@@ -65,6 +65,14 @@ jobs:
           printf '%s  %s\n' 8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8 "$RUNNER_TEMP/actionlint.tar.gz" | sha256sum --check
           tar -xzf "$RUNNER_TEMP/actionlint.tar.gz" -C "$RUNNER_TEMP" actionlint
           "$RUNNER_TEMP/actionlint" -color 2>&1 | tee artifacts/workflows.txt
+      - name: Validate Bicep without Azure credentials
+        run: |
+          curl --fail --silent --show-error --location --retry 3 \
+            https://github.com/Azure/bicep/releases/download/v0.34.44/bicep-linux-x64 \
+            -o "$RUNNER_TEMP/bicep"
+          printf '%s  %s\n' dcc869edf53652303d4822b650d727419eeac33bce80cfb61f8ccc5cd2ccee47 "$RUNNER_TEMP/bicep" | sha256sum --check
+          chmod +x "$RUNNER_TEMP/bicep"
+          BICEP="$RUNNER_TEMP/bicep" python3 -B scripts/check_bicep.py 2>&1 | tee artifacts/bicep.txt
       - name: Scan Git history for secrets
         run: |
           curl --fail --silent --show-error --location --retry 3 \

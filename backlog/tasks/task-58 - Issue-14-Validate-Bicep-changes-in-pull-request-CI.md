@@ -1,9 +1,11 @@
 ---
 id: TASK-58
 title: Issue 14 - Validate Bicep changes in pull-request CI
-status: To Do
-assignee: []
+status: In Progress
+assignee:
+  - '@codex'
 created_date: '2026-11-02T16:35:00Z'
+updated_date: '2026-11-02T20:26:00Z'
 labels:
   - infrastructure
   - cicd
@@ -11,6 +13,11 @@ dependencies:
   - TASK-5
 references:
   - https://github.com/vkaam/phonebuddy/issues/14
+  - .github/workflows/ci.yml
+  - scripts/check_bicep.py
+  - infra/main.bicep
+modified_files:
+  - .github/workflows/ci.yml
 priority: high
 type: task
 ordinal: 55000
@@ -36,3 +43,15 @@ Spec: Preserve the issue's approved acceptance. Do not broaden scope or weaken r
 - [ ] #2 Authenticated what-if uses a trusted scoped path; arbitrary PR code never runs with deployment credentials.
 - [ ] #3 Invalid templates, policy violations and missing evidence produce explicit failures; fork handling is tested.
 <!-- AC:END -->
+
+## Implementation Plan
+
+<!-- SECTION:PLAN:BEGIN -->
+1. Add pinned, digest-verified Bicep validation to the existing required Quality job, with no Azure credentials on PR runs. 2. Run the prescribed local checks and verify the workflow configuration. 3. Publish a draft PR and record any remaining trusted what-if and hosted fork-evidence gates; keep the task active until they are satisfied.
+<!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Added the existing pinned Bicep preflight to the required Quality job without Azure credentials. Local Bicep 0.34.44 preflight and actionlint 1.7.12 passed. Authenticated what-if, hosted invalid-template and fork credential evidence remain outstanding; TASK-57 identity bootstrap remains in open PR #55. The first local baseline was blocked by sandbox DNS and loopback restrictions; retrying with access.
+<!-- SECTION:NOTES:END -->
