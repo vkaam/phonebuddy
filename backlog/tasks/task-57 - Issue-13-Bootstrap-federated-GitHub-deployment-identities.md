@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-02T16:35:00Z'
-updated_date: '2026-11-02T18:24:00Z'
+updated_date: '2026-11-02T20:30:00Z'
 labels:
   - infrastructure
   - cicd
@@ -76,4 +76,6 @@ Addressed both inline review findings in commit 921da72eb080e132968254a4cfc2573f
 After integrating origin/main, local scripts/quality.py and all 40 Python tests passed; npm audit passed when rerun with network access. Local bundled browser verification could not launch because Playwright Chromium is not installed on this workstation; the hosted Quality check passed browser build/test and workflow lint on PR head 412d167fa6e97bd3c67685f30fa954d15df10e24, and advisory Risk report passed. PR #55 is current with main and review findings are resolved. TASK-6 remains In Progress pending reviewed Azure identity bootstrap, GitHub dev/test environment configuration, Azure federation/RBAC readback, and successful trusted dev/test OIDC smoke runs.
 
 TASK-67 metadata reconciliation integrated main d015e6a into existing PR #55 without changing its five implementation files relative to the prior PR head. The full local scripts/check.py bundle passed on the integrated source (evidence: /private/var/folders/zs/9bq4j3rx3wng_vzz52w8hrf80000gn/T/phonebuddy-quality-93yvg6in/report.json). TASK-57 replaces the historical TASK-6 PR record; TASK-6 matches main and remains archived. Acceptance remains unchecked pending all existing live identity gates. Current-head hosted CI is required after push.
+
+Verification 2026-11-02: owner reports acceptance setup complete. Read-only checks found dev and test GitHub environments and all three required Azure secret names, but GitHub reports no deployment branch policy for either. The signed-in Azure tenant returned zero exact-name matches for PhoneBuddy GitHub Deploy dev and test; this does not exclude differently named registrations or another tenant. No Azure OIDC authorization smoke workflow runs were found, and its workflow is not present on default branch; documented smoke requires main. Federation/RBAC and trusted success/cross-environment denial remain unverified. PR #55 head 6c94826 passed Quality run 41519243709 and advisory run 41519243907. Acceptance remains unchecked pending evidence and review; no bootstrap or environment mutation performed.
 <!-- SECTION:NOTES:END -->
