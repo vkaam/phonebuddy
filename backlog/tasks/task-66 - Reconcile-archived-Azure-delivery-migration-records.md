@@ -1,11 +1,11 @@
 ---
 id: TASK-66
 title: Reconcile archived Azure delivery migration records
-status: In Progress
+status: Done
 assignee:
   - '@codex'
 created_date: '2026-11-02T16:38:00Z'
-updated_date: '2026-11-02T16:59:00Z'
+updated_date: '2026-11-02T17:01:00Z'
 labels:
   - infrastructure
   - cicd
@@ -118,8 +118,8 @@ Spec: Preserve each active task's acceptance and all unrelated dependencies. Rep
 - [x] #1 Backlog task creation and archival CLI operations succeed.
 - [x] #2 The first-app Azure deployment path is represented by TASK-57 → TASK-59 → TASK-61 → TASK-62, with TASK-58 also required by TASK-62.
 - [x] #3 Legacy imported tasks TASK-5–TASK-14 are archived with status/history preserved; TASK-5 remains Done and other unfinished records do not satisfy dependencies merely by archival.
-- [ ] #4 Verification confirms only TASK-57 and TASK-58 are ready within the Azure issue-task filter; unrelated ready tasks may exist, and no GitHub issue or Azure resource was changed.
-- [ ] #5 Active TASK-16, TASK-18, TASK-23, TASK-25, TASK-30 and TASK-42 no longer depend on archived Azure tasks TASK-9, TASK-13 or TASK-14; their replacement dependencies and all unrelated direct dependencies are preserved.
+- [x] #4 Verification confirms only TASK-57 and TASK-58 are ready within the Azure issue-task filter; unrelated ready tasks may exist, and no GitHub issue or Azure resource was changed.
+- [x] #5 Active TASK-16, TASK-18, TASK-23, TASK-25, TASK-30 and TASK-42 no longer depend on archived Azure tasks TASK-9, TASK-13 or TASK-14; their replacement dependencies and all unrelated direct dependencies are preserved.
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -144,4 +144,12 @@ Final-head verification: PR #70 head 918d34544b37f05420d4b5f6374f5ce4f2044e60 pa
 PR review finding on 2026-11-02 identified stale active dependencies: TASK-16, TASK-18, TASK-23 and TASK-25 referenced archived TASK-9; TASK-18 also referenced archived TASK-14; TASK-30 and TASK-42 referenced archived TASK-13. The user directly authorized this bounded scope amendment with “fix the pr comment”. Remap these direct edges to TASK-60, TASK-65 and TASK-64 respectively; retain all unrelated direct dependencies.
 
 Applied the approved PR review fix through the Backlog CLI: TASK-16 TASK-9→TASK-60; TASK-18 TASK-9→TASK-60 and TASK-14→TASK-65; TASK-23 and TASK-25 TASK-9→TASK-60; TASK-30 and TASK-42 TASK-13→TASK-64. Preserved every other direct dependency. JSON task views verify each replacement edge; the Azure issue-task ready filter remains TASK-57 and TASK-58 only. The review thread remains unresolved pending final-head checks.
+
+Final PR-head verification: commit 423a63f65bc3f8bb9f4c5cb73158066591423981 passed Quality (run 41486886178) and Risk report (advisory; runs 41486915829 and 41486877851). The review finding is fully addressed by the six dependency remaps recorded above. GitHub PR #70 remains open for maintainer review and merge; no Azure deployment was performed.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Reconciled the Azure migration dependency graph through CLI-managed task updates and archived superseded legacy tasks with history preserved. Fixed review feedback by remapping active TASK-16/18/23/25/30/42 dependencies to TASK-60/64/65 while preserving unrelated dependency edges. Verified the Azure issue-task ready frontier is TASK-57 and TASK-58, TASK-5 remains Done and archived, and git diff --check passed. PR #70 head 423a63f passed Quality and both advisory risk checks. No GitHub issue or Azure resource was changed and no deployment was performed; maintainer review and merge remain outstanding.
+<!-- SECTION:FINAL_SUMMARY:END -->
