@@ -4,12 +4,13 @@ title: Generate evidence-linked call summaries and action items
 status: To Do
 assignee: []
 created_date: '2026-10-29T20:07:00Z'
+updated_date: '2026-11-02T16:58:00Z'
 labels:
   - ai
   - backend
 dependencies:
+  - TASK-60
   - TASK-23
-  - TASK-9
 references:
   - docs/software-plan.md
   - docs/quality-and-delivery.md
