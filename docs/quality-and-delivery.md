@@ -99,52 +99,61 @@ output; inspect/redact before sharing, preserve needed evidence outside temporar
 storage, and delete bundles when no longer needed. Temporary storage may be
 cleaned by the operating system; local bundles have no automatic retention policy.
 
-### CI cache contents, scope, and baseline
+### CI cache contents, scope, and measurements
 
-The unprivileged `CI` workflow caches two download stores:
+The unprivileged `CI` workflow caches only Playwright's Chromium headless-shell
+browser files under `~/.cache/ms-playwright`. The smoke tests use the configured
+Chromium project without a browser channel, so Playwright runs its default
+headless shell. CI installs it with
+`npx playwright install --with-deps --only-shell chromium`; this still installs
+and checks Linux system dependencies on every run and the smoke tests still run
+on every cache hit or miss. See [Playwright's browser installation guidance](https://playwright.dev/docs/browsers#chromium-headless-shell)
+for the `--only-shell` behavior.
 
-- `actions/setup-node` caches npm's package download cache using
-  `apps/web/package-lock.json`. `npm ci --no-audit --no-fund` still installs
-  from the lockfile on every run, and `npm audit` still checks the resulting
-  locked dependency graph.
-- `actions/cache` stores `~/.cache/ms-playwright`, which contains the pinned
-  Playwright Chromium, headless shell, and FFmpeg browser downloads. Its key
-  includes an explicit cache format version, runner OS and architecture, Node
-  version `22.15.1`, and the package-lock hash. There are no restore-key
-  fallbacks, so a lockfile, architecture, Node, or cache-format change causes a
-  miss. The action is pinned to immutable revision
-  [`actions/cache` v4.2.4](https://github.com/actions/cache/tree/0400d5f644dc74513175e3cd8d07132dd4860809).
+The cache uses `actions/cache` pinned to immutable revision
+[`v6.1.0`](https://github.com/actions/cache/tree/55cc8345863c7cc4c66a329aec7e433d2d1c52a9).
+Its exact key includes format `v2`, runner OS and architecture, Node `22.15.1`,
+and the `apps/web/package-lock.json` hash. It has no restore-key fallback, so
+changes to the browser/toolchain lockfile or runner identity miss and repopulate
+a new cache. The v2 key also separates the smaller headless-shell cache from
+an earlier experiment that included the full Chromium browser.
 
 The workflow continues to run `npm ci`, `npm audit`, lint, unit and browser
-smoke tests, the build, actionlint, Gitleaks, and the source-bound evidence
-uploads after either a hit or miss. `npx playwright install --with-deps
-chromium` still runs to install/check browser and operating-system dependencies.
-A cache hit is only a download optimization; the CI check result comes from the
-current run's completed verification steps and artifacts.
+smoke tests, the build, actionlint, Gitleaks, and source-bound evidence uploads
+after either a cache hit or miss. A cache hit is a download optimization, not
+verification evidence. We do not cache npm: the current locked graph installs
+28 packages in about 1–2 seconds, and an initial 59 MB npm cache hit did not
+reduce `npm ci` time.
 
-The cache is confined to `CI`, which uses the disposable runner and a read-only
-token. Pull request data can affect caches used by pull request CI, so no
-privileged event workflow may restore these caches. In particular,
-`.github/workflows/pr-safety.yml` continues to check out default-branch policy
-code and does not restore or consume CI caches, PR artifacts, or PR code. Keep
-all cache use out of `pull_request_target` workflows.
+Pull request data can affect caches used by pull request CI. GitHub scopes
+`pull_request` caches to the PR merge ref and does not allow those runs to write
+the default-branch cache; low-trust events do not get write access to that
+shared default-branch scope. See [GitHub's cache access rules](https://docs.github.com/en/actions/reference/workflows-and-actions/dependency-caching#restrictions-for-accessing-a-cache).
+The privileged `.github/workflows/pr-safety.yml` workflow does not restore or
+consume CI caches, PR artifacts, or PR code. Keep cache use out of
+`pull_request_target` workflows.
 
-Before caching, three successful uncached `Quality` runs provide an
-observational baseline: [52 seconds on `bd99978`](https://github.com/vkaam/phonebuddy/actions/runs/41403043185),
-[42 seconds on `4ae593d`](https://github.com/vkaam/phonebuddy/actions/runs/41347032710),
-and [41 seconds on `1900103`](https://github.com/vkaam/phonebuddy/actions/runs/41345888941).
-Their median is 42 seconds. The combined web install, audit, lint, unit tests,
-build, Playwright dependency install, and browser smoke step took 24.6–31.1
-seconds. In the latest baseline run, Playwright downloaded about 313 MiB of
-Chromium, headless-shell, and FFmpeg binaries in about 8 seconds; installing
-Linux browser dependencies also took time and remains uncached. These runs are
-representative workflow evidence, not a controlled benchmark: runner and
-source changes vary between runs. The first cache-enabled PR run was a cold
-miss on source `efd31c6`: [50 seconds, successful `Quality` check](https://github.com/vkaam/phonebuddy/actions/runs/41481776795).
-Both npm and Playwright caches missed and were saved. The combined web step
-took 19.2 seconds, including a 5.2-second browser download. This landed within
-the uncached range but above its 42-second median, so the cold run alone does
-not show an improvement. Warm-cache measurement is pending.
+Three successful uncached `Quality` runs establish an observational baseline.
+Durations below are measured from the first to last timestamp in the runner's
+job log, excluding queue and control-plane delays:
+
+| Source and run | Quality job | Build and test web shell |
+| --- | ---: | ---: |
+| [`bd99978362536dbf6d026ed47a7262b3ded57cd3`](https://github.com/vkaam/phonebuddy/actions/runs/41403043185) | 45.4 s | 31.1 s |
+| [`4ae593d03c0be3e1a41a8e34f7eb8ddc25e767a2`](https://github.com/vkaam/phonebuddy/actions/runs/41347032710) | 35.8 s | 24.6 s |
+| [`19001039764ff8ccf0c061216ebbff583d15f4cd`](https://github.com/vkaam/phonebuddy/actions/runs/41345888941) | 36.8 s | 26.2 s |
+
+The median baseline was 36.8 seconds for the Quality job and 26.2 seconds for
+its combined web step. The latest run downloaded about 313 MiB of browser
+files in 8.3 seconds; Linux dependency installation also took about 13 seconds
+and remains uncached. Runs vary in runner and source state, so these values are
+representative rather than a controlled benchmark.
+
+An initial cache experiment used 279 MiB of full Chromium browser files and a
+59 MiB npm cache. The warm run skipped browser downloads, but cache restore took
+about 2.8 seconds; the npm cache did not shorten `npm ci`. The current v2
+headless-shell cache avoids storing the unused full Chromium browser. Cold and
+warm v2 run timings and browser-cache hit details will be recorded here.
 
 The `CI` workflow runs on every PR (without path filters), pushes to `main`,
 manual dispatch, and merge groups. Its single stable check is `Quality`. It:

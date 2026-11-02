@@ -37,12 +37,10 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '22.15.1'
-          cache: npm
-          cache-dependency-path: apps/web/package-lock.json
-      - uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-v1-${{ runner.os }}-${{ runner.arch }}-node-22.15.1-${{ hashFiles('apps/web/package-lock.json') }}
+          key: playwright-v2-${{ runner.os }}-${{ runner.arch }}-node-22.15.1-${{ hashFiles('apps/web/package-lock.json') }}
       - name: Build and test web shell
         working-directory: apps/web
         run: |
@@ -51,7 +49,7 @@ jobs:
           npm run lint 2>&1 | tee ../../artifacts/web-lint.txt
           npm test
           npm run build
-          npx playwright install --with-deps chromium
+          npx playwright install --with-deps --only-shell chromium
           npm run test:browser 2>&1 | tee ../../artifacts/web-browser.txt
       - name: Retain web build
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

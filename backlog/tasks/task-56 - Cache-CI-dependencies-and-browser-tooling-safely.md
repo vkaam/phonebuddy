@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@vkaam'
 created_date: '2026-11-02T16:21:00Z'
-updated_date: '2026-11-02T16:30:00Z'
+updated_date: '2026-11-02T16:36:00Z'
 labels: []
 dependencies: []
 references:
@@ -25,7 +25,7 @@ ordinal: 54000
 
 <!-- SECTION:DESCRIPTION:BEGIN -->
 ## Problem and intended outcome
-The Quality workflow repeatedly installs the locked web dependency graph and Playwright Chromium. Add scoped, versioned GitHub Actions caches that shorten dependency and browser downloads while every CI run still performs the locked install, audit, lint, unit and browser tests, build, workflow validation, secret scan, and artifact evidence steps. Document what is cached, how keys invalidate, trust boundaries, measurements, and limitations.
+The Quality workflow downloads Playwright browser tooling on every run, increasing feedback time. Cache the Chromium headless-shell binaries used by the existing headless browser smoke tests with a scoped, versioned GitHub Actions cache. Keep the locked web dependency install and every vulnerability scan, lint, unit and browser test, build, workflow validation, secret scan, and evidence step running. Document cache contents, invalidation, trust boundaries, measurements, and limitations.
 
 ## Approved issue revision
 - Issue: https://github.com/vkaam/phonebuddy/issues/65
@@ -41,14 +41,14 @@ agent/gh-65-1-safe-ci-caching
 - backlog/tasks/task-56 - Cache-CI-dependencies-and-browser-tooling-safely.md (this task record only)
 
 ## Specification and constraints
-Use runner- and lockfile/toolchain-scoped cache keys with explicit invalidation. Keep npm ci and npm audit, all browser smoke and other required checks, source-bound report/artifact generation, and read-only workflow permissions. Cache data must not flow from untrusted pull requests into privileged workflows; do not add cache use to pull_request_target or consume caches as verification evidence. Record cold and warm hosted CI durations and identify the steps improved. Baseline evidence must be bound to the approved main SHA; improved evidence must identify the PR head and Actions run IDs.
+Use a browser-cache key scoped to runner OS, architecture, Node version, and the package-lock hash, with an explicit cache-format version and no restore-key fallback. Measurements showed the current small npm graph downloads quickly and its 59 MB package-manager cache did not shorten `npm ci`, so do not cache npm. Keep `npm ci` and `npm audit` active on every run. Install only Chromium's headless shell because the configured smoke tests use Playwright's default headless Chromium mode; retain the full browser smoke tests and all source-bound evidence. Cache data must not flow into privileged workflows; do not add cache use to `pull_request_target` or consume caches as verification evidence. Record cold and warm hosted run durations and affected-step timings.
 
 ## Verification
 - From repository root: python3 -B scripts/quality.py
 - From repository root: python3 -B scripts/run_required_unittests.py
-- From apps/web: npm ci --no-audit --no-fund; npm audit; npm run lint; npm test; npm run build; npx playwright install --with-deps chromium; npm run test:browser
+- From apps/web: npm ci --no-audit --no-fund; npm audit; npm run lint; npm test; npm run build; npx playwright install --with-deps --only-shell chromium; npm run test:browser
 - Hosted gate: CI / Quality succeeds on the PR head, including actionlint and Gitleaks; record its source SHA and run URL.
-- Performance evidence: record representative baseline and improved cold and warm Quality run durations and relevant step durations from GitHub Actions, with run URLs and source SHAs. A cache hit alone is not a passing result.
+- Performance evidence: report baseline, cold-cache, and warm-cache Quality job durations and relevant step durations from GitHub Actions, with run URLs and source SHAs. A cache hit alone is not a passing result.
 <!-- SECTION:DESCRIPTION:END -->
 
 ## Acceptance Criteria
@@ -62,7 +62,7 @@ Use runner- and lockfile/toolchain-scoped cache keys with explicit invalidation.
 ## Implementation Plan
 
 <!-- SECTION:PLAN:BEGIN -->
-1. Capture baseline Quality run durations and source-bound workflow evidence from main. 2. Add dependency and browser caches in the CI workflow with branch-safe scope and lockfile/toolchain invalidation. 3. Document contents, keys, trust boundaries, and limitations. 4. Run local checks and verify hosted cold and warm CI runs. 5. Record run evidence, finalize the task, and publish one PR.
+1. Preserve source-bound uncached baseline and compare the first cache-enabled runs. 2. Remove the unhelpful npm cache and narrow Playwright installation/cache to the configured headless-shell smoke-test browser. 3. Use a new versioned key and current immutable cache action pin; document exact contents and trust boundaries. 4. Run local checks and hosted cold/warm CI; record job and step timings. 5. Finalize the task and publish one PR.
 <!-- SECTION:PLAN:END -->
 
 ## Implementation Notes
@@ -75,4 +75,12 @@ Implemented caches in CI: setup-node caches the lockfile-keyed npm download stor
 Local verification passed on 2026-11-02: python3 -B scripts/quality.py; python3 -B scripts/run_required_unittests.py (35 tests); from apps/web, npm ci --no-audit --no-fund, npm audit (0 vulnerabilities), npm run lint, npm test (5 tests), npm run build, npx playwright install chromium (macOS-supported; downloaded Chromium 156 / Playwright v1248), and npm run test:browser (3 passed). Hosted Ubuntu CI remains necessary to validate the workflow with --with-deps, actionlint, Gitleaks, and cache timings.
 
 Cold hosted cache run on PR #69: run 41481776795 succeeded on source efd31c6182add1ae36b4679696f8cf906be47a7b in 50 seconds (https://github.com/vkaam/phonebuddy/actions/runs/41481776795). Both npm and Playwright caches missed and were saved. Build and test web shell took 19.2 seconds; browser binary downloads took 5.2 seconds. This is within the uncached 41–52 second range but above its 42-second median; no cold-run improvement is claimed. Warm cache measurement remains outstanding.
+
+First v1 warm-cache experiment on PR #69 succeeded: run 41482167446 restored a 59 MB npm cache and 279 MB Playwright cache; browser binaries were restored and not downloaded, but npm ci still took about 2 seconds. The Quality log span was about 35.8 seconds versus 35.4 seconds for the cold experiment, with variability in uncached Linux dependency installation. The npm cache provided no measured improvement, and the combined browser cache was larger than needed. Narrowing the browser install to the configured headless shell and dropping the npm cache before final performance measurement.
+
+Adjusted the workflow after the v1 warm-cache experiment: removed setup-node npm caching because a cache hit did not reduce the 2-second locked install; changed Playwright to --with-deps --only-shell for the configured default-headless Chromium tests; changed the cache format key to v2 to avoid restoring the old 279 MB full-browser cache; pinned actions/cache v6.1.0 at immutable commit 55cc8345863c7cc4c66a329aec7e433d2d1c52a9.
+
+Updated the documentation for the final design: v2 caches only Chromium headless-shell files, npm caching was dropped based on the measured no-benefit experiment, and baseline job durations now use first-to-last timestamps from runner logs (excluding queue/control-plane delays).
+
+Final design local verification on 2026-11-02: repository quality check passed; 35 Python tests passed; npm audit reported 0 vulnerabilities; web lint passed; all 5 required Node tests passed; TypeScript/Vite build passed; Playwright 1.64.1 installed only Chromium headless shell in an isolated /private/tmp browser directory and all 3 browser smoke tests passed. Hosted Ubuntu v2 cold/warm runs and final PR-head CI are still required.
 <!-- SECTION:NOTES:END -->
