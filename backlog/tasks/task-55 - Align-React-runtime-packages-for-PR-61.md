@@ -5,7 +5,7 @@ status: Done
 assignee:
   - '@meesv'
 created_date: '2026-11-02T06:45:00Z'
-updated_date: '2026-11-02T06:53:00Z'
+updated_date: '2026-11-02T06:55:00Z'
 labels:
   - dependency
   - ci
@@ -43,11 +43,11 @@ PR 61 upgrades react to 19.3.1 but leaves react-dom at 19.1.0; hosted browser sm
 ## Implementation Notes
 
 <!-- SECTION:NOTES:BEGIN -->
-Local verification passed after integrating current main 4ae593d03c0be3e1a41a8e34f7eb8ddc25e767a2: npm ci, npm run lint, npm run build, npm test, npm run test:browser (3/3). Hosted Quality and Risk report passed on PR head a320d19558b8f13fc057df69a3f8ddd185cdead4. The existing human review remains approved with no unresolved threads; PR 61 remains open and unmerged for normal merge controls.
+Local verification passed after integrating current main 4ae593d03c0be3e1a41a8e34f7eb8ddc25e767a2: npm ci, npm run lint, npm run build, npm test, npm run test:browser (3/3). Hosted Quality and Risk report both passed on final PR head 47e5f6a10a3bda2c3cf9b20e2b2e65fc951ebd69. The existing human review remains approved with no unresolved threads; PR 61 remains open and unmerged for normal merge controls.
 <!-- SECTION:NOTES:END -->
 
 ## Final Summary
 
 <!-- SECTION:FINAL_SUMMARY:BEGIN -->
-Aligned react-dom 19.3.1 and @types/react-dom 19.3.0 with the React versions already in PR 61, updating scheduler through the regenerated lockfile. npm ci, lint, build, unit tests, and all three browser smoke tests pass locally; hosted Quality and Risk report pass on a320d19558b8f13fc057df69a3f8ddd185cdead4. PR 61 remains open and unmerged for normal review and merge controls.
+Aligned react-dom 19.3.1 and @types/react-dom 19.3.0 with the React versions already in PR 61, updating scheduler through the regenerated lockfile. npm ci, lint, build, unit tests, and all three browser smoke tests pass locally; hosted Quality and Risk report pass on final head 47e5f6a10a3bda2c3cf9b20e2b2e65fc951ebd69. PR 61 remains open and unmerged for normal review and merge controls.
 <!-- SECTION:FINAL_SUMMARY:END -->
