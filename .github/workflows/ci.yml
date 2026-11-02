@@ -24,6 +24,10 @@ jobs:
     name: Quality
     runs-on: ubuntu-24.04
     timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: read
+      pull-requests: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -34,6 +38,12 @@ jobs:
           mkdir -p artifacts
           python3 scripts/quality.py 2>&1 | tee artifacts/quality.txt
           python3 -B scripts/run_required_unittests.py 2>&1 | tee artifacts/tests.txt
+      - name: Validate issue, Backlog and claim consistency
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BACKLOG_BASE: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || github.sha }}
+          BACKLOG_BRANCH: ${{ github.head_ref || github.event.repository.default_branch }}
+        run: python3 -B scripts/backlog_consistency.py --base "$BACKLOG_BASE" --branch "$BACKLOG_BRANCH" --output artifacts/backlog-consistency.json
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '22.15.1'
