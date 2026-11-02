@@ -1,82 +1,52 @@
 # GitHub Actions OIDC bootstrap
 
-This setup creates a separate Entra application and service principal for `dev`
-and `test`. Each principal trusts only the `vkaam/phonebuddy` GitHub environment
-subject and receives `Contributor` at its matching West Europe foundation
-resource group. It creates no client secret. The identity cannot manage the
-other environment or resources outside its resource group. Production is
-intentionally excluded until its subscription and write scope are approved.
+The owner approved one shared Entra application and service principal for `dev`
+and `test`. Its GitHub Actions federation is limited to the two environments of
+`vkaam/phonebuddy`. It receives Contributor separately on the dev and test West
+Europe foundation resource groups. **Either environment can access both resource
+groups:** the federation credentials authenticate the same Azure identity and do
+not isolate its Azure permissions. Production is excluded.
 
-Identity creation is an Azure tenant and RBAC bootstrap exception. Review this
-runbook and the change before applying it. The operator needs permission to
-register applications in Entra and assign `Contributor` on the two resource
-groups. Use the approved nonproduction subscription and a trusted workstation.
-Do not run the applying command in CI or paste identifiers into repository
-files, issues, or logs.
+The existing application is shared with other uses; review its complete trust,
+credentials, ownership, and all current Azure role assignments before granting it
+additional access. The script requires an explicit application ID and rejects any
+federated trust beyond the two approved repository-ID-qualified subjects. It does
+not create or remove app registrations, service principals, or federation trusts.
+Avoid storing identifiers in repository files or logs.
 
 ## Bootstrap
 
-Install and authenticate Azure CLI, then check the selected account and
-subscription before proceeding. The script defaults to a no-change dry run:
+Identity and role assignment changes require Azure tenant and RBAC bootstrap
+review. Authenticate with Azure CLI and select the approved nonproduction
+subscription. The operator needs role-assignment permissions on both groups.
+The script defaults to a no-change dry run:
 
 ```sh
-az login
-az account show --query '{tenant:tenantId,subscription:id,state:state}' --output table
-python3 scripts/bootstrap_github_oidc.py --environment dev --subscription-id <approved-subscription-id>
-python3 scripts/bootstrap_github_oidc.py --environment test --subscription-id <approved-subscription-id>
+python3 scripts/bootstrap_github_oidc.py --environment dev --subscription-id <approved-subscription-id> --app-id <reviewed-application-client-id>
+python3 scripts/bootstrap_github_oidc.py --environment test --subscription-id <approved-subscription-id> --app-id <reviewed-application-client-id>
 ```
 
-After review, pass `--apply` once for each environment. The operation is
-idempotent for the expected app, service principal, GitHub federation trust and
-resource-group role assignment. It fails if duplicate app names or a different
-existing federation trust are found. It never prints tenant, subscription,
-application or principal IDs and does not create client credentials.
-
-```sh
-python3 scripts/bootstrap_github_oidc.py --environment dev --subscription-id <approved-subscription-id> --apply
-python3 scripts/bootstrap_github_oidc.py --environment test --subscription-id <approved-subscription-id> --apply
-```
-
-The expected role scopes are exactly `rg-pb-dev-westeurope-foundation` and
-`rg-pb-test-westeurope-foundation`. The federation subjects are
-`repo:vkaam/phonebuddy:environment:dev` and
-`repo:vkaam/phonebuddy:environment:test`; both use issuer
-`https://token.actions.githubusercontent.com` and audience
-`api://AzureADTokenExchange`.
+After review, run each command with `--apply`. The script checks both federation
+trusts before assigning Contributor on the selected foundation resource group.
+It does not prove that other assignments do not exist; inspect all direct and
+inherited role assignments before and after use. It creates no client secret.
 
 ## GitHub repository owner setup
 
-In **Settings → Environments**, create environments named `dev` and `test`.
-For each environment, restrict deployment branches to `main` and add these
-environment secrets:
-
-| Secret | Value |
-| --- | --- |
-| `AZURE_CLIENT_ID` | The matching app registration's application (client) ID |
-| `AZURE_TENANT_ID` | The tenant ID from the selected Azure account |
-| `AZURE_SUBSCRIPTION_ID` | The approved nonproduction subscription ID |
-
-Find the client IDs by exact app name after bootstrap, and get the tenant ID
-from the selected Azure account. Store each environment's own client ID in its
-environment; the tenant and subscription values can be the same for both if
-that matches the approved account. These IDs are identifiers rather than
-passwords, but keeping them environment-scoped makes configuration explicit.
-Never add a client secret or certificate.
+In **Settings → Environments**, restrict both `dev` and `test` to deployment
+branch `main`. Each environment must have `AZURE_CLIENT_ID` (the same shared
+application client ID), `AZURE_TENANT_ID` and `AZURE_SUBSCRIPTION_ID` secrets.
+Never add a client secret or certificate. Verify the two existing federated
+credentials use the GitHub Actions issuer, Azure token exchange audience and
+repository-ID-qualified dev/test environment subjects.
 
 ## Verify
 
-After the workflow and environment configuration are available on `main`, run
-**Actions → Azure OIDC authorization smoke → Run workflow** once for `dev` and
-once for `test`. Each run authenticates with its selected environment identity,
-reads its own foundation resource group, and attempts a harmless empty ARM
-deployment to the other environment. The workflow passes that probe only when
-Azure returns `AuthorizationFailed`. The probe creates no Azure resources; if
-an unexpectedly broad grant allows it, the workflow deletes its deployment
-record and fails.
-
-Also inspect role assignments and federated credentials in Azure before calling
-the bootstrap complete. A PR or fork cannot invoke this workflow and the job
-requires the protected `main` ref. GitHub environment branch restrictions and
-the Entra environment subject provide independent checks. A successful smoke
-run verifies identity and resource-group authorization only; it does not enable
-automatic application deployment.
+Inspect Azure federation and role assignments, including inherited permissions.
+After the workflow is available on `main`, run **Azure OIDC authorization smoke**
+for both `dev` and `test`. Each run authenticates and reads both foundation
+resource groups, confirming the deliberately shared access. The workflow runs
+only on `main` and is not triggered by PRs; GitHub branch restrictions and Entra
+federation provide additional boundaries. Passing the smoke check does not prove
+write scope or enable application deployment. Record the two run URLs and Azure
+readback evidence before marking acceptance complete.

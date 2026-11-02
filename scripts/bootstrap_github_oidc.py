@@ -1,4 +1,4 @@
-"""Create environment-scoped GitHub OIDC principals in Azure.
+"""Assign scoped Azure access to the reviewed shared GitHub OIDC principal.
 
 This is an explicit bootstrap operation. It is dry-run unless --apply is passed.
 The script never creates a client secret and does not print tenant, subscription,
@@ -44,57 +44,32 @@ def ensure_single(items, label):
     return items[0] if items else None
 
 
-def validate_federated_credentials(credentials, expected):
-    """Accept no trust or exactly the expected GitHub trust; reject all others."""
-    if len(credentials) > 1:
-        raise RuntimeError("Application has multiple federated credentials; review them manually before granting access.")
-    if not credentials:
-        return None
-    credential = credentials[0]
-    actual = {key: credential.get(key) for key in expected}
-    if credential.get("name") != "github-environment" or actual != expected:
-        raise RuntimeError("Application has an unexpected federated credential; review it manually before granting access.")
-    return credential
+def validate_federated_credentials(credentials):
+    """Require exactly the two known GitHub environment trusts before RBAC changes."""
+    subjects = {f"repo:vkaam@25612385/phonebuddy@1437973251:environment:{env}" for env in ENVIRONMENTS}
+    actual = [c.get("subject") for c in credentials]
+    if (len(actual) != 2 or set(actual) != subjects or
+            any(c.get("issuer") != ISSUER or c.get("audiences") != [AUDIENCE] for c in credentials)):
+        raise RuntimeError("Expected exactly the approved dev and test GitHub federation trusts; review the registration before granting access.")
 
 
-def bootstrap(environment, subscription_id, apply):
-    app_name = f"PhoneBuddy GitHub Deploy {environment}"
+def bootstrap(environment, subscription_id, apply, app_id=None):
     resource_group = f"rg-pb-{environment}-{REGION}-foundation"
-    subject = f"repo:{REPOSITORY}:environment:{environment}"
     print(f"Environment: {environment}; resource group: {resource_group}; role: {ROLE}")
-    print(f"Federation subject: {subject}")
     if not apply:
-        print("Dry run only. Re-run with --apply to create or reconcile this identity.")
+        print("Dry run only. Re-run with --apply and the reviewed shared application ID.")
         return
-
+    if not app_id:
+        raise RuntimeError("An explicit shared application ID is required.")
     az("account", "set", "--subscription", subscription_id)
     groups = az("group", "list", "--query", f"[?name=='{resource_group}']", json_output=True)
     group = ensure_single(groups, f"resource group named {resource_group}")
     if not group:
         raise RuntimeError(f"Required resource group {resource_group} does not exist in the selected subscription.")
-
-    apps = az("ad", "app", "list", "--filter", f"displayName eq '{app_name}'", json_output=True)
-    app = ensure_single(apps, f"application named {app_name}")
-    if not app:
-        app = az("ad", "app", "create", "--display-name", app_name, json_output=True)
-        print(f"Created application registration for {environment}.")
-    app_id = app["appId"]
-    object_id = app["id"]
-
-    service_principals = az("ad", "sp", "list", "--filter", f"appId eq '{app_id}'", json_output=True)
-    service_principal = ensure_single(service_principals, f"service principal for {app_name}")
-    if not service_principal:
-        service_principal = az("ad", "sp", "create", "--id", app_id, json_output=True)
-        print(f"Created service principal for {environment}.")
-
-    federated = az("ad", "app", "federated-credential", "list", "--id", object_id, json_output=True)
-    expected = {"issuer": ISSUER, "subject": subject, "audiences": [AUDIENCE]}
-    credential = validate_federated_credentials(federated, expected)
-    if not credential:
-        payload = {"name": "github-environment", **expected}
-        az("ad", "app", "federated-credential", "create", "--id", object_id, "--parameters", json.dumps(payload), json_output=True)
-        print(f"Configured GitHub OIDC trust for {environment}.")
-
+    app = az("ad", "app", "show", "--id", app_id, json_output=True)
+    service_principal = az("ad", "sp", "show", "--id", app_id, json_output=True)
+    federated = az("ad", "app", "federated-credential", "list", "--id", app["id"], json_output=True)
+    validate_federated_credentials(federated)
     scope = group["id"]
     principal_id = service_principal["id"]
     assignments = az("role", "assignment", "list", "--scope", scope, "--all", "--query", f"[?principalId=='{principal_id}' && roleDefinitionName=='{ROLE}']", json_output=True)
@@ -103,17 +78,18 @@ def bootstrap(environment, subscription_id, apply):
         print(f"Assigned {ROLE} at the {environment} resource-group scope.")
     else:
         print(f"Verified existing {ROLE} assignment at the {environment} resource-group scope.")
-    print(f"Bootstrap completed for {environment}. Store the application ID in GitHub environment {environment} as AZURE_CLIENT_ID.")
+    print("The shared identity can access both resource groups after both assignments are applied.")
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--environment", choices=ENVIRONMENTS, required=True)
     parser.add_argument("--subscription-id", required=True, help="Approved nonproduction subscription; not logged.")
+    parser.add_argument("--app-id", help="Reviewed shared application ID; not logged.")
     parser.add_argument("--apply", action="store_true", help="Apply changes. Without this flag, only prints the planned scope.")
     args = parser.parse_args(argv)
     try:
-        bootstrap(args.environment, args.subscription_id, args.apply)
+        bootstrap(args.environment, args.subscription_id, args.apply, args.app_id)
     except AzCommandError as error:
         print(f"Bootstrap failed: {error}", file=sys.stderr)
         return 1

@@ -32,35 +32,13 @@ jobs:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-      - name: Verify environment access and cross-environment write denial
+      - name: Verify shared identity access
         env:
           TARGET_ENVIRONMENT: ${{ inputs.environment }}
         shell: bash
         run: |
           set -euo pipefail
-          own_group="rg-pb-${TARGET_ENVIRONMENT}-westeurope-foundation"
-          az group show --name "$own_group" --query name --output tsv >/dev/null
-
-          if [[ "$TARGET_ENVIRONMENT" == "dev" ]]; then other_environment='test'; else other_environment='dev'; fi
-          other_group="rg-pb-${other_environment}-westeurope-foundation"
-          probe="oidc-cross-env-probe-${GITHUB_RUN_ID}"
-          template="$RUNNER_TEMP/empty-template.json"
-          error_file="$RUNNER_TEMP/cross-env-error.txt"
-          cat > "$template" <<'JSON'
-          {"$schema":"https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#","contentVersion":"1.0.0.0","resources":[]}
-          JSON
-
-          set +e
-          az deployment group create --name "$probe" --resource-group "$other_group" --template-file "$template" --output none 2>"$error_file"
-          status=$?
-          set -e
-          if [[ $status -eq 0 ]]; then
-            az deployment group delete --name "$probe" --resource-group "$other_group" --output none || true
-            echo "Cross-environment deployment unexpectedly succeeded." >&2
-            exit 1
-          fi
-          if ! grep -q 'AuthorizationFailed' "$error_file"; then
-            echo "Cross-environment probe failed for a reason other than an Azure authorization denial." >&2
-            exit 1
-          fi
-          echo "Environment identity can read its own foundation and cannot deploy to the other environment."
+          for environment in dev test; do
+            az group show --name "rg-pb-${environment}-westeurope-foundation" --query name --output tsv >/dev/null
+          done
+          echo "The ${TARGET_ENVIRONMENT} GitHub environment authenticated and can read both approved foundation groups."

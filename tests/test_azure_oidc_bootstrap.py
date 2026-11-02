@@ -24,19 +24,29 @@ class AzureOidcBootstrapTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "More than one Azure"):
             bootstrap.ensure_single([{}, {}], "application")
 
-    def test_federation_validation_rejects_unexpected_or_multiple_trusts(self):
-        expected = {
-            "issuer": bootstrap.ISSUER,
-            "subject": "repo:vkaam/phonebuddy:environment:dev",
-            "audiences": [bootstrap.AUDIENCE],
-        }
-        correct = {"name": "github-environment", **expected}
-        self.assertIsNone(bootstrap.validate_federated_credentials([], expected))
-        self.assertEqual(bootstrap.validate_federated_credentials([correct], expected), correct)
-        with self.assertRaisesRegex(RuntimeError, "unexpected federated credential"):
-            bootstrap.validate_federated_credentials([{"name": "other-trust", **expected}], expected)
-        with self.assertRaisesRegex(RuntimeError, "multiple federated credentials"):
-            bootstrap.validate_federated_credentials([correct, correct], expected)
+    def test_federation_requires_exactly_both_approved_trusts(self):
+        trusted = [{"issuer": bootstrap.ISSUER,
+                    "subject": f"repo:vkaam@25612385/phonebuddy@1437973251:environment:{env}",
+                    "audiences": [bootstrap.AUDIENCE]} for env in ("dev", "test")]
+        bootstrap.validate_federated_credentials(trusted)
+        for invalid in (trusted[:1], trusted + [trusted[0]],
+                        [trusted[0], {**trusted[1], "subject": "repo:other/project:environment:test"}]):
+            with self.subTest(invalid=invalid), self.assertRaisesRegex(RuntimeError, "exactly the approved"):
+                bootstrap.validate_federated_credentials(invalid)
+
+    def test_apply_requires_explicit_shared_app_before_azure_changes(self):
+        with patch.object(bootstrap, "az") as az:
+            with self.assertRaisesRegex(RuntimeError, "explicit shared application ID"):
+                bootstrap.bootstrap("dev", "subscription-id", apply=True)
+        az.assert_not_called()
+
+    def test_unexpected_trust_blocks_role_assignment(self):
+        responses = [None, [{"id": "/group"}], {"id": "app-object"},
+                     {"id": "principal-object"}, [{"subject": "unexpected"}]]
+        with patch.object(bootstrap, "az", side_effect=responses) as az:
+            with self.assertRaisesRegex(RuntimeError, "approved dev and test"):
+                bootstrap.bootstrap("dev", "subscription-id", apply=True, app_id="app-id")
+        self.assertFalse(any(call.args[:3] == ("role", "assignment", "create") for call in az.call_args_list))
 
     def test_azure_cli_errors_do_not_retain_command_arguments(self):
         subscription_id = "subscription-id-that-must-not-leak"
@@ -53,7 +63,8 @@ class AzureOidcBootstrapTests(unittest.TestCase):
         self.assertIn("environment: ${{ inputs.environment }}", workflow)
         self.assertIn("id-token: write", workflow)
         self.assertNotIn("pull_request:", workflow)
-        self.assertIn("AuthorizationFailed", workflow)
+        self.assertIn("for environment in dev test", workflow)
+        self.assertNotIn("az deployment group create", workflow)
 
 
 if __name__ == "__main__":
