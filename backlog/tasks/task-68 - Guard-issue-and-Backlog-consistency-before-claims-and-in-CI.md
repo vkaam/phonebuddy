@@ -1,11 +1,11 @@
 ---
 id: TASK-68
 title: Guard issue and Backlog consistency before claims and in CI
-status: In Progress
+status: Done
 assignee:
   - '@codex'
 created_date: '2026-11-02T18:44:00Z'
-updated_date: '2026-11-02T19:45:00Z'
+updated_date: '2026-11-02T19:48:00Z'
 labels:
   - governance
   - validation
@@ -75,10 +75,14 @@ Implemented a GET-only consistency guard with restricted native-frontmatter pars
 Compatibility regression added for existing CLI-managed self-record scope aliases and same-line external/context annotations; annotations grant no repository file scope. Verified the still-pending TASK-67 specification parses correctly without changing its record or bundling PR #71. All 60 Python tests pass (25 guard cases). Initial PR #73 head 51efd8b passed Quality run 41509531387 and advisory run 41509531386; a real published-head pre-claim check also passed with claim_verified true and 66 native identities. The compatibility change requires new current-head CI before finalization.
 
 Acceptance verified on implementation head 500c503c3ba1d27f4d1316cf32dc7e63002d2ad4. AC1/2: real GET-only live validation on published head 51efd8b returned pass/claim_verified true and reconciled 66 identities and branch/PR claims; current-head hosted Quality independently reran the live guard successfully. Regression cases cover canonical/pinned metadata, changed/cancelled/missing issue evidence, duplicates, distinct slices, fork/branch claims, stale active work and exact scope. AC3/4: real Git fixtures and negative cases prove branch-local Done/closed flags/unfinished archives, incomplete or unmerged completion, unknown/cyclic/removed identities and stale replacement edges cannot pass claims; existing self-record aliases remain compatible without widening file scope. AC5: 25 guard regressions and all 60 Python tests pass; full local quality bundle passed on 500c503 with 5 Node and 3 browser tests plus install/audit/lint/build (evidence /private/var/folders/zs/9bq4j3rx3wng_vzz52w8hrf80000gn/T/phonebuddy-quality-eam06to5/report.json); actionlint, repository/diff checks passed. PR #73 head 500c503 passed Quality run 41510101477 and both advisory reports 41510098569/41510119095. GraphQL closingIssuesReferences is empty. Finalization metadata will be committed and pushed, then all checks reverified on the final head. Normal review/merge is required. No application release gate applies to this read-only tooling change; durable leases, trusted approval attestation and repository protection activation remain separate.
+
+PR #73 review fixes: merged main reconciliation retaining its TASK-57 record; rejected status changes of already archived unfinished tasks and validated amended Done records while preserving unchanged historic completion. Both review findings have regression coverage. All 62 Python tests, the full local quality bundle, offline and live guard, repository checks, actionlint and diff checks passed. Head 3810a25 passed hosted Quality run 41513065619 and advisory run 41513150144. Final metadata requires another current-head check; normal review and merge remain outstanding.
 <!-- SECTION:NOTES:END -->
 
 ## Final Summary
 
 <!-- SECTION:FINAL_SUMMARY:BEGIN -->
 Added a read-only issue/Backlog consistency guard and made it part of CI Quality and the documented pre-claim workflow. It validates approved execution metadata, live issue revisions and branch/PR claims, default-branch completion, migration mappings and changed-path scope; offline checks are registered in the local evidence bundle. Reports bind source and blockers without mutating task, issue or claim state. Preserved historical compatibility and included only the already-approved TASK-57 claim correction. All 60 Python tests (25 guard cases), complete local quality with 5 Node/3 browser tests, actionlint and scope/repository checks pass; implementation head 500c503 passed hosted Quality/live validation and both advisory reports. PR #73 requires review/merge and final-head revalidation after this metadata commit. Branch-local Done is provisional. The guard does not replace atomic leases, trusted human approval or release/completion controllers, and it does not activate repository protections or grant merge/deploy authority.
+
+Review fixes preserve unfinished archived status and validate amended Done records; the integrated main reconciliation and new regressions passed local and hosted checks. Final metadata head requires revalidation and normal review/merge.
 <!-- SECTION:FINAL_SUMMARY:END -->
