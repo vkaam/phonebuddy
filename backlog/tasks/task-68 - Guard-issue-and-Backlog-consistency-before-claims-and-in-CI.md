@@ -1,17 +1,18 @@
 ---
 id: TASK-68
 title: Guard issue and Backlog consistency before claims and in CI
-status: In Progress
+status: Done
 assignee:
   - '@codex'
 created_date: '2026-11-02T18:44:00Z'
-updated_date: '2026-11-02T19:27:00Z'
+updated_date: '2026-11-02T19:29:00Z'
 labels:
   - governance
   - validation
 dependencies: []
 references:
   - https://github.com/vkaam/phonebuddy/issues/72
+  - https://github.com/vkaam/phonebuddy/pull/73
 modified_files:
   - scripts/backlog_consistency.py
   - tests/test_backlog_consistency.py
@@ -46,11 +47,11 @@ Triage amendment v2 (2026-11-02): the live guard correctly detected main's stale
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 Executable tasks require canonical approved issue revision/evidence, unique branch, explicit paths, verification and native acceptance; historical imports remain ineligible, and stale/cancelled intent blocks claims.
-- [ ] #2 Live branch/PR reconciliation detects duplicate ownership/PRs and unsafe task reuse, permits distinct native slices for one issue, and fails closed when evidence is unavailable or incomplete.
-- [ ] #3 Dependencies require verified default-branch completion with checked acceptance and merged evidence for execution records; unknown/ambiguous/cyclic identities, archived unfinished tasks and branch-local Done cannot authorize claims.
-- [ ] #4 Migration validation requires explicit replacement or intake-only disposition and detects stale downstream dependencies while preserving historical statuses.
-- [ ] #5 The same guard is documented for local/pre-claim use and enforced by CI; source-bound JSON, negative regression cases and current-head checks verify behavior without mutating task/issue/claim state.
+- [x] #1 Executable tasks require canonical approved issue revision/evidence, unique branch, explicit paths, verification and native acceptance; historical imports remain ineligible, and stale/cancelled intent blocks claims.
+- [x] #2 Live branch/PR reconciliation detects duplicate ownership/PRs and unsafe task reuse, permits distinct native slices for one issue, and fails closed when evidence is unavailable or incomplete.
+- [x] #3 Dependencies require verified default-branch completion with checked acceptance and merged evidence for execution records; unknown/ambiguous/cyclic identities, archived unfinished tasks and branch-local Done cannot authorize claims.
+- [x] #4 Migration validation requires explicit replacement or intake-only disposition and detects stale downstream dependencies while preserving historical statuses.
+- [x] #5 The same guard is documented for local/pre-claim use and enforced by CI; source-bound JSON, negative regression cases and current-head checks verify behavior without mutating task/issue/claim state.
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -68,4 +69,12 @@ Triage amendment v2 (2026-11-02): the live guard correctly detected main's stale
 Implemented a GET-only consistency guard with restricted native-frontmatter parsing, approved issue digest checks, branch/PR claim reconciliation, default-branch/merged dependency evidence, migration mapping/stale-edge checks, scope enforcement and source-bound JSON. Historical imports remain ineligible and cannot obtain an exemption by backdating new records. Registered offline structure in scripts/check.py and live validation inside CI Quality with a read-only token; documented mandatory pre-claim use and point-in-time/approval/lease limits. Applied only the already-approved TASK-57 claim correction from PR #71 and normalized its Scope line without changing allowed paths or acceptance. No archive migration was bundled. Focused 24 guard regressions and the full 59-test Python suite passed; actionlint and diff/repository checks passed. Full local quality bundle passed (35 original plus 24 guard tests, 5 Node tests, 3 browser tests, install/audit/lint/build); evidence /private/var/folders/zs/9bq4j3rx3wng_vzz52w8hrf80000gn/T/phonebuddy-quality-izly3mmn/report.json. A real live pre-claim run returned pass and claim_verified true with the existing TASK-57 claim observed; final source-bound validation will be repeated after publication.
 
 Compatibility regression added for existing CLI-managed self-record scope aliases and same-line external/context annotations; annotations grant no repository file scope. Verified the still-pending TASK-67 specification parses correctly without changing its record or bundling PR #71. All 60 Python tests pass (25 guard cases). Initial PR #73 head 51efd8b passed Quality run 41509531387 and advisory run 41509531386; a real published-head pre-claim check also passed with claim_verified true and 66 native identities. The compatibility change requires new current-head CI before finalization.
+
+Acceptance verified on implementation head 500c503c3ba1d27f4d1316cf32dc7e63002d2ad4. AC1/2: real GET-only live validation on published head 51efd8b returned pass/claim_verified true and reconciled 66 identities and branch/PR claims; current-head hosted Quality independently reran the live guard successfully. Regression cases cover canonical/pinned metadata, changed/cancelled/missing issue evidence, duplicates, distinct slices, fork/branch claims, stale active work and exact scope. AC3/4: real Git fixtures and negative cases prove branch-local Done/closed flags/unfinished archives, incomplete or unmerged completion, unknown/cyclic/removed identities and stale replacement edges cannot pass claims; existing self-record aliases remain compatible without widening file scope. AC5: 25 guard regressions and all 60 Python tests pass; full local quality bundle passed on 500c503 with 5 Node and 3 browser tests plus install/audit/lint/build (evidence /private/var/folders/zs/9bq4j3rx3wng_vzz52w8hrf80000gn/T/phonebuddy-quality-eam06to5/report.json); actionlint, repository/diff checks passed. PR #73 head 500c503 passed Quality run 41510101477 and both advisory reports 41510098569/41510119095. GraphQL closingIssuesReferences is empty. Finalization metadata will be committed and pushed, then all checks reverified on the final head. Normal review/merge is required. No application release gate applies to this read-only tooling change; durable leases, trusted approval attestation and repository protection activation remain separate.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Added a read-only issue/Backlog consistency guard and made it part of CI Quality and the documented pre-claim workflow. It validates approved execution metadata, live issue revisions and branch/PR claims, default-branch completion, migration mappings and changed-path scope; offline checks are registered in the local evidence bundle. Reports bind source and blockers without mutating task, issue or claim state. Preserved historical compatibility and included only the already-approved TASK-57 claim correction. All 60 Python tests (25 guard cases), complete local quality with 5 Node/3 browser tests, actionlint and scope/repository checks pass; implementation head 500c503 passed hosted Quality/live validation and both advisory reports. PR #73 requires review/merge and final-head revalidation after this metadata commit. Branch-local Done is provisional. The guard does not replace atomic leases, trusted human approval or release/completion controllers, and it does not activate repository protections or grant merge/deploy authority.
+<!-- SECTION:FINAL_SUMMARY:END -->
