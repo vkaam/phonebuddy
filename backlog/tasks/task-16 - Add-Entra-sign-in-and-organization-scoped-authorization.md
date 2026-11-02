@@ -4,12 +4,13 @@ title: Add Entra sign-in and organization-scoped authorization
 status: To Do
 assignee: []
 created_date: '2026-10-29T20:07:00Z'
+updated_date: '2026-11-02T16:58:00Z'
 labels:
   - identity
   - backend
 dependencies:
+  - TASK-60
   - TASK-15
-  - TASK-9
 references:
   - docs/software-plan.md
   - docs/quality-and-delivery.md
