@@ -139,8 +139,12 @@ seconds. In the latest baseline run, Playwright downloaded about 313 MiB of
 Chromium, headless-shell, and FFmpeg binaries in about 8 seconds; installing
 Linux browser dependencies also took time and remains uncached. These runs are
 representative workflow evidence, not a controlled benchmark: runner and
-source changes vary between runs. Cold and warm cache-run timings will be
-recorded below when available.
+source changes vary between runs. The first cache-enabled PR run was a cold
+miss on source `efd31c6`: [50 seconds, successful `Quality` check](https://github.com/vkaam/phonebuddy/actions/runs/41481776795).
+Both npm and Playwright caches missed and were saved. The combined web step
+took 19.2 seconds, including a 5.2-second browser download. This landed within
+the uncached range but above its 42-second median, so the cold run alone does
+not show an improvement. Warm-cache measurement is pending.
 
 The `CI` workflow runs on every PR (without path filters), pushes to `main`,
 manual dispatch, and merge groups. Its single stable check is `Quality`. It:

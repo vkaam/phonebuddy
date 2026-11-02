@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@vkaam'
 created_date: '2026-11-02T16:21:00Z'
-updated_date: '2026-11-02T16:25:00Z'
+updated_date: '2026-11-02T16:30:00Z'
 labels: []
 dependencies: []
 references:
@@ -73,4 +73,6 @@ Baseline evidence from uncached main runs: latest Quality run 41403043185 on bd9
 Implemented caches in CI: setup-node caches the lockfile-keyed npm download store, and actions/cache v4.2.4 caches the Playwright browser directory with a versioned OS/architecture/Node/lockfile key and no restore-key fallback. npm ci, npm audit, playwright install --with-deps, browser tests, and the existing verification/evidence steps remain unconditional. Documentation records baseline runs and states the privileged PR safety workflow does not consume CI caches.
 
 Local verification passed on 2026-11-02: python3 -B scripts/quality.py; python3 -B scripts/run_required_unittests.py (35 tests); from apps/web, npm ci --no-audit --no-fund, npm audit (0 vulnerabilities), npm run lint, npm test (5 tests), npm run build, npx playwright install chromium (macOS-supported; downloaded Chromium 156 / Playwright v1248), and npm run test:browser (3 passed). Hosted Ubuntu CI remains necessary to validate the workflow with --with-deps, actionlint, Gitleaks, and cache timings.
+
+Cold hosted cache run on PR #69: run 41481776795 succeeded on source efd31c6182add1ae36b4679696f8cf906be47a7b in 50 seconds (https://github.com/vkaam/phonebuddy/actions/runs/41481776795). Both npm and Playwright caches missed and were saved. Build and test web shell took 19.2 seconds; browser binary downloads took 5.2 seconds. This is within the uncached 41–52 second range but above its 42-second median; no cold-run improvement is claimed. Warm cache measurement remains outstanding.
 <!-- SECTION:NOTES:END -->
