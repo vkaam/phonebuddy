@@ -4,16 +4,17 @@ title: Validate the complete web softphone pilot
 status: To Do
 assignee: []
 created_date: '2026-10-29T20:07:00Z'
+updated_date: '2026-11-02T16:58:00Z'
 labels:
   - qa
   - pilot
 dependencies:
+  - TASK-64
   - TASK-21
   - TASK-24
   - TASK-26
   - TASK-27
   - TASK-28
-  - TASK-13
 references:
   - docs/software-plan.md
   - docs/quality-and-delivery.md

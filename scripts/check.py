@@ -115,7 +115,7 @@ def main(argv=None):
     output = Path(tempfile.mkdtemp(prefix="phonebuddy-quality-", dir=parent))
     checks = [
         ("repository", [sys.executable, "-B", "scripts/quality.py"]),
-        ("tests", [sys.executable, "-B", "-m", "unittest", "discover", "-s", "tests", "-v"]),
+        ("tests", [sys.executable, "-B", "scripts/run_required_unittests.py"]),
         ("node-version", ["node", "--version"]),
         ("npm-version", ["npm", "--version"]),
         ("web-install", ["npm", "--prefix", "apps/web", "ci", "--no-audit", "--no-fund"]),

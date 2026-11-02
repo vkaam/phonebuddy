@@ -4,11 +4,12 @@ title: Qualify a narrowly approved development lane without per-PR human approva
 status: To Do
 assignee: []
 created_date: '2026-10-31T18:40:00Z'
+updated_date: '2026-11-02T16:58:00Z'
 labels:
   - factory
   - autonomy
 dependencies:
-  - TASK-13
+  - TASK-64
   - TASK-40
   - TASK-41
 documentation:

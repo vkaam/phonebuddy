@@ -150,6 +150,10 @@ npx playwright install --with-deps chromium
 npm run test:browser
 ```
 
+The required Python runner fails on empty discovery, skips, expected failures,
+errors, or failures. The required Node unit-test runner also rejects empty,
+skipped, todo, cancelled, failed, or inconclusive runs.
+
 The hosted `Quality` workflow runs on pull requests, pushes to `main`, merge
 queues, and manual dispatch. It runs `scripts/quality.py`, the Python unit
 suite, the web commands above, actionlint, and Gitleaks. A local pass is not
