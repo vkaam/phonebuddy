@@ -70,7 +70,8 @@ not prove telephony or backend behavior. A missing browser fails the bundle.
 The required Python suite fails on empty discovery, skipped tests, expected
 failures, errors, or failures. The required browser suite fails if tests are
 skipped, absent, or return non-passing results, and focused `test.only` cases
-are forbidden. The Node unit-test runner does not yet enforce skip detection.
+are forbidden. The required Node unit-test command validates its TAP summary
+and fails on empty, skipped, todo, cancelled, failed, or inconclusive runs.
 Checks continue after a
 failure, but any failed or missing step fails the bundle. Each invocation creates
 a fresh directory. The install replaces `apps/web/node_modules`.
