@@ -1,0 +1,44 @@
+name: Azure OIDC authorization smoke
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Environment to verify
+        required: true
+        type: choice
+        options:
+          - dev
+          - test
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    if: github.repository == 'vkaam/phonebuddy' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment: ${{ inputs.environment }}
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: azure/login@a641126d1b8aa4d1fa005f4f92df94a3a4c4c906 # v3.1.0
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: Verify shared identity access
+        env:
+          TARGET_ENVIRONMENT: ${{ inputs.environment }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          for environment in dev test; do
+            az group show --name "rg-pb-${environment}-westeurope-foundation" --query name --output tsv >/dev/null
+          done
+          echo "The ${TARGET_ENVIRONMENT} GitHub environment authenticated and can read both approved foundation groups."
