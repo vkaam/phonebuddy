@@ -160,3 +160,68 @@ reconciliation), [issue #42](https://github.com/vkaam/phonebuddy/issues/42) (wor
 [issue #46](https://github.com/vkaam/phonebuddy/issues/46) (trusted merge/completion)
 and [issue #47](https://github.com/vkaam/phonebuddy/issues/47) (bounded autonomy).
 This document does not install those services or expand their privileges.
+
+## Executable consistency guard
+
+Run the same read-only validator locally and in CI:
+
+```sh
+git fetch origin
+python3 -B scripts/backlog_consistency.py --base origin/main
+```
+
+Immediately before claiming or resuming, also supply the native task and its
+approved branch. A zero exit code and `claim_verified: true` are required:
+
+```sh
+python3 -B scripts/backlog_consistency.py --base origin/main --task TASK-58 --branch agent/gh-14-1-bicep-pr-validation
+```
+
+The command uses a read-only `GH_TOKEN`/`GITHUB_TOKEN` or the existing GitHub CLI
+connection. It makes GET requests only, paginates branch/PR evidence, inspects
+branch records as data and rejects unavailable, truncated or stale default-branch
+evidence. It never executes code from another branch, writes claims, edits tasks
+or issues, or closes anything. Save JSON outside the checkout, or in an untracked
+`artifacts/` file, with `--output`; tracked source can never be overwritten.
+Untracked runtime artifacts are excluded from source hashes and scope checks;
+tracked files under that directory remain source. Reports bind the checkout head, dirty state and
+hashed file manifest to the observed issue bodies, branch/PR claims and default
+commit. Re-run after source, requirements or branch state changes.
+
+The guard checks required execution fields, approved body digests, canonical
+issue references, feature-branch uniqueness, duplicate decomposition, current
+claims, task identity/dependency integrity and changed-path scope. New or changed
+proposed Done records must have checked acceptance. A dependency is usable only
+when its Done record with checked acceptance exists on the live default commit;
+execution records also need a matching merged PR whose merge commit is an
+ancestor of that commit. Historical completed records retain their existing
+acceptance on the default branch. Closed issue flags and branch-local Done never
+substitute for that evidence; tasks requiring external gates must remain active
+until their evidence exists. The guard validates recorded evidence, not the
+truth of an unperformed Azure, release or human check.
+
+Unfinished imports already present before the 1 November governance adoption are
+reported as historical/ineligible, not silently promoted into executable tasks.
+They cannot pass a claim check; new records cannot obtain that exemption by
+backdating themselves. Retiring unfinished records requires either a native
+`Replaced by: TASK-n` line in the record, a shared canonical issue mapping and
+remapped active downstream edges, or explicit intake-only disposition through
+both `historical-import` and `needs-triage` labels plus a canonical issue
+reference. Archival preserves unfinished status and cannot satisfy dependencies.
+The guard also rejects silently removed identities. Use the Backlog CLI for all
+reconciliation changes; the guard supplies no automatic repair path.
+
+CI runs live validation inside the existing Quality gate using a read-only,
+unprivileged token, retaining its JSON with QA artifacts. `scripts/check.py`
+registers the offline structural mode; `--offline` never validates a claim or
+provides live merge/approval evidence. Existing broad imports may therefore
+appear as warnings in an audit while remaining blocked for execution.
+
+This is a point-in-time consistency gate for human-directed work. Approval text
+is checked for required provenance and revision, not cryptographically attested
+as an independent owner event. A passing snapshot does not acquire a lock or
+eliminate the race between validation and a later claim. Durable exclusive
+leases, fencing, trusted approval services and aggregate completion/release
+controllers remain the separate runtime work described above. Repository rules
+must require Quality for CI failure to prevent a merge; this change does not
+alter repository protections or review/merge authority.
