@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@vkaam'
 created_date: '2026-11-02T16:21:00Z'
-updated_date: '2026-11-02T16:36:00Z'
+updated_date: '2026-11-02T16:39:00Z'
 labels: []
 dependencies: []
 references:
@@ -83,4 +83,6 @@ Adjusted the workflow after the v1 warm-cache experiment: removed setup-node npm
 Updated the documentation for the final design: v2 caches only Chromium headless-shell files, npm caching was dropped based on the measured no-benefit experiment, and baseline job durations now use first-to-last timestamps from runner logs (excluding queue/control-plane delays).
 
 Final design local verification on 2026-11-02: repository quality check passed; 35 Python tests passed; npm audit reported 0 vulnerabilities; web lint passed; all 5 required Node tests passed; TypeScript/Vite build passed; Playwright 1.64.1 installed only Chromium headless shell in an isolated /private/tmp browser directory and all 3 browser smoke tests passed. Hosted Ubuntu v2 cold/warm runs and final PR-head CI are still required.
+
+V2 cold hosted cache run on PR #69: CI / Quality run 41483343913 passed on source 32b0aba2b1c00efc13194acb552dd6de7248b5c6; runner-log duration 38.0 seconds and Build and test web shell 23.4 seconds. The v2 key missed and was saved; only the 99 MiB Chromium headless shell and 1.4 MiB FFmpeg were downloaded (about 3.4 seconds). The cold job was near the 36.8-second uncached median; the web step was 2.8 seconds below its median. Warm-cache result remains required.
 <!-- SECTION:NOTES:END -->

@@ -152,8 +152,15 @@ representative rather than a controlled benchmark.
 An initial cache experiment used 279 MiB of full Chromium browser files and a
 59 MiB npm cache. The warm run skipped browser downloads, but cache restore took
 about 2.8 seconds; the npm cache did not shorten `npm ci`. The current v2
-headless-shell cache avoids storing the unused full Chromium browser. Cold and
-warm v2 run timings and browser-cache hit details will be recorded here.
+headless-shell cache avoids storing the unused full Chromium browser.
+
+The first v2 cold-cache run on PR #69 used source
+`32b0aba2b1c00efc13194acb552dd6de7248b5c6`: [38.0 seconds of Quality runner-log time, successful](https://github.com/vkaam/phonebuddy/actions/runs/41483343913).
+Its combined web step took 23.4 seconds, missed and populated the v2 cache,
+and downloaded only the 99 MiB headless shell plus 1.4 MiB of FFmpeg in
+about 3.4 seconds. The cold job was close to the uncached 36.8-second median;
+the web step was 2.8 seconds below its 26.2-second median. This is not a
+controlled timing comparison. The warm-cache result is pending.
 
 The `CI` workflow runs on every PR (without path filters), pushes to `main`,
 manual dispatch, and merge groups. Its single stable check is `Quality`. It:
