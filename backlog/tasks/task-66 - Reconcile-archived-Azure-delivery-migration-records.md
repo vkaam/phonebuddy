@@ -1,11 +1,11 @@
 ---
 id: TASK-66
 title: Reconcile archived Azure delivery migration records
-status: In Progress
+status: Done
 assignee:
   - '@codex'
 created_date: '2026-11-02T16:38:00Z'
-updated_date: '2026-11-02T16:39:00Z'
+updated_date: '2026-11-02T16:41:00Z'
 labels:
   - infrastructure
   - cicd
@@ -99,10 +99,10 @@ Spec: Reconcile only the Azure delivery migration. Keep the completed foundation
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 Backlog task creation and archival CLI operations succeed.
-- [ ] #2 The first-app Azure deployment path is represented by TASK-57 → TASK-59 → TASK-61 → TASK-62, with TASK-58 also required by TASK-62.
-- [ ] #3 Legacy imported tasks TASK-5–TASK-14 are archived with status/history preserved; TASK-5 remains Done and other unfinished records do not satisfy dependencies merely by archival.
-- [ ] #4 Verification confirms only TASK-57 and TASK-58 are ready and no GitHub issue or Azure resource was changed.
+- [x] #1 Backlog task creation and archival CLI operations succeed.
+- [x] #2 The first-app Azure deployment path is represented by TASK-57 → TASK-59 → TASK-61 → TASK-62, with TASK-58 also required by TASK-62.
+- [x] #3 Legacy imported tasks TASK-5–TASK-14 are archived with status/history preserved; TASK-5 remains Done and other unfinished records do not satisfy dependencies merely by archival.
+- [x] #4 Verification confirms only TASK-57 and TASK-58 are ready and no GitHub issue or Azure resource was changed.
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -120,4 +120,12 @@ Spec: Reconcile only the Azure delivery migration. Keep the completed foundation
 Created TASK-57 through TASK-65 from open issues #13–#21, each with its approved body timestamp and SHA-256, direct authorization evidence, unique future branch, explicit path scope, verification gates, acceptance criteria and dependencies. Corrected TASK-64's issue #20 body digest against the live issue. Archived imported TASK-5 through TASK-14 after creating their replacement tasks; TASK-5's completed status remains satisfied. No GitHub issue, Azure resource, application source, or deployment setting was changed.
 
 Published draft PR https://github.com/vkaam/phonebuddy/pull/70 at head 3f7342dc663f8c15fa1ad91baca8e0bd2311476f; hosted checks are pending. PR keeps all issue links neutral and does not close any parent issue.
+
+Final-head verification: PR #70 head 918d34544b37f05420d4b5f6374f5ce4f2044e60 passed Quality (run 41483638965) and Risk report (advisory; run 41483634849). Local git diff --check passed. TASK-57 and TASK-58 are the only ready tasks; TASK-62 depends on TASK-57, TASK-58, TASK-59 and TASK-61. No GitHub issue or Azure resource was changed. Maintainer review and merge remain outstanding; no Azure deployment was performed.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Reconciled the Azure delivery migration. Created fresh issue-linked native tasks TASK-57 through TASK-65 for open issues #13–#21 with approved body snapshots, direct authorization evidence, unique branches, explicit scopes, verification gates, acceptance criteria and remapped dependencies. Archived legacy TASK-5 through TASK-14 records while preserving TASK-5 as Done. The first application deployment path is TASK-57 → TASK-59 → TASK-61 → TASK-62, with TASK-58 also required by TASK-62. Backlog graph checks and git diff --check passed; PR #70 Quality and advisory Risk checks passed on head 918d345. No GitHub issues or Azure resources were changed. Maintainer review and merge remain outstanding; Azure deployment is not part of this PR.
+<!-- SECTION:FINAL_SUMMARY:END -->
