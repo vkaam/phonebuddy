@@ -16,6 +16,8 @@ test('required Node runner rejects incomplete and failing real test runs', () =>
     ['failure', "test('failure', () => { throw new Error('failure'); });", 1],
     ['cancelled', "test('cancelled', { timeout: 1 }, async () => await new Promise(r => setTimeout(r, 100)));", 1],
     ['inconclusive', "test('ambiguous', () => console.log('tests 1'));", 1],
+    ['empty-file', '', 1],
+    ['early-exit', "test('unexecuted', () => { throw new Error('should not run'); }); process.exit(0);", 1],
     ['empty', null, 1],
   ];
   for (const [name, source, expected] of cases) {
