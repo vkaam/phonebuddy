@@ -1,11 +1,11 @@
 ---
 id: TASK-68
 title: Guard issue and Backlog consistency before claims and in CI
-status: Done
+status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-02T18:44:00Z'
-updated_date: '2026-11-02T19:29:00Z'
+updated_date: '2026-11-02T19:45:00Z'
 labels:
   - governance
   - validation
@@ -13,6 +13,8 @@ dependencies: []
 references:
   - https://github.com/vkaam/phonebuddy/issues/72
   - https://github.com/vkaam/phonebuddy/pull/73
+  - scripts/backlog_consistency.py
+  - tests/test_backlog_consistency.py
 modified_files:
   - scripts/backlog_consistency.py
   - tests/test_backlog_consistency.py
@@ -61,6 +63,8 @@ Triage amendment v2 (2026-11-02): the live guard correctly detected main's stale
 2. Implement schema, live revision/claim, default-branch completion and migration/dependency checks with actionable failure reasons.
 3. Add adversarial regression fixtures and register the guard in local evidence, CI and pre-claim instructions.
 4. Exercise real repository/live API checks and seeded failures, run complete local/hosted verification, publish one PR and finalize after successful checks.
+
+5. Merge current main, preserve the reconciled TASK-57 record, fix both completion-validation review findings, and verify regression and hosted checks.
 <!-- SECTION:PLAN:END -->
 
 ## Implementation Notes

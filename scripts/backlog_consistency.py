@@ -328,12 +328,17 @@ def validate(tasks, base, repository, live=None, target=None, branch=None, chang
     for tid in base.keys() - tasks.keys():
         fail(tid, "native identity/history was removed; retain an explicit archival/migration record")
     for tid, task in tasks.items():
-        if historical(task, base):
+        old = base.get(tid)
+        unchanged_done = (old is not None and old == task
+                          and task["meta"]["status"] == "Done")
+        amended_done = (old is not None and old != task
+                        and task["meta"]["status"] == "Done"
+                        and old["meta"]["status"] == "Done")
+        if historical(task, base) and not amended_done:
             if not task["archived"] and task["meta"]["status"] != "Done":
                 warnings.append(f"{tid}: historical import is ineligible; fresh atomic triage is required")
             continue
-        if task["archived"] or (task["meta"]["status"] == "Done"
-                                and tid in base and base[tid]["meta"]["status"] == "Done"):
+        if unchanged_done or (task["archived"] and not amended_done):
             continue
         try:
             specs[tid] = spec(task, repository)
@@ -402,13 +407,13 @@ def validate(tasks, base, repository, live=None, target=None, branch=None, chang
         # Superseded IDs must not survive on any active downstream record.
         old = base.get(tid)
         replacements = re.findall(r"^Replaced by: (TASK-[1-9][0-9]*)\s*$", task["body"], re.M) if task["archived"] else []
+        if old and task["archived"] and old["meta"]["status"] != "Done" and task["meta"]["status"] != old["meta"]["status"]:
+            fail(tid, "archival must not turn unfinished work into completion")
         if old and not old["archived"] and task["archived"] and old["meta"]["status"] != "Done":
             intake = ("historical-import" in task["meta"]["labels"]
                       and "needs-triage" in task["meta"]["labels"]
                       and any(re.fullmatch(rf"https://github\.com/{re.escape(repository)}/issues/[1-9][0-9]*", u)
                               for u in task["meta"]["references"]))
-            if task["meta"]["status"] != old["meta"]["status"]:
-                fail(tid, "archival must not turn unfinished work into completion")
             if not replacements and not intake:
                 fail(tid, "migration requires 'Replaced by: TASK-n' or explicit historical-import/needs-triage issue intake")
         for replacement in replacements:

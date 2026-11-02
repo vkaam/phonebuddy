@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-02T16:35:00Z'
-updated_date: '2026-11-02T19:15:00Z'
+updated_date: '2026-11-02T18:24:00Z'
 labels:
   - infrastructure
   - cicd
@@ -37,7 +37,7 @@ Issue: https://github.com/vkaam/phonebuddy/issues/13
 Approved revision: 2026-11-01T09:24:42Z; body SHA-256 e49bb04e65519b8d40380feda8a7e091f4d3f2c94b25766da0812a8cd0d684e5.
 Approval evidence: The human user directly authorized reconciliation in Codex on 2026-11-02 with “fix this”. This authorizes triage into a bounded execution task; it does not authorize Azure deployment or issue closure.
 Branch: agent/gh-13-1-bootstrap-federated-identities
-Scope: scripts/bootstrap_github_oidc.py; tests/test_azure_oidc_bootstrap.py; .github/workflows/azure-oidc-smoke.yml; infra/github-oidc.md; infra/README.md; backlog/tasks/task-57 - Issue-13-Bootstrap-federated-GitHub-deployment-identities.md.
+Scope: scripts/bootstrap_github_oidc.py; tests/test_azure_oidc_bootstrap.py; .github/workflows/azure-oidc-smoke.yml; infra/github-oidc.md; infra/README.md; backlog/tasks/task-57 - Issue-13-Bootstrap-federated-GitHub-deployment-identities.md. Archived TASK-6 is historical and is not restored.
 Verify: From repository root run python3 -B scripts/check.py; python3 -B scripts/run_required_unittests.py; python3 -B -m unittest discover -s tests -p test_azure_oidc_bootstrap.py -v; actionlint .github/workflows/azure-oidc-smoke.yml .github/workflows/ci.yml .github/workflows/pr-safety.yml; git diff --check. Node/npm, registry access and pinned Playwright Chromium are required for the complete local bundle. Hosted Quality and advisory checks must pass on the current PR head. External gates: review bootstrap/runbook; repository owner configures dev/test main-only GitHub environments; approved Azure federation/RBAC readback and trusted dev/test OIDC authentication/cross-environment denial runs. No live bootstrap is authorized by this reconciliation.
 Spec: Implement only issue #13's approved identity and federation controls. Keep untrusted pull-request code outside the Azure credential path.
 

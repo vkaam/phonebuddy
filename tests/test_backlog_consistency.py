@@ -217,6 +217,24 @@ class ConsistencyTests(unittest.TestCase):
         archive["meta"]["status"] = "Done"
         self.assertFails(self.run_guard([archive, replacement, child], base), "must not turn unfinished")
 
+    def test_existing_unfinished_archive_cannot_be_promoted(self):
+        old = record(archived=True, created="2026-10-29")
+        promoted = deepcopy(old)
+        promoted["meta"]["status"] = "Done"
+        promoted["ac"] = [(True, promoted["ac"][0][1])]
+        self.assertFails(self.run_guard([promoted], {old["id"]: old}), "must not turn unfinished")
+
+    def test_amended_done_records_require_valid_acceptance_and_spec(self):
+        for archived in (False, True):
+            old = record(status="Done", archived=archived)
+            self.assertEqual(self.run_guard([deepcopy(old)], {old["id"]: old})["status"], "pass")
+            unchecked = deepcopy(old)
+            unchecked["ac"] = [(False, unchecked["ac"][0][1])]
+            self.assertFails(self.run_guard([unchecked], {old["id"]: old}), "unchecked native acceptance")
+            invalid = deepcopy(old)
+            invalid["body"] = invalid["body"].replace("Approval evidence:", "Removed evidence:")
+            self.assertFails(self.run_guard([invalid], {old["id"]: old}), "approval evidence")
+
     def test_unexplained_archive_is_rejected_and_explicit_intake_stays_unfinished(self):
         old, archive = record(), record(archived=True)
         self.assertFails(self.run_guard([archive], {old["id"]: old}), "migration requires")
