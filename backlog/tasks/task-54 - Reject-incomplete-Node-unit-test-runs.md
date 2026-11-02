@@ -5,7 +5,7 @@ status: Done
 assignee:
   - '@codex'
 created_date: '2026-11-01T20:29:00Z'
-updated_date: '2026-11-01T20:39:00Z'
+updated_date: '2026-11-02T06:49:00Z'
 labels:
   - factory
 dependencies:
@@ -20,6 +20,7 @@ modified_files:
   - apps/web/package.json
   - docs/quality-and-delivery.md
   - docs/agentic-development-contract.md
+  - backlog/tasks/task-54 - Reject-incomplete-Node-unit-test-runs.md
 priority: high
 type: chore
 ordinal: 53000
@@ -58,10 +59,12 @@ Verification: required Node runner passed five tests under local Node 26.10.0 an
 Draft PR https://github.com/vkaam/phonebuddy/pull/68; implementation head 7514994. Hosted checks and independent review remain pending; aggregate issue #39 acceptance is outstanding.
 
 Hosted Quality https://github.com/vkaam/phonebuddy/actions/runs/41347399670 and PR safety advisory https://github.com/vkaam/phonebuddy/actions/runs/41347398206 passed on head 9dcf5363de439647d18dfe39d286999d548b0da1. Final task metadata commit requires fresh checks. Independent review and merge remain outstanding; branch-local Done is provisional.
+
+PR #68 review follow-up: the required Node runner now counts TAP events for actual test cases separately from its discovered-file wrapper, and real subprocess fixtures cover an empty discovered test file and a successful early process exit before registered tests execute. npm --prefix apps/web test passed (5 tests); python3 -B scripts/run_required_unittests.py passed (35 tests); elevated PLAYWRIGHT_BROWSERS_PATH=/private/tmp/phonebuddy-playwright-browsers python3 -B scripts/check.py passed all local checks; git diff --check passed.
 <!-- SECTION:NOTES:END -->
 
 ## Final Summary
 
 <!-- SECTION:FINAL_SUMMARY:BEGIN -->
-Added a fail-closed Node test command that validates TAP counts and rejects empty, skipped, todo, cancelled, failed and inconclusive runs. Real subprocess fixtures, Node 22 and 26 verification, the full local bundle, npm audit and pre-finalization hosted checks passed. Independent review and merge remain outstanding; broader issue #39 acceptance remains incomplete.
+Hardened required Node unit-test validation to require at least one executed test case, separately from file-level TAP success. Added real subprocess regression fixtures for empty discovered files and successful early process exits, retaining existing outcome coverage. Web tests (5), Python tests (35), and the full local quality bundle passed; broader issue #39 acceptance and PR review/merge remain outstanding.
 <!-- SECTION:FINAL_SUMMARY:END -->
