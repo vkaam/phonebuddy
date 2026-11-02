@@ -23,8 +23,8 @@ Use GitHub and Backlog for live state.
   [PR #55](https://github.com/vkaam/phonebuddy/pull/55), instead of scheduling a
   duplicate identity implementation. Its amended specification enumerates the
   six exact implementation/test/task paths; acceptance remains unchecked.
-  Reconcile that PR's TASK-6 modification to TASK-57 while preserving the
-  implementation.
+  That PR now uses TASK-57; its five implementation files are unchanged by the
+  reconciliation, and the TASK-57 records on both PR branches are identical.
 - Retained original issue requirements and states. Progress reports link merge
   evidence and outstanding gates. Open issues with merged slices are not
   automatically complete; closure remains with the owner or an authorized
@@ -98,6 +98,22 @@ Current-main [Quality run 41498099939](https://github.com/vkaam/phonebuddy/actio
 succeeded on `d015e6a`. The advisory workflow on that main push was skipped;
 that is not successful PR-check evidence. The reconciliation PR and updated
 identity PR require their own successful final-head checks.
+
+[Reconciliation PR #71](https://github.com/vkaam/phonebuddy/pull/71) passed
+[Quality](https://github.com/vkaam/phonebuddy/actions/runs/41500518040) and
+[advisory reporting](https://github.com/vkaam/phonebuddy/actions/runs/41500516693)
+on implementation head `81a283a83a66d1fbe09e667ec7b38199c05ab7ee`.
+Finalization metadata changes require checks again on their final head.
+[Identity PR #55](https://github.com/vkaam/phonebuddy/pull/55) passed
+[Quality](https://github.com/vkaam/phonebuddy/actions/runs/41500338760) and all
+three advisory reports on final head `02000423647240e486d24d81a0fd0d1e85d02724`.
+Its integrated full local bundle also passed, including 41 Python tests.
+Both PRs have zero GitHub auto-closing issue links. Owner-visible progress
+reports were posted to issues
+[#37](https://github.com/vkaam/phonebuddy/issues/37#issuecomment-6584961978),
+[#39](https://github.com/vkaam/phonebuddy/issues/39#issuecomment-6584962900) and
+[#65](https://github.com/vkaam/phonebuddy/issues/65#issuecomment-6584963746).
+Their requirement bodies, acceptance check states and open states are unchanged.
 
 Issue #39 implementation is merged through PRs
 [#56](https://github.com/vkaam/phonebuddy/pull/56),

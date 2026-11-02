@@ -1,11 +1,11 @@
 ---
 id: TASK-67
 title: Reconcile issue intake, execution claims and merged evidence
-status: In Progress
+status: Done
 assignee:
   - '@codex'
 created_date: '2026-11-02T18:20:00Z'
-updated_date: '2026-11-02T18:25:00Z'
+updated_date: '2026-11-02T18:27:00Z'
 labels:
   - governance
   - reconciliation
@@ -172,10 +172,10 @@ Spec: Preserve historical acceptance and dependency links when archiving importe
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 All 37 issues have an explicit current task or intake mapping and unfinished imported records are archived with status, acceptance and native dependency history preserved.
-- [ ] #2 TASK-57 is claimed for existing draft PR #55 and its actual branch; the identity PR uses the current native record without resurrecting archived TASK-6 or duplicating implementation.
-- [ ] #3 The audit links merged work for issues #37, #39 and #65, distinguishes incomplete aggregate acceptance from merge evidence, and identifies actionable next work and external gates without closing issues.
-- [ ] #4 Native task identities, dependencies, approved snapshots and exact file scope pass validation; local checks and all current-head hosted checks succeed and the work is published for review.
+- [x] #1 All 37 issues have an explicit current task or intake mapping and unfinished imported records are archived with status, acceptance and native dependency history preserved.
+- [x] #2 TASK-57 is claimed for existing draft PR #55 and its actual branch; the identity PR uses the current native record without resurrecting archived TASK-6 or duplicating implementation.
+- [x] #3 The audit links merged work for issues #37, #39 and #65, distinguishes incomplete aggregate acceptance from merge evidence, and identifies actionable next work and external gates without closing issues.
+- [x] #4 Native task identities, dependencies, approved snapshots and exact file scope pass validation; local checks and all current-head hosted checks succeed and the work is published for review.
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -191,4 +191,12 @@ Spec: Preserve historical acceptance and dependency links when archiving importe
 
 <!-- SECTION:NOTES:BEGIN -->
 Validated all 37 live issue mappings against 65 existing task records; archived 26 imported unfinished records through the CLI while preserving every original acceptance item, check state, status and dependency. Verified all active execution task digests against unchanged live issue bodies and no active task depends on an archived unfinished record. Only TASK-58 remains unassigned and dependency-ready. Updated existing draft PR #55 to use TASK-57 on its original branch, with the archived TASK-6 version preserved exactly from main; the five identity implementation files are unchanged by reconciliation. Integrated full local bundle passed. Reconciliation git diff --check, repository checks, 35 required Python tests, native doctor and exact-path scope audit all pass. Hosted current-head checks and external evidence reports remain pending.
+
+Acceptance evidence: exact native-data audit passed all 37 mappings and 65 retained identities, preserved every original AC/check/status/dependency, archived 26 unfinished imports, verified all active issue body digests, and found no active dependency on an unfinished archive. Only TASK-58 is unassigned and ready. TASK-57 is byte-identical across both coordinated branches. Identity PR #55 head 02000423647240e486d24d81a0fd0d1e85d02724 passed Quality run 41500338760 and all three advisory reports (41500336128, 41500400442, 41500507461); it remains draft with live gates outstanding. Reconciliation PR #71 head 81a283a83a66d1fbe09e667ec7b38199c05ab7ee passed Quality run 41500518040 and advisory run 41500516693. GraphQL closingIssuesReferences totalCount is zero for both. Progress reports posted to issues #37/#39/#65 (comments 6584961978/6584962900/6584963746), preserving requirement bodies and issue states. Local checks and exact metadata/document scope audit passed. Finalization metadata will be committed/pushed and final-head checks reverified before reporting readiness. Normal maintainer review and merge remain required.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Reconciled all 37 issue mappings and 65 pre-existing native records, archived 26 unfinished imports without changing acceptance or dependencies, claimed TASK-57 for existing identity PR #55 and corrected that PR to use the current task without changing its implementation. Added a dated audit, recorded merged evidence on issues #37/#39/#65 and preserved genuine aggregate/live gates. Native doctor, exact scope/snapshot/identity/dependency checks, 35 Python tests and repository checks pass; complete local bundles pass on main and integrated PR #55. PR #55 final head is green; PR #71 implementation head passed Quality and advisory reporting. Final metadata head must pass again. TASK-58 is the next unassigned ready task. Branch-local Done is provisional until PR #71 merges; owner review, live identity gates, the issue #39 registration gap and remaining factory decisions are not claimed complete.
+<!-- SECTION:FINAL_SUMMARY:END -->
