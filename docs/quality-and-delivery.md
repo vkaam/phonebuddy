@@ -159,8 +159,15 @@ The first v2 cold-cache run on PR #69 used source
 Its combined web step took 23.4 seconds, missed and populated the v2 cache,
 and downloaded only the 99 MiB headless shell plus 1.4 MiB of FFmpeg in
 about 3.4 seconds. The cold job was close to the uncached 36.8-second median;
-the web step was 2.8 seconds below its 26.2-second median. This is not a
-controlled timing comparison. The warm-cache result is pending.
+the web step was 2.8 seconds below its 26.2-second median. The warm-cache run
+on source `365acdd69073b86091556f16837c9aa719a6bd4d` then [passed in 28.9 seconds of Quality runner-log time](https://github.com/vkaam/phonebuddy/actions/runs/41483702707).
+Its web step took 16.1 seconds. The exact v2 cache key hit, restoring a 108 MiB
+cache; Playwright downloaded no browser files, and all 3 browser smoke tests
+still passed. Against the uncached medians, the warm job was 7.9 seconds faster
+and its web step was 10.1 seconds faster. Runner/source variation means this
+remains representative evidence, not a controlled benchmark. Linux system
+dependency installation, locked npm install, audit, every test, build,
+actionlint, Gitleaks, and evidence uploads still ran on the warm hit.
 
 The `CI` workflow runs on every PR (without path filters), pushes to `main`,
 manual dispatch, and merge groups. Its single stable check is `Quality`. It:
