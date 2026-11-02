@@ -1,11 +1,11 @@
 ---
 id: TASK-69
 title: Publish trusted shared OIDC authentication smoke workflow
-status: In Progress
+status: Done
 assignee:
   - '@codex'
 created_date: '2026-11-02T21:15:00Z'
-updated_date: '2026-11-02T21:16:00Z'
+updated_date: '2026-11-02T21:57:00Z'
 labels: []
 dependencies: []
 references:
@@ -38,8 +38,8 @@ Spec: Workflow is manual and main-only, uses GitHub environments and least-privi
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 Manual workflow is configured for main-only dispatch via dev or test GitHub environments, authenticates with OIDC, and reads both foundation resource groups without deployment writes.
-- [ ] #2 Regression checks and workflow lint verify the trusted trigger and permissions; TASK-57 records the split and waits for this PR to merge.
+- [x] #1 Manual workflow is configured for main-only dispatch via dev or test GitHub environments, authenticates with OIDC, and reads both foundation resource groups without deployment writes.
+- [x] #2 Regression checks and workflow lint verify the trusted trigger and permissions; TASK-57 records the split and waits for this PR to merge.
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -54,4 +54,12 @@ Spec: Workflow is manual and main-only, uses GitHub environments and least-privi
 Workflow and boundary regression prepared from existing draft PR #55. Local 63 Python tests, repository checks, actionlint, offline guard and git diff --check passed. TASK-57 is paused on this prerequisite and its existing PR claim is retained. Live authentication is explicitly deferred until after this enabling PR is reviewed and merged.
 
 Draft PR #75 opened; awaiting hosted Quality and advisory checks on the current head. The workflow must reach main through review before either live smoke run can be collected.
+
+Acceptance evidence: boundary regression and actionlint verify configured manual main-only environment job, OIDC permission, group-read-only commands and no PR trigger or deployment command; 63 Python tests and repository checks passed. TASK-57 is paused with TASK-69 dependency. PR #75 head 2e62275 passed hosted Quality run 41526941786 and advisory run 41526939615. Live authentication runs are explicitly TASK-57 evidence after review and merge, not claimed here. Final metadata requires revalidation.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Prepared the reviewed main-only shared OIDC smoke workflow and TASK-57 prerequisite split. Local tests, actionlint, offline guard and hosted checks passed on implementation head; final metadata head requires revalidation. Live authentication runs and TASK-57 acceptance remain outstanding until this PR is reviewed and merged.
+<!-- SECTION:FINAL_SUMMARY:END -->
