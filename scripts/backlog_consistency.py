@@ -179,6 +179,9 @@ def spec(task, repository):
     approval = field(task, "Approval evidence") or field(task, "Approval")
     branch = field(task, "Branch")
     scope = field(task, "Scope")
+    # Earlier CLI-managed specifications put external/context notes after the
+    # repository allowlist on the same line. Those notes grant no file scope.
+    scope = scope.split(". External scope:", 1)[0].split(". Archived TASK-", 1)[0]
     verify = field(task, "Verify") or field(task, "Verification")
     if not digest or not revision or not approval:
         raise EvidenceError("approved timestamp, SHA-256 and explicit approval evidence are required")
@@ -189,7 +192,8 @@ def spec(task, repository):
     paths = []
     for path in scope.split(";"):
         path = path.strip().rstrip(".")
-        if path in {"this task's own CLI-managed record", "this task's CLI-managed record"}:
+        if path in {"this task's own CLI-managed record", "this task's CLI-managed record",
+                    "this task record through Backlog CLI", "this task record only"}:
             path = task["path"]
         if (not path or path.startswith(("/", "~")) or "\\" in path
                 or ".." in PurePosixPath(path).parts or any(c in path for c in "`$\n")

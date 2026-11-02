@@ -126,6 +126,15 @@ class ConsistencyTests(unittest.TestCase):
         self.assertFails(self.run_guard([record()], branch="agent/task-80", changed=["new/unapproved.py"]), "outside approved scope")
         self.assertFails(self.run_guard([record()], branch="other", changed=["scripts/feature-80.py"]), "exactly one")
 
+    def test_existing_self_record_aliases_do_not_grant_external_notes_file_scope(self):
+        for alias in ["this task record through Backlog CLI", "this task's own CLI-managed record"]:
+            task = record()
+            task["body"] = task["body"].replace(task["path"], alias + ". External scope: owner progress reporting")
+            result = self.run_guard([task])
+            self.assertEqual(result["status"], "pass", result)
+            info = guard.spec(task, REPO)
+            self.assertEqual(info["scope"], ["scripts/feature-80.py", task["path"]])
+
     def test_changed_cancelled_or_missing_issue_evidence_blocks(self):
         for remote, reason in [(live(body="edited intent"), "body changed"),
                                (live(state="closed"), "closed"),

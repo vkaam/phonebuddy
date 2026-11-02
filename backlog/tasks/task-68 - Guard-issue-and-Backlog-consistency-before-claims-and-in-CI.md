@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-02T18:44:00Z'
-updated_date: '2026-11-02T19:22:00Z'
+updated_date: '2026-11-02T19:27:00Z'
 labels:
   - governance
   - validation
@@ -66,4 +66,6 @@ Triage amendment v2 (2026-11-02): the live guard correctly detected main's stale
 
 <!-- SECTION:NOTES:BEGIN -->
 Implemented a GET-only consistency guard with restricted native-frontmatter parsing, approved issue digest checks, branch/PR claim reconciliation, default-branch/merged dependency evidence, migration mapping/stale-edge checks, scope enforcement and source-bound JSON. Historical imports remain ineligible and cannot obtain an exemption by backdating new records. Registered offline structure in scripts/check.py and live validation inside CI Quality with a read-only token; documented mandatory pre-claim use and point-in-time/approval/lease limits. Applied only the already-approved TASK-57 claim correction from PR #71 and normalized its Scope line without changing allowed paths or acceptance. No archive migration was bundled. Focused 24 guard regressions and the full 59-test Python suite passed; actionlint and diff/repository checks passed. Full local quality bundle passed (35 original plus 24 guard tests, 5 Node tests, 3 browser tests, install/audit/lint/build); evidence /private/var/folders/zs/9bq4j3rx3wng_vzz52w8hrf80000gn/T/phonebuddy-quality-izly3mmn/report.json. A real live pre-claim run returned pass and claim_verified true with the existing TASK-57 claim observed; final source-bound validation will be repeated after publication.
+
+Compatibility regression added for existing CLI-managed self-record scope aliases and same-line external/context annotations; annotations grant no repository file scope. Verified the still-pending TASK-67 specification parses correctly without changing its record or bundling PR #71. All 60 Python tests pass (25 guard cases). Initial PR #73 head 51efd8b passed Quality run 41509531387 and advisory run 41509531386; a real published-head pre-claim check also passed with claim_verified true and 66 native identities. The compatibility change requires new current-head CI before finalization.
 <!-- SECTION:NOTES:END -->
