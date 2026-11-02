@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-02T16:35:00Z'
-updated_date: '2026-11-02T20:30:00Z'
+updated_date: '2026-11-02T20:31:00Z'
 labels:
   - infrastructure
   - cicd
@@ -34,7 +34,7 @@ ordinal: 54000
 Need: Trusted workflows require environment-scoped Azure access without long-lived credentials.
 
 Issue: https://github.com/vkaam/phonebuddy/issues/13
-Approved revision: 2026-11-01T09:24:42Z; body SHA-256 e49bb04e65519b8d40380feda8a7e091f4d3f2c94b25766da0812a8cd0d684e5.
+Approved revision: 2026-11-02T20:27:34Z; body SHA-256 585a9d00ecf2885cfa147a04519d4d548b2ca8a4d3423c0878b2a20f3d2495eb.
 Approval evidence: The human user directly authorized reconciliation in Codex on 2026-11-02 with “fix this”. This authorizes triage into a bounded execution task; it does not authorize Azure deployment or issue closure.
 Branch: agent/gh-13-1-bootstrap-federated-identities
 Scope: scripts/bootstrap_github_oidc.py; tests/test_azure_oidc_bootstrap.py; .github/workflows/azure-oidc-smoke.yml; infra/github-oidc.md; infra/README.md; backlog/tasks/task-57 - Issue-13-Bootstrap-federated-GitHub-deployment-identities.md. Archived TASK-6 is historical and is not restored.
@@ -42,6 +42,8 @@ Verify: From repository root run python3 -B scripts/check.py; python3 -B scripts
 Spec: Implement only issue #13's approved identity and federation controls. Keep untrusted pull-request code outside the Azure credential path.
 
 Triage amendment, 2026-11-02 (TASK-67): The current user reconciliation instruction authorizes retaining existing draft PR https://github.com/vkaam/phonebuddy/pull/55 and its actual branch, transferring the active claim from archived TASK-6 to TASK-57, and enumerating the exact source/test scope already implemented there. The issue requirements and all three unchecked acceptance criteria remain unchanged. This corrects migration bookkeeping; it grants no identity bootstrap, deployment, merge or issue-closing authority.
+
+Revision reassessment 2026-11-02: the owner checked the three issue acceptance boxes. Replacing only those checks with unchecked reproduces the previously approved body SHA-256 e49bb04e65519b8d40380feda8a7e091f4d3f2c94b25766da0812a8cd0d684e5; requirement wording and scope are unchanged. Owner reports completion, but execution acceptance remains subject to the recorded verification gates.
 <!-- SECTION:DESCRIPTION:END -->
 
 ## Acceptance Criteria
