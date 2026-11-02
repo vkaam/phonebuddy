@@ -64,6 +64,7 @@ class RunnerTests(unittest.TestCase):
         with patch.object(check, "write_bundle", return_value={"status": "pass"}) as bundle:
             self.assertEqual(check.main(["--output-parent", str(self.root)]), 0)
         checks = dict(bundle.call_args.args[2])
+        self.assertEqual(checks["tests"], [sys.executable, "-B", "scripts/run_required_unittests.py"])
         self.assertEqual(checks["node-version"], ["node", "--version"])
         self.assertEqual(checks["npm-version"], ["npm", "--version"])
         self.assertEqual(checks["web-install"],
