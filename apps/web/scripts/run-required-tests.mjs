@@ -26,7 +26,12 @@ if (result.stderr) process.stderr.write(result.stderr);
 
 const counts = {};
 let valid = true;
+let executedTests = 0;
+let lastResultName = '';
 for (const line of (result.stdout ?? '').split(/\r?\n/)) {
+  const resultMatch = /^(?:not )?ok \d+ - (.+)$/.exec(line);
+  if (resultMatch) lastResultName = resultMatch[1];
+  if (/^\s+type: 'test'$/.test(line) && !files.includes(lastResultName)) executedTests++;
   const match = /^# (tests|pass|fail|cancelled|skipped|todo) (\d+)$/.exec(line);
   if (!match) continue;
   if (Object.hasOwn(counts, match[1])) valid = false;
@@ -34,7 +39,7 @@ for (const line of (result.stdout ?? '').split(/\r?\n/)) {
 }
 const keys = ['tests', 'pass', 'fail', 'cancelled', 'skipped', 'todo'];
 valid &&= keys.every(key => Number.isSafeInteger(counts[key]));
-valid &&= counts.tests > 0 && counts.pass === counts.tests;
+valid &&= executedTests > 0 && counts.tests > 0 && counts.pass === counts.tests;
 valid &&= counts.fail === 0 && counts.cancelled === 0 && counts.skipped === 0 && counts.todo === 0;
 if (result.error || result.status !== 0 || !valid) {
   console.error(`Required Node tests incomplete or failed${result.error ? `: ${result.error.message}` : '.'}`);
