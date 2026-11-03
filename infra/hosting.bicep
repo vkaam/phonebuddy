@@ -101,7 +101,10 @@ resource environmentDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-0
   properties: {
     workspaceId: logWorkspace.id
     logAnalyticsDestinationType: 'Dedicated'
-    logs: [{ category: 'ContainerAppSystemLogs', enabled: true }]
+    logs: [
+      { category: 'ContainerAppSystemLogs', enabled: true }
+      { category: 'ContainerAppConsoleLogs', enabled: true }
+    ]
     metrics: [{ category: 'AllMetrics', enabled: true }]
   }
 }
@@ -141,7 +144,6 @@ resource appDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-previe
   properties: {
     workspaceId: logWorkspace.id
     logAnalyticsDestinationType: 'Dedicated'
-    logs: [{ category: 'ContainerAppConsoleLogs', enabled: true }]
     metrics: [{ category: 'AllMetrics', enabled: true }]
   }
 }

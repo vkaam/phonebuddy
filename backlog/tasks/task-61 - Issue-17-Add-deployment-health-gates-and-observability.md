@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-02T16:36:00Z'
-updated_date: '2026-11-03T20:36:00Z'
+updated_date: '2026-11-03T21:05:00Z'
 labels:
   - infrastructure
   - cicd
@@ -85,4 +85,12 @@ Spec: Preserve the issue's approved acceptance. Do not broaden scope or weaken r
 Implemented structured health telemetry that excludes request lines, client addresses, query strings and bodies; added 30-day Log Analytics, Application Insights, Container Apps diagnostics, and Azure Monitor rules for missing telemetry, non-200 health responses, and p95 latency. Added the 60-second warm-up/10-minute dev-test gate, source-bound deployment annotations, and a manual main-only workflow that observes an existing deployment without deploying it. Live Backlog claim validation passed with claim_verified=true against origin/main; TASK-59 is completed. Verification on the implementation source: full local baseline passed (report /private/var/folders/zs/9bq4j3rx3wng_vzz52w8hrf80000gn/T/phonebuddy-quality-rwk2dj6b/report.json); pinned Bicep 0.34.44 validation passed; actionlint passed on all five workflows. The required hosted Azure checks have not run: the task's recorded approval explicitly excludes deployment, and no release-test workload has been deployed. No Azure resource was changed.
 
 Draft PR #82: https://github.com/vkaam/phonebuddy/pull/82 at head 37656a7d19db0f1b9fb71645e8bb60cd50154eac. PR is draft while hosted Azure alert-injection and healthy-release evidence remain outstanding; no task acceptance criteria are checked and no Azure resources were changed.
+
+User explicitly authorized dev/test deployment and alert drill in Codex on 2026-11-03. Selected existing dev target rg-pb-dev-westeurope-foundation in West Europe after account and tag verification; the group was empty. Local deployment-ready preflight passed and the read-only hosting what-if succeeded with 9 Create, 0 Modify, 0 NoChange, no diagnostics, using deployWorkload=false. Preflight reviewed current Microsoft pricing: Basic Container Registry is /bin/zsh.1666/day (~.07 per 30.4 days); the registry, monitoring ingestion/alerts, and active workload add metered charges. The documented dev monthly budget is  and is an alert, not a spending cap. No resources deployed yet.
+
+Correction and status update for the preceding note: zsh expanded dollar signs in the recorded text. The accurate Basic Container Registry retail price is 0.1666 USD/day, about 5.07 USD per 30.4 days. The dev monthly budget is 10 USD and is an alert, not a spending cap. The bootstrap deployment succeeded and created nine resources. ACR Tasks are blocked by subscription policy, so the image was built locally and pushed. The first workload deployment failed because the image was ARM64. The corrected amd64 deployment then failed because Azure rejected ContainerAppConsoleLogs on the Container App-level diagnostic setting; Microsoft documents this category at the managed environment level. The app and alerts are not yet successfully provisioned; no alert drill has run.
+
+Azure deployment diagnostics: the first workload attempt failed because the pushed image index had no linux/amd64 child. The corrected amd64 image deployed to ACR; the next attempt reported ContainerAppConsoleLogs unsupported at the Container App diagnostic-settings scope. Updated infra/hosting.bicep to route console and system logs through the Container Apps managed-environment diagnostic setting and keep only AllMetrics at app scope; scripts/check_bicep.py now enforces this documented Azure scope. Local validation and a new deployment preview are pending.
+
+Validation after the managed-environment diagnostics fix: pinned Bicep 0.34.44 check passed; full scripts/check.py baseline passed (report /private/var/folders/zs/9bq4j3rx3wng_vzz52w8hrf80000gn/T/phonebuddy-quality-di10vjh0/report.json); actionlint passed on all five workflows. The Bicep scope change is not deployed yet; hosted alerts and healthy gate remain outstanding pending commit, PR checks, and retry.
 <!-- SECTION:NOTES:END -->

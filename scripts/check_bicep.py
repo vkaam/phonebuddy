@@ -137,6 +137,29 @@ def validate_hosting(template):
             or 'Microsoft.OperationalInsights/workspaces'
             not in insight_properties.get('WorkspaceResourceId', '')):
         raise ValueError('Application Insights must use the bounded Log Analytics workspace')
+    diagnostic_settings = [resource for resource in template['resources']
+                           if resource.get('type') == 'Microsoft.Insights/diagnosticSettings']
+    environment_diagnostics = next(
+        (resource for resource in diagnostic_settings
+         if '/managedEnvironments/' in resource.get('scope', '')), None)
+    app_diagnostics = next(
+        (resource for resource in diagnostic_settings
+         if '/containerApps/' in resource.get('scope', '')), None)
+    environment_log_categories = {
+        item.get('category')
+        for item in environment_diagnostics.get('properties', {}).get('logs', [])
+    } if environment_diagnostics else set()
+    if not {'ContainerAppConsoleLogs', 'ContainerAppSystemLogs'}.issubset(
+            environment_log_categories):
+        raise ValueError('Console and system logs must route from the Container Apps environment')
+    if app_diagnostics is None or app_diagnostics.get('properties', {}).get('logs'):
+        raise ValueError('Container App-level diagnostics may route metrics, not logs')
+    app_metric_categories = {
+        item.get('category')
+        for item in app_diagnostics.get('properties', {}).get('metrics', [])
+    }
+    if 'AllMetrics' not in app_metric_categories:
+        raise ValueError('Container App-level diagnostics must route AllMetrics')
     alerts = [resource for resource in template.get('resources', [])
               if resource.get('type') == 'Microsoft.Insights/scheduledQueryRules']
     if len(alerts) != 3 or any(resource.get('kind') != 'LogAlert'
