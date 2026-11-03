@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-02T16:36:00Z'
-updated_date: '2026-11-03T21:12:00Z'
+updated_date: '2026-11-03T21:16:00Z'
 labels:
   - infrastructure
   - cicd
@@ -94,4 +94,6 @@ External acceptance remains open: no authorized Azure deployment, live model quo
 Draft PR #84 was created from the recorded feature branch on latest main. PR head: `44cc55d78535e48a389810d17a6e78692165367c`. The PR is draft because the required authorized Azure deployment and live nonproduction/restore evidence remain outstanding. Hosted checks are pending; task remains In Progress and acceptance criteria remain unchecked.
 
 Read-only current Azure evidence, collected 2026-11-03 in the configured subscription: `gpt-5-mini` version `2025-08-07` is Generally Available in West Europe with inference through 2027-07-13, but it has no regional `Standard` SKU in the model catalog. The catalog lists `GlobalStandard` and `DataZoneStandard`; capacity API reports 500 Global Standard units and 0 Data Zone Standard units for this model/version. The configured policy requires regional Standard and rejects global/data-zone processing, so the dev and test model preflights correctly fail closed with “not available on the Standard SKU.” A legacy regional `gpt-4.1-mini` catalog entry also had 0 Standard capacity. No geography fallback was used, no Azure writes occurred, and no deployment was attempted. Model SKU/geography or capacity approval is needed before this gate can pass.
+
+Final local validation before this task-record update, on code commit `9226b257488a898747585e1ad8cb48500b7ceb5a`: full `python3 -B scripts/check.py` passed; evidence `/private/var/folders/zs/9bq4j3rx3wng_vzz52w8hrf80000gn/T/phonebuddy-quality-0j_j04k_/report.json`. `BICEP=/private/tmp/phonebuddy-azure-cli/bin/bicep python3 -B scripts/check_bicep.py` passed with CLI 0.34.44; focused Foundry/data-platform suite passed 24 tests; `git diff --check` passed. This validation covers the code subsequently carried forward by the task-record-only update. Hosted CI for this exact PR head remains to be recorded.
 <!-- SECTION:NOTES:END -->
