@@ -14,6 +14,7 @@ dependencies:
 references:
   - https://github.com/vkaam/phonebuddy/issues/14
   - https://github.com/vkaam/phonebuddy/actions/runs/41699912355
+  - https://github.com/vkaam/phonebuddy/pull/80
 priority: high
 type: task
 ordinal: 68000
@@ -52,4 +53,6 @@ Spec: TASK-58 must be complete on default branch. Any workflow or permission cha
 Run 41699912355 attempt 3 succeeded on merged main 8eed705c322f06d0690e860ec56fe555c7d4faba. It verified exact-commit Quality, authenticated via dev OIDC, and reported six Create changes for the dev hosting preview with deployWorkload=false; the workflow records counts only, not detailed resource changes. Read-only Azure RBAC readback found Contributor and Role Based Access Control Administrator on the dev foundation group with no condition; this is a shared dev/test identity and is not evidence of least privilege or lack of other permissions. No resources were deployed. Hosted Quality 41699306514 exercised invalid-environment and failure-path regression tests on the implementation PR, but no actual cross-repository fork PR was found and the full hosted evidence is incomplete.
 
 Local checks passed on the current verification branch: full baseline phonebuddy-quality-ir3rjeme, pinned Bicep 0.34.44, actionlint 1.7.12 and git diff --check. Hosted implementation PR tests cover several invalid inputs and policy/failure cases, but no hosted malformed-template PR or actual fork PR has been evidenced. The successful live run reports only change counts and no retained per-resource preview; a complete auditable preview remains unverified. All acceptance criteria remain open.
+
+Draft PR #80 records current verification evidence. Hosted fork PR, hosted malformed-template failure and detailed retained preview evidence remain open; the unconditioned dev RBAC Administrator grant also requires owner review. Do not mark complete on the successful preview alone.
 <!-- SECTION:NOTES:END -->
