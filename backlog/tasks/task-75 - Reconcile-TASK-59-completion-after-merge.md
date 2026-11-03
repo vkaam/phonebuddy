@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-03T19:44:00Z'
-updated_date: '2026-11-03T19:49:00Z'
+updated_date: '2026-11-03T19:51:00Z'
 labels:
   - infrastructure
   - cicd
@@ -61,4 +61,6 @@ Owner directly instructed closure after disclosure of the absent recorded indepe
 Draft PR #81 records the reconciliation. No independent approval is recorded for PR #77; the owner explicitly directed closure after that limitation was disclosed. Hosted checks and independent review remain outstanding.
 
 Hosted Quality run 41706429563 and advisory Risk run 41706425806 passed on head e7d8423. TASK-75 remains In Progress pending independent review and merge; final-head checks remain required.
+
+Final-head Quality run 41706884615 failed because the global consistency guard reports TASK-74 issue is closed or live approval/revision evidence is unavailable. Issue #14 was closed by the owner at 2026-11-03T19:48:48Z while TASK-74 remains To Do on main and PR #80 remains open. This is unrelated to TASK-59 source; reconciliation requires resolving the issue #14/TASK-74 state rather than bypassing the guard. TASK-75 remains In Progress.
 <!-- SECTION:NOTES:END -->
