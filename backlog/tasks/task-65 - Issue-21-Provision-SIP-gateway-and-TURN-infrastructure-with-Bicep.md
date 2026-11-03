@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-02T16:36:00Z'
-updated_date: '2026-11-03T20:48:00Z'
+updated_date: '2026-11-03T20:50:00Z'
 labels:
   - infrastructure
   - cicd
@@ -64,7 +64,7 @@ Spec: Preserve the issue's approved acceptance. Do not broaden scope or weaken r
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 Bicep provisions gateway/relay compute, fixed addressing, bounded media ports, DNS/certificate prerequisites and private administration paths.
+- [x] #1 Bicep provisions gateway/relay compute, fixed addressing, bounded media ports, DNS/certificate prerequisites and private administration paths.
 - [ ] #2 Gateway software/configuration are reproducible and versioned; provider secrets stay server-side and controlled tests do not require Fonzer.
 - [ ] #3 A synthetic browser-to-SIP call verifies both media directions, forced TURN, TLS and restricted management access.
 - [ ] #4 Updates drain new calls; active-call limitations and compatible image/configuration rollback are documented and tested.
@@ -84,4 +84,6 @@ Implemented opt-in media networking and VM resources, static IPs, a narrow inbou
 Final-source verification rerun passed: python3 -B scripts/check.py (Local baseline: pass) and BICEP=/private/tmp/phonebuddy-task65-azure/bin/bicep DOTNET_BUNDLE_EXTRACT_BASE_DIR=/private/tmp/phonebuddy-task65-bicep-extract python3 -B scripts/check_bicep.py (Bicep baseline checks passed). git diff --check passed. origin/main was fetched and is an ancestor of this branch. Acceptance criteria 2-4 remain open pending reproducible image build provenance and authorized Azure deployment, forced-TURN synthetic call, and update/drain/rollback exercise.
 
 Published draft PR: https://github.com/vkaam/phonebuddy/pull/83 (Refs #21). GitHub CI Quality job passed on head f46cc520142e73c31fe3c27cc75171776e466323, including repository/policy checks, web build/tests, Bicep validation and history secret scan. PR remains draft and TASK-65 remains In Progress because live acceptance gates are outstanding.
+
+Final PR-head verification passed on fb5ac173c9733a0cb53212bf0bc5c2d75c49a276: GitHub Quality and advisory Risk report checks both completed successfully. Criterion 1 is evidenced by successful Bicep build plus automated contract checks for opt-in deployment, fixed IPs, bounded inbound/outbound media ports, Bastion-only SSH, pinned Gallery image version and secret-free outputs. Criteria 2-4 remain unchecked because there is no image build/provenance pipeline or authorized live Azure environment evidence for call, drain, update and rollback behavior.
 <!-- SECTION:NOTES:END -->
