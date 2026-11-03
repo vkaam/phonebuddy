@@ -5,12 +5,13 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-02T16:35:00Z'
-updated_date: '2026-11-02T21:08:00Z'
+updated_date: '2026-11-03T05:00:00Z'
 labels:
   - infrastructure
   - cicd
 dependencies:
   - TASK-5
+  - TASK-69
 references:
   - https://github.com/vkaam/phonebuddy/issues/13
   - https://github.com/vkaam/phonebuddy/pull/55
@@ -37,7 +38,7 @@ Issue: https://github.com/vkaam/phonebuddy/issues/13
 Approved revision: 2026-11-02T20:47:52Z; body SHA-256 31d3571e5b62e2fc8a4efa86f325d5f757bccc09f4516fc7f7cabf17d417305b.
 Approval evidence: The human user directly authorized reconciliation in Codex on 2026-11-02 with “fix this”. This authorizes triage into a bounded execution task; it does not authorize Azure deployment or issue closure.
 Branch: agent/gh-13-1-bootstrap-federated-identities
-Scope: scripts/bootstrap_github_oidc.py; tests/test_azure_oidc_bootstrap.py; .github/workflows/azure-oidc-smoke.yml; infra/github-oidc.md; infra/README.md; backlog/tasks/task-57 - Issue-13-Bootstrap-federated-GitHub-deployment-identities.md. Archived TASK-6 is historical and is not restored.
+Scope: scripts/bootstrap_github_oidc.py; tests/test_azure_oidc_bootstrap.py; infra/github-oidc.md; infra/README.md; backlog/tasks/task-57 - Issue-13-Bootstrap-federated-GitHub-deployment-identities.md. Archived TASK-6 is historical and is not restored.
 Verify: From repository root run python3 -B scripts/check.py; python3 -B scripts/run_required_unittests.py; python3 -B -m unittest discover -s tests -p test_azure_oidc_bootstrap.py -v; actionlint .github/workflows/azure-oidc-smoke.yml .github/workflows/ci.yml .github/workflows/pr-safety.yml; git diff --check. Node/npm, registry access and pinned Playwright Chromium are required for the complete local bundle. Hosted Quality and advisory checks must pass on the current PR head. External gates: review bootstrap/runbook; repository owner configures dev/test main-only GitHub environments; approved Azure federation/RBAC readback and trusted dev/test OIDC authentication/cross-environment denial runs. No live bootstrap is authorized by this reconciliation.
 Spec: Implement only issue #13's approved identity and federation controls. Keep untrusted pull-request code outside the Azure credential path.
 
@@ -46,6 +47,8 @@ Triage amendment, 2026-11-02 (TASK-67): The current user reconciliation instruct
 Revision reassessment 2026-11-02: the owner checked the three issue acceptance boxes. Replacing only those checks with unchecked reproduces the previously approved body SHA-256 e49bb04e65519b8d40380feda8a7e091f4d3f2c94b25766da0812a8cd0d684e5; requirement wording and scope are unchanged. Owner reports completion, but execution acceptance remains subject to the recorded verification gates.
 
 Triage amendment 2026-11-02: Owner explicitly approved one shared service principal for dev and test, including mutual access to both nonproduction resource groups. Update the existing scoped bootstrap, workflow, tests and documentation accordingly. Verify both GitHub environment trusts and restrict Azure assignments to the two approved resource groups; test authentication from both environments and the untrusted-PR boundary. Cross-environment denial is no longer an acceptance requirement. Owner approval does not itself verify provisioning or authorize deployment.
+
+Triage amendment 2026-11-02: The owner approved splitting the main-only OIDC smoke workflow into TASK-69 and PR #75 so TASK-57 can gather live evidence. TASK-57 depends on TASK-69 and retains the shared-principal bootstrap, tests and documentation; issue acceptance and live verification remain unchanged.
 <!-- SECTION:DESCRIPTION:END -->
 
 ## Acceptance Criteria
@@ -58,12 +61,7 @@ Triage amendment 2026-11-02: Owner explicitly approved one shared service princi
 ## Implementation Plan
 
 <!-- SECTION:PLAN:BEGIN -->
-1. Continue existing draft PR #55; reconcile its native record to TASK-57 and keep TASK-6 archived.
-2. Preserve implemented bootstrap, workflow, tests and runbook; integrate current main and revalidate current-head CI.
-3. Keep acceptance unchecked pending reviewed bootstrap, owner environment setup, Azure FIC/RBAC readback and successful trusted dev/test OIDC denial tests.
-4. Record live evidence only after the existing approval and environment prerequisites are met; complete through PR #55 without closing issue #13.
-
-5. Implement the owner-approved shared principal, verify both environment trusts and resource-group scopes, and document shared access and outstanding live checks.
+1. Reconcile PR #55 with merged TASK-69 and retain the shared identity design. 2. Verify scoped Azure role/federation and GitHub environment configuration, and record both trusted authentication runs. 3. Validate implementation and current-head checks, then finalize provisionally subject to review and merge.
 <!-- SECTION:PLAN:END -->
 
 ## Implementation Notes
@@ -88,4 +86,8 @@ Verification 2026-11-02: owner reports acceptance setup complete. Read-only chec
 Further owner-supplied evidence: the named app registration was found in the active subscription tenant, which matches the supplied tenant. Read-only inspection found two GitHub Actions federated credentials on this single app, one for each dev/test environment, using repository-ID-qualified subjects and the Azure token-exchange audience. No role assignments for its service principal were returned in the active subscription. The task requires distinct environment identities and verified least-privilege roles; this inspection does not establish either. Main-only environment restrictions and live OIDC success/denial evidence remain unverified.
 
 Owner-approved amendment implemented: shared app ID is explicit; bootstrap validates both exact GitHub environment trusts before granting Contributor on either selected foundation group; smoke verifies authentication from each environment and shared read access to both groups. Updated runbook documents shared write authority and review of existing app permissions. No Azure roles, secrets or branch policies have been changed. Live role readback, branch restrictions and both main-only smoke runs remain outstanding; task remains In Progress.
+
+TASK-69 merged in PR #75. Owner configured main-only dev/test branch policies and supplied the shared principal; readback showed Contributor assignments at both foundation resource groups. Main workflow authenticated successfully for dev (https://github.com/vkaam/phonebuddy/actions/runs/41581057192) and test (https://github.com/vkaam/phonebuddy/actions/runs/41581143105); each run read both foundation groups. These runs prove authentication and read access, not absence of additional Azure privileges or external credentials.
+
+2026-11-03 readback confirmed exactly the two expected repository-ID-qualified environment federations and Contributor role assignments for the shared principal at both approved foundation resource groups in the active subscription. Both GitHub environments restrict branches to main. The pre-existing shared app also has one password credential (value not inspected); its ownership and continued need require review and this task does not assert that the app is exclusively credential-free. The merged integration passed 71 Python tests, repository checks, actionlint, diff checks and the full local bundle (evidence /private/var/folders/zs/9bq4j3rx3wng_vzz52w8hrf80000gn/T/phonebuddy-quality-0syh2srg/report.json). Acceptance and completion remain pending review of existing app access and current-head hosted checks.
 <!-- SECTION:NOTES:END -->
