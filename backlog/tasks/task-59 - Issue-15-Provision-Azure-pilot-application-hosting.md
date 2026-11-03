@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-02T16:36:00Z'
-updated_date: '2026-11-03T17:57:00Z'
+updated_date: '2026-11-03T17:58:00Z'
 labels:
   - infrastructure
   - cicd
@@ -50,7 +50,7 @@ Spec: User-approved triage split on 2026-11-03: TASK-59 covers the hosting imple
 <!-- AC:BEGIN -->
 - [x] #1 The Bicep hosting template compiles and describes the Container Apps environment, registry, Static Web App, Key Vault, identity and required service networking with documented access boundaries.
 - [x] #2 The release-test image builds and its readiness endpoint returns a configured version without secrets; the template uses the intended registry and a digest-qualified image reference.
-- [ ] #3 The implementation documents administration, deployment prerequisites, cleanup boundaries and cost considerations, and the required local and hosted checks pass.
+- [x] #3 The implementation documents administration, deployment prerequisites, cleanup boundaries and cost considerations, and the required local and hosted checks pass.
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -75,4 +75,6 @@ Draft PR #77: https://github.com/vkaam/phonebuddy/pull/77. Full local baseline p
 Triage amendment 2026-11-03: The user explicitly approved splitting implementation from live verification so the reviewed hosting PR can merge before CI/CD deployment. TASK-59 is limited to hosting source, local verification and review; a separate issue #15 task will retain deployment, reachability, access, repeatability, cleanup and cost acceptance after TASK-62. Issue-level acceptance is unchanged. This amendment authorizes adding that CLI-created follow-up task record to PR #77; no deployment, merge or issue closure is authorized.
 
 Split verification: compiled Bicep and contract checks passed; the digest-pinned image built locally and its readiness endpoint returned local-check inside the container. Full local baseline passed after task metadata corrections (phonebuddy-quality-j89ii9ny). TASK-71 retains live provisioning, external reachability, access readback, repeat deployment, cleanup and cost. Host-forwarded local probe returned an empty response; this is not evidence of deployed reachability. Final hosted checks and independent review remain required.
+
+Implementation criteria verified on PR head 7e620ca: local full baseline phonebuddy-quality-j89ii9ny, Bicep contract checks, Docker build and internal readiness test passed; hosted Quality run 41689180450 and advisory risk run 41689194336 passed. This is review evidence, not live deployment evidence; TASK-71 retains the latter. Independent review and final-head checks remain required.
 <!-- SECTION:NOTES:END -->
