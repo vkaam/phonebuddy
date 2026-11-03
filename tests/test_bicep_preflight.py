@@ -1,18 +1,22 @@
 """Deployment preflight rejects unresolved or mismatched environment inputs."""
 import unittest
 import json
+from datetime import date
 from pathlib import Path
 import subprocess
 import sys
 import tempfile
 
 from scripts.check_bicep import (
+    DATA_PLATFORM_DEPLOYMENT_NAME,
     FOUNDATION_DEPLOYMENT_NAME,
     FOUNDATION_RESOURCE_GROUP_NAME,
     FOUNDATION_RESOURCE_GROUP_OUTPUT,
     deployment_ready,
     expected_resource_group_names,
     validate_foundation_isolation,
+    validate_foundry_model_evidence,
+    validate_data_platform,
     validate_what_if,
     validate_quality_evidence,
 )
@@ -22,7 +26,27 @@ def params(environment='dev', location='westeurope', owner='team', cost_center='
     return {key: {'value': value} for key, value in {
         'environment': environment, 'location': location,
         'owner': owner, 'costCenter': cost_center,
+        'sqlAdminObjectId': '00000000-0000-0000-0000-000000000001',
+        'sqlAdminLogin': 'phonebuddy-admin',
+        'foundryModelName': 'gpt-5-mini',
+        'foundryModelVersion': '2025-08-07',
     }.items()}
+
+
+def foundry_evidence(location='westeurope', lifecycle='GenerallyAvailable', capacity=20,
+                     model='gpt-5-mini', version='2025-08-07', sku='Standard',
+                     model_sku='Standard', model_capacity=100, deprecation='2027-01-01T00:00:00Z'):
+    return (
+        {'value': [{'model': {
+            'format': 'OpenAI', 'name': model, 'version': version,
+            'lifecycleStatus': lifecycle,
+            'deprecation': {'inference': deprecation},
+            'skus': [{'name': model_sku, 'deprecationDate': '2027-01-01T00:00:00Z',
+                      'capacity': {'minimum': 1, 'maximum': model_capacity, 'step': 1}}],
+        }}]},
+        {'value': [{'location': location,
+                    'properties': {'skuName': sku, 'availableCapacity': capacity}}]},
+    )
 
 
 class DeploymentReadinessTests(unittest.TestCase):
@@ -50,6 +74,105 @@ class DeploymentReadinessTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, 'must be supplied'):
                     deployment_ready(environment, values)
 
+    def test_unresolved_sql_admin_blocks_deployment(self):
+        for field in ('sqlAdminObjectId', 'sqlAdminLogin'):
+            values = params()
+            values[field]['value'] = 'UNRESOLVED'
+            with self.subTest(field=field):
+                with self.assertRaisesRegex(ValueError, field):
+                    deployment_ready('dev', values)
+
+
+class FoundryAvailabilityTests(unittest.TestCase):
+    def test_exact_regional_model_lifecycle_and_capacity_pass(self):
+        models, capacities = foundry_evidence()
+        result = validate_foundry_model_evidence(
+            models, capacities, 'westeurope', 'gpt-5-mini', '2025-08-07',
+            'Standard', 2, today=date(2026, 11, 3),
+        )
+        self.assertEqual(result['availableCapacity'], 20)
+        self.assertEqual(result['location'], 'westeurope')
+
+    def test_does_not_fallback_to_another_geography(self):
+        models, capacities = foundry_evidence(location='swedencentral')
+        with self.assertRaisesRegex(ValueError, 'no geography fallback'):
+            validate_foundry_model_evidence(
+                models, capacities, 'westeurope', 'gpt-5-mini', '2025-08-07',
+                'Standard', 2, today=date(2026, 11, 3),
+            )
+
+    def test_retired_preview_and_deprecating_models_fail(self):
+        for status in ('Preview', 'Deprecating', 'Deprecated'):
+            models, capacities = foundry_evidence(lifecycle=status)
+            with self.subTest(status=status), self.assertRaisesRegex(ValueError, 'GenerallyAvailable'):
+                validate_foundry_model_evidence(
+                    models, capacities, 'westeurope', 'gpt-5-mini', '2025-08-07',
+                    'Standard', 2, today=date(2026, 11, 3),
+                )
+
+    def test_missing_model_version_or_insufficient_quota_fails(self):
+        for models, capacities in (
+            foundry_evidence(model='other-model'),
+            foundry_evidence(capacity=1),
+            foundry_evidence(sku='GlobalStandard'),
+        ):
+            with self.subTest(models=models, capacities=capacities), self.assertRaises(ValueError):
+                validate_foundry_model_evidence(
+                    models, capacities, 'westeurope', 'gpt-5-mini', '2025-08-07',
+                    'Standard', 2, today=date(2026, 11, 3),
+                )
+
+
+def data_platform_template():
+    return {'resources': [
+        {'type': 'Microsoft.Sql/servers'},
+        {'type': 'Microsoft.Sql/servers/administrators',
+         'properties': {'administratorType': 'ActiveDirectory'}},
+        {'type': 'Microsoft.Sql/servers/databases'},
+        {'type': 'Microsoft.Sql/servers/databases/backupShortTermRetentionPolicies'},
+        {'type': 'Microsoft.Storage/storageAccounts', 'properties': {
+            'allowBlobPublicAccess': False, 'allowSharedKeyAccess': False,
+            'supportsHttpsTrafficOnly': True}},
+        {'type': 'Microsoft.Storage/storageAccounts/blobServices', 'properties': {
+            'deleteRetentionPolicy': {'enabled': True},
+            'containerDeleteRetentionPolicy': {'enabled': True}}},
+        {'type': 'Microsoft.Storage/storageAccounts/blobServices/containers'},
+        {'type': 'Microsoft.ServiceBus/namespaces', 'properties': {'disableLocalAuth': True}},
+        {'type': 'Microsoft.ServiceBus/namespaces/queues', 'properties': {
+            'deadLetteringOnMessageExpiration': True, 'maxDeliveryCount': 5}},
+        {'type': 'Microsoft.ManagedIdentity/userAssignedIdentities'},
+        {'type': 'Microsoft.CognitiveServices/accounts', 'kind': 'SpeechServices',
+         'properties': {'disableLocalAuth': True}},
+        {'type': 'Microsoft.CognitiveServices/accounts', 'kind': 'AIServices',
+         'properties': {'disableLocalAuth': True}},
+        {'type': 'Microsoft.CognitiveServices/accounts/projects'},
+        {'type': 'Microsoft.CognitiveServices/accounts/deployments', 'sku': {'name': 'Standard'},
+         'properties': {'model': {'name': 'gpt-5-mini', 'version': '2025-08-07'},
+                        'versionUpgradeOption': 'NoAutoUpgrade'}},
+        {'type': 'Microsoft.Authorization/roleAssignments'},
+        {'type': 'Microsoft.Sql/servers/azureADOnlyAuthentications',
+         'properties': {'azureADOnlyAuthentication': True}},
+        {'type': 'Microsoft.ServiceBus/namespaces/queues', 'properties': {
+            'deadLetteringOnMessageExpiration': True, 'maxDeliveryCount': 3}},
+    ]}
+
+
+class DataPlatformTemplateTests(unittest.TestCase):
+    def test_required_secure_data_platform_resources_pass(self):
+        self.assertTrue(validate_data_platform(data_platform_template()))
+
+    def test_storage_keys_public_blobs_and_nonregional_fallback_fail(self):
+        for mutate, message in (
+            (lambda t: t['resources'][4]['properties'].__setitem__('allowSharedKeyAccess', True), 'Shared Key'),
+            (lambda t: t['resources'][8]['properties'].__setitem__('deadLetteringOnMessageExpiration', False), 'dead-letter'),
+            (lambda t: t['resources'][-1]['properties'].__setitem__('maxDeliveryCount', 0), 'dead-letter'),
+            (lambda t: t['resources'][13]['properties'].__setitem__('spilloverDeploymentName', 'fallback'), 'regional model'),
+        ):
+            template = data_platform_template()
+            mutate(template)
+            with self.subTest(message=message), self.assertRaisesRegex(ValueError, message):
+                validate_data_platform(template)
+
 
 def foundation_template(resource_group_name=FOUNDATION_RESOURCE_GROUP_NAME,
                         module_outputs=None):
@@ -74,6 +197,25 @@ def foundation_template(resource_group_name=FOUNDATION_RESOURCE_GROUP_NAME,
                     },
                 },
             },
+        }, {
+            'type': 'Microsoft.Resources/deployments',
+            'name': DATA_PLATFORM_DEPLOYMENT_NAME,
+            'resourceGroup': (
+                "[format('rg-pb-{0}-{1}-foundation', parameters('environment'), "
+                "parameters('location'))]"
+            ),
+            'dependsOn': [
+                "[subscriptionResourceId('Microsoft.Resources/deployments', "
+                "format('phonebuddy-{0}-{1}-foundation', parameters('environment'), "
+                "parameters('location')))]",
+            ],
+            'properties': {'parameters': {
+                name: {} for name in (
+                    'environment', 'location', 'owner', 'costCenter',
+                    'sqlAdminObjectId', 'sqlAdminLogin', 'foundryModelName',
+                    'foundryModelVersion', 'foundryModelCapacity',
+                )
+            }},
         }],
         'outputs': {'resourceGroupName': {
             'type': 'string', 'value': FOUNDATION_RESOURCE_GROUP_OUTPUT,

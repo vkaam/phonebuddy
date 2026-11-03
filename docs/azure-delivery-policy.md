@@ -95,3 +95,46 @@ authorizes stateful recovery; and the budget owner responds to cost alerts. Name
 people or on-call rotations and escalation contacts are prerequisites for enabling
 each environment. TASK-10 through TASK-13 implement and exercise these controls;
 until then automatic delivery is not enabled.
+
+## Data and AI resource controls
+
+TASK-60's Bicep module provisions SQL Database, private Blob Storage, Service
+Bus, Speech, and an Azure AI Foundry project and model deployment inside each
+environment's region-specific foundation group. The environment settings use
+7/14/35-day SQL point-in-time restore and blob/container soft-delete windows,
+1/7/30-day Service Bus message TTLs, LRS/ZRS storage, Standard/Premium Service
+Bus, and Foundry Standard model capacity of 1/2/10 units for dev/test/prod.
+Production inputs remain unresolved and block deployment.
+
+The pinned `gpt-5-mini` model version is checked in the exact target region for
+Generally Available status, an unexpired inference and SKU lifecycle, valid
+capacity step/range, and sufficient regional subscription capacity. Missing or
+insufficient evidence fails closed; no global, data-zone, or alternate-region
+fallback is permitted. Capacity evidence is time-sensitive and does not reserve
+quota. Repeat it immediately before a deployment preview, and treat an Azure
+capacity rejection as a failed gate.
+
+SQL and all cognitive and messaging data-plane access use Entra authentication;
+SQL administrator object ID/login must be explicitly supplied. Blob public
+access and Shared Key are disabled, Service Bus SAS/local auth and cognitive
+account key auth are disabled, and workload access is granted through
+environment-scoped managed identity roles. Never put credentials in Bicep
+parameters, resource tags, logs, task evidence or outputs. Endpoint and resource
+names may be recorded; tokens and payloads may not.
+
+Before the environment is enabled, the data owner must approve retention,
+restore and deletion procedures. SQL short-term backup and blob versioning and
+soft-delete provide bounded recovery windows; they are not an independent
+archive. Confirm any legal hold, SQL restore point, blob versions, Service Bus
+DLQ, resource locks and owner before deletion. Validate a restore in an authorized
+nonproduction scope and record its source revision, timestamp, result and data
+owner. Never automatically reverse destructive migrations or delete a production
+resource group.
+
+The dev/test-only `scripts/azure_foundations_smoke.py` checks synthetic authorized
+and unauthenticated access to Blob Storage, Service Bus, Speech and Foundry, and
+exercises Service Bus DLQ delivery. Run it only after an authorized deployment
+and RBAC propagation with the intended identity. It does not deploy resources,
+use production data or grant permission to do either. The source implementation
+does not count as live evidence: the exact deployed commit and probe result must
+be recorded before the corresponding external gate passes.

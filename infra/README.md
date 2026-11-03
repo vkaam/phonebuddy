@@ -120,3 +120,62 @@ assignment permissions, and the job may fail until the owner reviews an
 appropriate permission design. Do not grant privileges merely to make the job
 green. TASK-58's post-merge follow-up must record the run, permission scope and
 hosted PR/fork failure-boundary evidence; no live result is claimed here.
+
+## Data, messaging and AI foundation
+
+`infra/main.bicep` also deploys `modules/data-platform.bicep` into that
+environment's foundation group. It provisions an Entra-only SQL serverless
+database, private blob container with versioning and soft-delete, keyless
+Service Bus queues, Speech, an Azure AI Foundry project and a pinned regional
+model deployment. A user-assigned workload identity receives only the Blob
+Data Contributor, Service Bus sender/receiver, Speech User and Cognitive
+Services OpenAI User roles required by the application. Resource names and
+outputs contain identifiers and endpoints only; no credentials are emitted.
+
+Retention is environment-specific: SQL point-in-time recovery and blob/container
+soft-delete use 7 days for dev, 14 for test and 35 for prod. Blob versions are
+enabled. SQL backup redundancy is locally redundant in dev/test and zone
+redundant in prod. Service Bus message TTL is 1, 7 and 30 days respectively;
+the separate `foundation-smoke` queue has a one-day TTL and a delivery limit of
+three for nonproduction probes. Production uses zone-redundant storage and
+Premium Service Bus; dev/test use LRS storage and Standard Service Bus.
+
+Before deployment, replace SQL administrator placeholders and run
+`python3 -B scripts/check_bicep.py --deployment-ready <environment>`. Check the
+exact model/version, Generally Available inference lifecycle, regional model
+capacity and requested deployment units against Azure before preview/deploy:
+
+```sh
+python3 -B scripts/check_bicep.py --foundry-preflight dev --subscription-id <subscription-id>
+```
+
+The preflight has no cross-region fallback. Prod remains blocked until its
+geography, owner, cost center and SQL administrator are approved and supplied.
+The model capacity API check is evidence at preflight time, not a reservation;
+deployment can still fail if capacity changes.
+
+After an authorized dev/test deployment and RBAC propagation, run the synthetic
+data-plane probes with the intended Entra identity:
+
+```sh
+python3 -B scripts/azure_foundations_smoke.py --environment dev --subscription-id <subscription-id>
+```
+
+The script writes and deletes one synthetic blob, verifies anonymous denial,
+sends a synthetic Service Bus message and abandons it until the broker moves it
+to the DLQ, then checks Speech synthesis and Foundry inference with both Entra
+and unauthenticated requests. It only targets dev/test and prints statuses, not
+tokens, response bodies or synthetic content. It requires the active identity
+to have the data roles and outbound access to the resource endpoints. Record
+successful output against the exact deployed source revision. The script was
+not run as part of local source validation; no Azure deployment or live data
+plane result is claimed.
+
+Deletion must follow the approved environment owner procedure after checking
+resource locks, SQL PITR window, blob versions/soft-delete, Service Bus DLQ and
+retention, and any legal hold. Soft-delete and SQL backups provide recovery
+windows, not an independent long-term archive or a substitute for a tested
+restore. Keep all access keyless through Entra; do not create keys, SAS URLs,
+secrets in parameter files, or credentials in deployment outputs. No backup
+restore or deletion exercise is claimed until recorded from the authorized
+environment.

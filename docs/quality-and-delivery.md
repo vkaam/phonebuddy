@@ -6,6 +6,25 @@ There is no application, infrastructure, cloud identity, or deployed environment
 yet. A green baseline check validates the repository and its safety policy; it
 does not establish calling, isolation, transcription, or summary quality.
 
+TASK-60 adds a separate infrastructure validation layer. `python3 -B
+scripts/check_bicep.py` requires Bicep CLI 0.34.44, compiles the main, hosting
+and data-platform templates, validates all environment parameter files, and
+checks security-critical resource settings. Its Foundry model preflight calls
+Azure Resource Manager and requires current lifecycle and exact-region capacity
+evidence; it needs an Azure CLI identity with read access and never substitutes
+another geography. `--deployment-ready <environment>` rejects unresolved SQL
+administrator and environment values. Neither check deploys resources.
+
+After a separate, authorized dev/test deployment, the operator may run
+`python3 -B scripts/azure_foundations_smoke.py --environment dev
+--subscription-id <id>`. This produces synthetic Blob, Service Bus, Speech and
+Foundry data-plane evidence, including unauthorized-request denial and queue
+dead-letter behavior. The smoke harness is not part of the default repository
+baseline because it requires deployed Azure resources, data-plane roles and
+network access. Never run it against production. A source-level test or a
+successful local Bicep compile is not a substitute for its live result, a
+backup/restore exercise, hosted CI, or human review.
+
 ## Checks available now
 
 For each bounded increment, use the
