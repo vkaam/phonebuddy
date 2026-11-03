@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-02T16:36:00Z'
-updated_date: '2026-11-03T17:21:00Z'
+updated_date: '2026-11-03T17:28:00Z'
 labels:
   - infrastructure
   - cicd
@@ -67,4 +67,6 @@ Dependencies TASK-5 and TASK-57 are completed on origin/main. No existing TASK-5
 Implemented a draft staged hosting template and release-test endpoint. Pinned Bicep build/lint and baseline security checks pass; focused HTTP test passes with loopback access. Azure deployment, image publication, readback, cost and cleanup evidence are not authorized or performed. The template does not enforce image digest/registry or nonempty release version, and needs further hardening and review before live use. The Container Apps environment uses managed public networking; the vault has no private endpoint or secret access. Acceptance remains open.
 
 Draft PR #77: https://github.com/vkaam/phonebuddy/pull/77. Full local baseline passed on the implementation source (phonebuddy-quality-kv8ftewf); pinned Bicep checks and focused endpoint test passed. Docker daemon unavailable; image build not verified. Live Azure gates and template hardening remain outstanding.
+
+2026-11-03: Docker image built from a digest-pinned base and /ready returned the expected version from inside the container. The host-forwarded probe returned an empty reply and does not establish host reachability. Hosting template now constructs the image from the provisioned registry and a required 64-character digest, and requires a nonempty version; the compiled-template check verifies these constraints. The vault remains inaccessible on public networking with no runtime secrets or private endpoint; private secret access requires a separately reviewed design. Live deployment and evidence remain outstanding.
 <!-- SECTION:NOTES:END -->

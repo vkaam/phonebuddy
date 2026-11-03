@@ -6,17 +6,18 @@ automatically and must be reviewed before any live deployment. Select the approv
 environment's foundation group and subscription explicitly. Do not use production
 until its inputs and deployment are approved.
 
-The first deployment uses `deployWorkload=false`. Build `infra/release-test`, tag
+The first deployment uses `deployWorkload=false`, a 64-zero `imageDigest` and a
+nonempty placeholder `releaseVersion`. Build `infra/release-test`, tag
 and push the image to the new registry using a separately authorized publishing
 identity; registry admin credentials are disabled. Resolve the pushed digest,
-then deploy the same template with `deployWorkload=true`, `image` set to the
-registry's digest-qualified image and `releaseVersion` set to the expected build
-identity. The pull identity has AcrPull on that registry only; allow for RBAC
+then deploy the same template with `deployWorkload=true`, `imageDigest` set to
+the 64-character SHA-256 digest (without `sha256:`) and `releaseVersion` set to
+the expected build identity. The template constructs the image reference from
+the provisioned registry and fixed `release-test` repository. The pull identity has AcrPull on that registry only; allow for RBAC
 propagation before deploying the app. Deployment role-assignment permissions and
 registry-push permissions are separate prerequisites. Do not pass secrets as
-parameters or environment variables. The template does not enforce that an image
-parameter points to the intended registry or that its version matches the image:
-the operator must verify both before deployment.
+parameters or environment variables. The template checks digest length and a nonempty version; the operator must verify
+the digest is valid and that the version matches the image before deployment.
 
 The public HTTPS endpoint exposes `/ready` and `/`, returning only readiness and
 the configured version. The Static Web App has no application content until a

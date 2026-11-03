@@ -110,7 +110,20 @@ def validate_hosting(template):
             or vault.get('publicNetworkAccess') != 'Disabled'
             or vault.get('enablePurgeProtection') is not True):
         raise ValueError('Vault must use RBAC, disable public access and protect against purge')
-    if template['parameters']['deployWorkload'].get('defaultValue') is not False:
+    parameters = template['parameters']
+    digest = parameters['imageDigest']
+    if digest.get('minLength') != 64 or digest.get('maxLength') != 64 or 'defaultValue' in digest:
+        raise ValueError('Image digest must be supplied as 64 characters')
+    if parameters['releaseVersion'].get('minLength') != 1 or 'defaultValue' in parameters['releaseVersion']:
+        raise ValueError('A nonempty release version must be supplied')
+    image = resources['Microsoft.App/containerApps']['properties']['template']['containers'][0]['image']
+    expected_image = ("[format('{0}/release-test@sha256:{1}', "
+                      "reference(resourceId('Microsoft.ContainerRegistry/registries', "
+                      "format('pb{0}{1}', parameters('environment'), variables('suffix'))), "
+                      "'2023-07-01').loginServer, parameters('imageDigest'))]")
+    if image != expected_image:
+        raise ValueError('Workload image must use the provisioned registry and digest')
+    if parameters['deployWorkload'].get('defaultValue') is not False:
         raise ValueError('Workload deployment must be opt-in')
     if set(template.get('outputs', {})) != {'registryName', 'registryServer', 'workloadUrl'}:
         raise ValueError('Hosting outputs must contain only public resource identifiers')

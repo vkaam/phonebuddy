@@ -7,10 +7,13 @@ param owner string
 param costCenter string
 @description('Deploy the workload only after its image has been pushed to this registry.')
 param deployWorkload bool = false
-@description('Immutable registry image reference, including digest.')
-param image string = ''
-@description('Version returned by the readiness endpoint.')
-param releaseVersion string = ''
+@description('SHA-256 image digest without the sha256: prefix; provide 64 zeroes during bootstrap.')
+@minLength(64)
+@maxLength(64)
+param imageDigest string
+@description('Nonempty version returned by the readiness endpoint.')
+@minLength(1)
+param releaseVersion string
 
 var suffix = uniqueString(subscription().id, resourceGroup().id)
 var tags = { environment: environment, service: 'phonebuddy', owner: owner, costCenter: costCenter }
@@ -87,7 +90,7 @@ resource app 'Microsoft.App/containerApps@2023-05-01' = if (deployWorkload) {
     template: {
       containers: [{
         name: 'release-test'
-        image: image
+        image: '${registry.properties.loginServer}/release-test@sha256:${imageDigest}'
         env: [{ name: 'RELEASE_VERSION', value: releaseVersion }]
         resources: { cpu: json('0.25'), memory: '0.5Gi' }
         probes: [{ type: 'Readiness', httpGet: { path: '/ready', port: 8080 }, initialDelaySeconds: 2, periodSeconds: 10 }]
