@@ -93,6 +93,29 @@ def validate_foundation_isolation(template):
         raise ValueError('Foundation output must resolve to the environment resource group')
 
 
+def validate_hosting(template):
+    """Check security-critical defaults in the compiled pilot template."""
+    resources = {r['type']: r for r in template.get('resources', [])}
+    required = {'Microsoft.ContainerRegistry/registries', 'Microsoft.KeyVault/vaults',
+                'Microsoft.Web/staticSites', 'Microsoft.ManagedIdentity/userAssignedIdentities',
+                'Microsoft.Authorization/roleAssignments', 'Microsoft.App/managedEnvironments',
+                'Microsoft.App/containerApps'}
+    if not required.issubset(resources):
+        raise ValueError('Hosting template is missing required resources')
+    registry = resources['Microsoft.ContainerRegistry/registries']['properties']
+    vault = resources['Microsoft.KeyVault/vaults']['properties']
+    if registry.get('adminUserEnabled') is not False:
+        raise ValueError('Registry administrator must be disabled')
+    if (vault.get('enableRbacAuthorization') is not True
+            or vault.get('publicNetworkAccess') != 'Disabled'
+            or vault.get('enablePurgeProtection') is not True):
+        raise ValueError('Vault must use RBAC, disable public access and protect against purge')
+    if template['parameters']['deployWorkload'].get('defaultValue') is not False:
+        raise ValueError('Workload deployment must be opt-in')
+    if set(template.get('outputs', {})) != {'registryName', 'registryServer', 'workloadUrl'}:
+        raise ValueError('Hosting outputs must contain only public resource identifiers')
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--deployment-ready', choices=['dev', 'test', 'prod'],
@@ -103,6 +126,9 @@ def main():
     if not version.startswith('Bicep CLI version ' + VERSION + ' '):
         raise ValueError('Expected Bicep CLI version ' + VERSION)
     run(binary, 'lint', 'infra/main.bicep')
+    run(binary, 'lint', 'infra/hosting.bicep')
+    hosting = json.loads(run(binary, 'build', 'infra/hosting.bicep', '--stdout'))
+    validate_hosting(hosting)
     template = json.loads(run(binary, 'build', 'infra/main.bicep', '--stdout'))
     allowed = template['parameters']['environment']['allowedValues']
     if allowed != list(ENVIRONMENTS):
