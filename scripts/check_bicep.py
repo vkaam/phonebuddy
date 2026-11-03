@@ -69,7 +69,7 @@ def validate_foundry_model_evidence(models, capacities, location, model_name,
         if (model.get('format') == 'OpenAI' and model.get('name') == model_name
                 and model.get('version') == model_version):
             if str(item.get('location', '')).lower() != location.lower():
-                raise ValueError('Foundry catalog returned the pinned model outside the selected region')
+                raise ValueError('Foundry catalog returned the pinned model outside the selected region; no geography fallback is allowed')
             matches.append(model)
     if not matches:
         raise ValueError('Pinned Foundry model/version is missing in the selected region')
