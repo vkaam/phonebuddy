@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-03T19:44:00Z'
-updated_date: '2026-11-03T19:51:00Z'
+updated_date: '2026-11-03T19:56:00Z'
 labels:
   - infrastructure
   - cicd
@@ -17,10 +17,12 @@ references:
     backlog/tasks/task-59 -
     Issue-15-Provision-Azure-pilot-application-hosting.md
   - https://github.com/vkaam/phonebuddy/pull/81
+  - https://github.com/vkaam/phonebuddy/issues/14
 modified_files:
   - >-
     backlog/tasks/task-59 -
     Issue-15-Provision-Azure-pilot-application-hosting.md
+  - backlog/tasks/task-75 - Reconcile-TASK-59-completion-after-merge.md
 priority: high
 type: task
 ordinal: 69000
@@ -33,11 +35,11 @@ Need: Reconcile the merged hosting implementation task, which remains In Progres
 
 Issue: https://github.com/vkaam/phonebuddy/issues/15
 Approved revision: 2026-11-01T09:24:49Z; body SHA-256 3990d679f2058124599c9c0e4d518017736c3f9c5e1b3e238c381d3c7ee7c60d.
-Approval evidence: On 2026-11-03 the owner directly instructed “close it” for TASK-59 after disclosure that no independent human approval was recorded. This authorizes this task-status reconciliation, not deployment or issue closure.
+Approval evidence: On 2026-11-03 the owner directly instructed “close it” for TASK-59 after disclosure that no independent human approval was recorded. This authorizes this task-status reconciliation, not deployment or issue closure. On 2026-11-03, after reviewing the PR #81 Quality failure, the owner directly authorized reopening issue #14 solely to restore consistency with unfinished TASK-74 and PR #80.
 Branch: agent/gh-15-3-task59-reconciliation
-Scope: backlog/tasks/task-59 - Issue-15-Provision-Azure-pilot-application-hosting.md; this task record only
-Verify: From repository root run python3 -B scripts/check.py, python3 -B scripts/check_bicep.py and git diff --check; verify PR #77 merge, final-head checks and owner instruction. Hosted checks and independent review apply to this reconciliation PR.
-Spec: Record evidence and the absence of a recorded human approval accurately; do not represent the owner instruction as a retrospective review. TASK-71 retains live deployment acceptance and issue #15 stays open.
+Scope: backlog/tasks/task-59 - Issue-15-Provision-Azure-pilot-application-hosting.md; this task record only; GitHub issue #14 state only (reopen). Do not change issue #14 requirements, TASK-74, or PR #80.
+Verify: From repository root run python3 -B scripts/check.py, python3 -B scripts/check_bicep.py and git diff --check; verify PR #77 merge, final-head checks and owner instruction. Verify issue #14 is open and PR #81 hosted checks and independent review apply on the reconciliation PR.
+Spec: Record evidence and the absence of a recorded human approval accurately; do not represent the owner instruction as a retrospective review. TASK-71 retains live deployment acceptance and issue #15 stays open. Reopen issue #14 only to restore consistency required by the repository-wide guard; make no changes to its body, TASK-74, or PR #80.
 <!-- SECTION:DESCRIPTION:END -->
 
 ## Acceptance Criteria
@@ -63,4 +65,6 @@ Draft PR #81 records the reconciliation. No independent approval is recorded for
 Hosted Quality run 41706429563 and advisory Risk run 41706425806 passed on head e7d8423. TASK-75 remains In Progress pending independent review and merge; final-head checks remain required.
 
 Final-head Quality run 41706884615 failed because the global consistency guard reports TASK-74 issue is closed or live approval/revision evidence is unavailable. Issue #14 was closed by the owner at 2026-11-03T19:48:48Z while TASK-74 remains To Do on main and PR #80 remains open. This is unrelated to TASK-59 source; reconciliation requires resolving the issue #14/TASK-74 state rather than bypassing the guard. TASK-75 remains In Progress.
+
+Owner explicitly selected reopening issue #14 to resolve the PR #81 consistency blocker. Reopened issue #14 on 2026-11-03 after preserving its body and acceptance criteria; this is the only approved change to TASK-74/PR #80 state and does not assert their acceptance. Re-run final-head Quality and advisory checks; independent review remains required before merge.
 <!-- SECTION:NOTES:END -->
