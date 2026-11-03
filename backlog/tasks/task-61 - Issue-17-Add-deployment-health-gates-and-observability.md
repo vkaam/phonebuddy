@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-02T16:36:00Z'
-updated_date: '2026-11-03T21:05:00Z'
+updated_date: '2026-11-03T21:15:00Z'
 labels:
   - infrastructure
   - cicd
@@ -93,4 +93,10 @@ Correction and status update for the preceding note: zsh expanded dollar signs i
 Azure deployment diagnostics: the first workload attempt failed because the pushed image index had no linux/amd64 child. The corrected amd64 image deployed to ACR; the next attempt reported ContainerAppConsoleLogs unsupported at the Container App diagnostic-settings scope. Updated infra/hosting.bicep to route console and system logs through the Container Apps managed-environment diagnostic setting and keep only AllMetrics at app scope; scripts/check_bicep.py now enforces this documented Azure scope. Local validation and a new deployment preview are pending.
 
 Validation after the managed-environment diagnostics fix: pinned Bicep 0.34.44 check passed; full scripts/check.py baseline passed (report /private/var/folders/zs/9bq4j3rx3wng_vzz52w8hrf80000gn/T/phonebuddy-quality-di10vjh0/report.json); actionlint passed on all five workflows. The Bicep scope change is not deployed yet; hosted alerts and healthy gate remain outstanding pending commit, PR checks, and retry.
+
+Live dev state update: after the failed ARM deployment response, ARM operations show the Container App revision succeeded and all three scheduled query alerts exist. GET /ready and GET / both returned ready=true, version 8c420b3e2f6dc8fa925db5361ecda10d0c70ef9d. The rejected app-level diagnostic setting still needs replacement by the corrected managed-environment log setting; telemetry and alert drills have not run. Application Insights Smart Detection action group exists with zero email and zero role receivers. The corrected Bicep/checker/test changes are locally validated and pushed CI is still pending.
+
+Evidence correction: GitHub Quality and Risk report passed on commit 9adc3c9 before the narrow Ignore-validator change; that validator/test change is not yet pushed. The actual ARM what-if validator accepted the corrected preview with 1 Create, 7 Modify, 6 NoChange, and one Ignore for only the Azure-managed Smart Detection action group. The action group has zero receivers. The required Python suite now passes all 88 tests with loopback access, and pinned Bicep validation passes. Live /ready and / returned version 8c420b3e2f6dc8fa925db5361ecda10d0c70ef9d. Current full quality baseline is rerunning after the final task-note correction.
+
+Final candidate validation: python3 -B scripts/check.py passed with report /private/var/folders/zs/9bq4j3rx3wng_vzz52w8hrf80000gn/T/phonebuddy-quality-ogz2jhx2/report.json. The candidate includes the narrow Smart Detection Ignore handling and test; current PR checks on 9adc3c9 predate that last change and must be rerun after push.
 <!-- SECTION:NOTES:END -->

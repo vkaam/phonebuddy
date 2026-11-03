@@ -2,6 +2,32 @@
 from pathlib import Path
 import unittest
 
+from scripts.check_bicep import validate_what_if
+
+
+class BicepWhatIfValidationTests(unittest.TestCase):
+    def test_only_the_azure_managed_smart_detection_group_may_be_ignored(self):
+        safe_result = {
+            'status': 'Succeeded',
+            'changes': [{
+                'changeType': 'Ignore',
+                'resourceId': ('/subscriptions/sub/resourceGroups/rg/providers/'
+                               'Microsoft.Insights/actionGroups/Application Insights Smart Detection'),
+            }],
+        }
+        self.assertEqual(validate_what_if(safe_result), safe_result['changes'])
+
+        unsafe_result = {
+            'status': 'Succeeded',
+            'changes': [{
+                'changeType': 'Ignore',
+                'resourceId': ('/subscriptions/sub/resourceGroups/rg/providers/'
+                               'Microsoft.Insights/actionGroups/unreviewed-resource'),
+            }],
+        }
+        with self.assertRaisesRegex(ValueError, 'Only the Azure-managed'):
+            validate_what_if(unsafe_result)
+
 
 class BicepCiBoundaryTests(unittest.TestCase):
     def test_azure_identity_is_confined_to_manual_main_workflow(self):

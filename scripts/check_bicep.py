@@ -181,7 +181,7 @@ def validate_hosting(template):
 
 
 def validate_what_if(result):
-    """Fail closed when Azure returns no usable preview or an uncertain change."""
+    """Fail closed except for Azure's known unmodified App Insights action group."""
     if not isinstance(result, dict) or result.get('status') != 'Succeeded' or result.get('error'):
         raise ValueError('What-if did not report success')
     if result.get('potentialChanges') or result.get('diagnostics'):
@@ -189,10 +189,17 @@ def validate_what_if(result):
     changes = result.get('changes')
     if not isinstance(changes, list) or not changes:
         raise ValueError('Missing what-if changes')
-    allowed = {'Create', 'Modify', 'NoChange'}
+    allowed = {'Create', 'Modify', 'NoChange', 'Ignore'}
     if any(not isinstance(change, dict) or change.get('changeType') not in allowed
            or not change.get('resourceId') for change in changes):
         raise ValueError('Incomplete or unexpected what-if result')
+    ignored = [change for change in changes if change['changeType'] == 'Ignore']
+    expected_ignored_id_suffix = (
+        '/providers/microsoft.insights/actiongroups/application insights smart detection'
+    )
+    if any(not change['resourceId'].lower().endswith(expected_ignored_id_suffix)
+           for change in ignored):
+        raise ValueError('Only the Azure-managed App Insights Smart Detection action group may be ignored')
     return changes
 
 
@@ -229,7 +236,7 @@ def main():
     if options.what_if_result:
         changes = validate_what_if(json.loads(options.what_if_result.read_text()))
         counts = {kind: sum(item['changeType'] == kind for item in changes)
-                  for kind in ('Create', 'Modify', 'NoChange')}
+                  for kind in ('Create', 'Modify', 'NoChange', 'Ignore')}
         print(json.dumps({'whatIfChangeCounts': counts}))
         return
     binary = os.environ.get('BICEP', 'bicep')
