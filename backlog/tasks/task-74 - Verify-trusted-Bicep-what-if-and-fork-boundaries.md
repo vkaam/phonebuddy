@@ -1,11 +1,11 @@
 ---
 id: TASK-74
 title: Verify trusted Bicep what-if and fork boundaries
-status: In Progress
+status: Done
 assignee:
   - '@codex'
 created_date: '2026-11-03T18:50:00Z'
-updated_date: '2026-11-03T19:27:00Z'
+updated_date: '2026-11-03T19:30:00Z'
 labels:
   - infrastructure
   - cicd
@@ -63,4 +63,12 @@ Owner direction 2026-11-03: skip the real fork PR test. Hosted Quality run 41699
 Acceptance #3 is checked only for the owner-approved static boundary regression and fork-test waiver, backed by hosted Quality run 41699306514. No actual fork execution is claimed.
 
 Acceptance #1: merged-main run 41699912355 attempt 3 completed the fixed dev-group preview, validated the response without ignored, unsupported or uncertain changes, and emitted six Create counts; source, identity role readback and limitations are recorded above. No per-resource detail was retained and this is not deployment approval. Acceptance #2: hosted Quality run 41699306514 executed the Bicep invalid-environment compiler check, negative compiled-template policy fixtures, and CLI missing/uncertain evidence regression tests; those tests reject invalid inputs, but no separate malformed-template PR was executed.
+
+Current-head verification at 5ddb266: hosted Quality run 41703472925 and advisory Risk report run 41703469711 passed. The owner waived a live fork PR; actual hosted malformed-template PR and detailed what-if resource payload were not performed or retained. The unconditioned dev RBAC Administrator grant to the shared identity remains for owner review.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Recorded a successful trusted dev what-if on merged main, scoped identity readback, and hosted regression evidence for invalid inputs, policy fixtures, missing evidence and the credentialed workflow boundary. The owner waived the separate live fork PR. The preview retained counts only; no actual malformed-template PR or deployment was performed. The shared identity has unconditioned RBAC Administrator on the dev resource group. Local and hosted checks passed; completion is provisional pending the review and merge of this PR, and issue-level acceptance remains for the owner.
+<!-- SECTION:FINAL_SUMMARY:END -->
