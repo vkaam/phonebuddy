@@ -87,6 +87,10 @@ created here.
 For the reviewed dev/test GitHub Actions identity bootstrap and manual GitHub
 environment setup, see [GitHub OIDC bootstrap](github-oidc.md).
 
+For the opt-in SIP/WebRTC gateway and TURN network, image-version contract,
+runtime configuration and call/update gates, see the
+[gateway and TURN guide](gateway/README.md).
+
 For disposable testing use an explicitly designated nonproduction subscription
 and unique test scope, with a named owner, budget and expiry. The fixed
 environment-and-region resource group name makes parallel disposable deployments

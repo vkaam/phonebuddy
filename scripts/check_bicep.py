@@ -129,6 +129,109 @@ def validate_hosting(template):
         raise ValueError('Hosting outputs must contain only public resource identifiers')
 
 
+def validate_media(template):
+    """Require an opt-in media VM with narrow public ports and private management."""
+    resources = template.get('resources', [])
+    by_type = {resource.get('type'): resource for resource in resources}
+    required = {
+        'Microsoft.Network/virtualNetworks',
+        'Microsoft.Network/networkSecurityGroups',
+        'Microsoft.Network/publicIPAddresses',
+        'Microsoft.Network/networkInterfaces',
+        'Microsoft.Network/bastionHosts',
+        'Microsoft.Compute/virtualMachines',
+    }
+    if not required.issubset(by_type):
+        raise ValueError('Media template is missing required network, Bastion, or VM resources')
+
+    parameters = template.get('parameters', {})
+    if parameters.get('deployMedia', {}).get('defaultValue') is not False:
+        raise ValueError('Media deployment must be opt-in')
+    if 'defaultValue' in parameters.get('gatewayImageVersion', {}):
+        raise ValueError('Gateway image must be an explicitly selected version')
+    if 'defaultValue' in parameters.get('releaseVersion', {}):
+        raise ValueError('Gateway release version must be explicit')
+
+    nsg = by_type['Microsoft.Network/networkSecurityGroups'].get('properties', {})
+    rules = nsg.get('securityRules', [])
+    inbound = [rule.get('properties', {}) for rule in rules
+               if rule.get('properties', {}).get('direction') == 'Inbound']
+    expected_inbound = {
+        ('Tcp', '443'), ('Udp', '3478'), ('Tcp', '3478'),
+        ('Tcp', '5349'), ('Udp', '5349'), ('Udp', '10000-20000'), ('Tcp', '22'),
+    }
+    actual_inbound = {
+        (rule.get('protocol'), rule.get('destinationPortRange')) for rule in inbound
+    }
+    if actual_inbound != expected_inbound:
+        raise ValueError('Public media ingress must match the reviewed WSS, TURN, and bounded RTP ports')
+    if any(rule.get('sourceAddressPrefix') != 'Internet'
+           for rule in inbound if rule.get('destinationPortRange') != '22'):
+        raise ValueError('Public media rules must state the Internet source boundary explicitly')
+    ssh_rules = [rule for rule in inbound if rule.get('destinationPortRange') == '22']
+    if (len(ssh_rules) != 1 or ssh_rules[0].get('sourceAddressPrefix') in (None, '*', 'Internet')):
+        raise ValueError('SSH must be restricted to the private Bastion subnet')
+    outbound = [rule.get('properties', {}) for rule in rules
+                if rule.get('properties', {}).get('direction') == 'Outbound']
+    expected_outbound = {
+        ('Allow', 'Udp', '53', 'Internet'),
+        ('Allow', 'Udp', '53', 'AzurePlatformDNS'),
+        ('Allow', 'Udp', '123', 'Internet'),
+        ('Allow', 'Udp', '123', 'AzurePlatformTime'),
+        ('Allow', 'Tcp', '443', 'Internet'),
+        ('Allow', 'Tcp', '5061', 'Internet'),
+        ('Allow', 'Udp', '10000-20000', 'Internet'),
+        ('Deny', '*', '*', 'Internet'),
+    }
+    actual_outbound = {
+        (rule.get('access'), rule.get('protocol'), rule.get('destinationPortRange'),
+         rule.get('destinationAddressPrefix')) for rule in outbound
+    }
+    if actual_outbound != expected_outbound:
+        raise ValueError('Media VM egress must be limited to DNS, time, TLS signaling, and bounded RTP')
+    deny_egress = [rule for rule in outbound
+                   if rule.get('access') == 'Deny' and rule.get('destinationAddressPrefix') == 'Internet']
+    if len(deny_egress) != 1 or deny_egress[0].get('priority', 65000) > 4096:
+        raise ValueError('Unapproved Internet egress must be denied before default NSG rules')
+
+    public_ip = by_type['Microsoft.Network/publicIPAddresses'].get('properties', {})
+    if public_ip.get('publicIPAllocationMethod') != 'Static':
+        raise ValueError('Gateway public IP must be static')
+    if public_ip.get('publicIPAddressVersion') != 'IPv4':
+        raise ValueError('Gateway public IP must use the tested IPv4 path')
+
+    nic = by_type['Microsoft.Network/networkInterfaces'].get('properties', {})
+    ip_configs = nic.get('ipConfigurations', [])
+    if len(ip_configs) != 1:
+        raise ValueError('Gateway NIC must have one reviewed network interface')
+    ip_config = ip_configs[0].get('properties', {})
+    if ip_config.get('privateIPAllocationMethod') != 'Static' or not ip_config.get('publicIPAddress'):
+        raise ValueError('Gateway NIC must have fixed private and public addresses')
+
+    vm = by_type['Microsoft.Compute/virtualMachines'].get('properties', {})
+    image_id = vm.get('storageProfile', {}).get('imageReference', {}).get('id', '')
+    if ('Microsoft.Compute/galleries/images/versions' not in image_id
+            or "parameters('gatewayImageVersion')" not in image_id
+            or 'latest' in image_id.lower()):
+        raise ValueError('Gateway VM must use a versioned Compute Gallery image ID')
+    linux = vm.get('osProfile', {}).get('linuxConfiguration', {})
+    if linux.get('disablePasswordAuthentication') is not True:
+        raise ValueError('Gateway VM password authentication must be disabled')
+    security = vm.get('securityProfile', {})
+    if (security.get('securityType') != 'TrustedLaunch'
+            or security.get('uefiSettings', {}).get('secureBootEnabled') is not True
+            or security.get('uefiSettings', {}).get('vTpmEnabled') is not True):
+        raise ValueError('Gateway VM must use Trusted Launch with Secure Boot and vTPM')
+
+    bastion = by_type['Microsoft.Network/bastionHosts'].get('properties', {})
+    if not bastion.get('ipConfigurations'):
+        raise ValueError('Private administration must use Azure Bastion')
+    outputs = template.get('outputs', {})
+    if any(any(word in name.lower() for word in ('secret', 'password', 'credential', 'token'))
+           for name in outputs):
+        raise ValueError('Media outputs must not expose credentials')
+
+
 def validate_what_if(result):
     """Fail closed when Azure returns no usable preview or an uncertain change."""
     if not isinstance(result, dict) or result.get('status') != 'Succeeded' or result.get('error'):
@@ -187,8 +290,11 @@ def main():
         raise ValueError('Expected Bicep CLI version ' + VERSION)
     run(binary, 'lint', 'infra/main.bicep')
     run(binary, 'lint', 'infra/hosting.bicep')
+    run(binary, 'lint', 'infra/media.bicep')
     hosting = json.loads(run(binary, 'build', 'infra/hosting.bicep', '--stdout'))
     validate_hosting(hosting)
+    media = json.loads(run(binary, 'build', 'infra/media.bicep', '--stdout'))
+    validate_media(media)
     template = json.loads(run(binary, 'build', 'infra/main.bicep', '--stdout'))
     allowed = template['parameters']['environment']['allowedValues']
     if allowed != list(ENVIRONMENTS):
