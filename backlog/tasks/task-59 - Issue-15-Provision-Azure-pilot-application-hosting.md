@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-02T16:36:00Z'
-updated_date: '2026-11-03T17:28:00Z'
+updated_date: '2026-11-03T17:57:00Z'
 labels:
   - infrastructure
   - cicd
@@ -18,6 +18,7 @@ references:
   - infra/modules/foundation.bicep
   - infra/modules/hosting.bicep
   - https://github.com/vkaam/phonebuddy/pull/77
+  - TASK-71
 modified_files:
   - infra/release-test/server.py
   - infra/release-test/Dockerfile
@@ -25,6 +26,7 @@ modified_files:
   - infra/release-test/README.md
   - tests/test_release_test.py
   - scripts/check_bicep.py
+  - backlog/tasks/task-71 - Verify-Azure-pilot-hosting-through-CI-CD.md
 priority: high
 type: task
 ordinal: 56000
@@ -33,28 +35,28 @@ ordinal: 56000
 ## Description
 
 <!-- SECTION:DESCRIPTION:BEGIN -->
-Need: Complete the human-approved Azure outcome described by this issue as one bounded execution slice.
+Need: Implement the hosting foundation for issue #15 so it can be reviewed and merged before trusted CI/CD verification.
 
 Issue: https://github.com/vkaam/phonebuddy/issues/15
 Approved revision: 2026-11-01T09:24:49Z; body SHA-256 3990d679f2058124599c9c0e4d518017736c3f9c5e1b3e238c381d3c7ee7c60d.
 Approval evidence: The human user directly authorized reconciliation in Codex on 2026-11-02 with “fix this”. This authorizes triage into a bounded native task; it does not authorize deployment, merge or issue closure.
 Branch: agent/gh-15-1-azure-pilot-hosting
-Scope: infra/**; scripts/**; tests/**; docs/azure-delivery-policy.md; docs/quality-and-delivery.md; backlog/tasks/task-59 - Issue-15-Provision-Azure-pilot-application-hosting.md
-Verify: From repository root run python3 -B scripts/check.py and python3 -B scripts/check_bicep.py. In the authorized pilot environment, deploy twice and verify the minimal release-test workload's expected version and readiness endpoint; retain deployment, access-scope, cleanup and cost evidence.
-Spec: Preserve the issue's approved acceptance. Do not broaden scope or weaken review. External Azure and hosted checks are explicit acceptance gates and must be evidenced on the current source.
+Scope: infra/**; scripts/**; tests/**; docs/azure-delivery-policy.md; docs/quality-and-delivery.md; backlog/tasks/task-59 - Issue-15-Provision-Azure-pilot-application-hosting.md; backlog/tasks/task-71 - Verify-Azure-pilot-hosting-through-CI-CD.md.
+Verify: From repository root run python3 -B scripts/check.py and python3 -B scripts/check_bicep.py; build the release-test image with Docker and exercise its readiness response and version. Required hosted checks and independent review apply on the final PR head. Live deployment and evidence are tracked in TASK-71 after TASK-62.
+Spec: User-approved triage split on 2026-11-03: TASK-59 covers the hosting implementation and local verification; TASK-71 retains all live Azure acceptance after TASK-62. Issue-level acceptance remains unchanged. No deployment, merge or issue closure is authorized by the split.
 <!-- SECTION:DESCRIPTION:END -->
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 Bicep provisions Container Apps environment, registry, Static Web App, Key Vault, identities and required networking.
-- [ ] #2 A minimal version-identifying release-test workload is reachable and exposes readiness without secrets.
-- [ ] #3 Runtime access is scoped, administration is restricted, and repeat deployment, cleanup boundaries and baseline cost are demonstrated.
+- [x] #1 The Bicep hosting template compiles and describes the Container Apps environment, registry, Static Web App, Key Vault, identity and required service networking with documented access boundaries.
+- [x] #2 The release-test image builds and its readiness endpoint returns a configured version without secrets; the template uses the intended registry and a digest-qualified image reference.
+- [ ] #3 The implementation documents administration, deployment prerequisites, cleanup boundaries and cost considerations, and the required local and hosted checks pass.
 <!-- AC:END -->
 
 ## Implementation Plan
 
 <!-- SECTION:PLAN:BEGIN -->
-1. Design a resource-group-scoped hosting module with a Container Apps environment and versioned readiness workload, Basic registry, Static Web App, RBAC-enabled Key Vault, managed identities and the networking required by those services. Use managed identity for registry pulls and grant only the required registry role; keep registry admin and vault public secret exposure disabled. 2. Add deterministic, environment-scoped names and tags, secret-free outputs and safeguards, and document the deployment, access, cleanup and cost boundaries. 3. Validate compiled templates and failure cases with the required local checks. 4. After explicit authorization of the design and live deployment, review what-if, deploy twice to the designated pilot, and verify version, readiness, access, cleanup and cost evidence. 5. Publish and monitor the PR; leave acceptance open until every live gate is verified.
+1. Implement the staged hosting resources and versioned release-test workload. 2. Verify compiled security and image contracts, build and exercise the container, and document boundaries. 3. Publish PR #77 for independent review with TASK-71 retaining live deployment evidence after TASK-62.
 <!-- SECTION:PLAN:END -->
 
 ## Implementation Notes
@@ -69,4 +71,8 @@ Implemented a draft staged hosting template and release-test endpoint. Pinned Bi
 Draft PR #77: https://github.com/vkaam/phonebuddy/pull/77. Full local baseline passed on the implementation source (phonebuddy-quality-kv8ftewf); pinned Bicep checks and focused endpoint test passed. Docker daemon unavailable; image build not verified. Live Azure gates and template hardening remain outstanding.
 
 2026-11-03: Docker image built from a digest-pinned base and /ready returned the expected version from inside the container. The host-forwarded probe returned an empty reply and does not establish host reachability. Hosting template now constructs the image from the provisioned registry and a required 64-character digest, and requires a nonempty version; the compiled-template check verifies these constraints. The vault remains inaccessible on public networking with no runtime secrets or private endpoint; private secret access requires a separately reviewed design. Live deployment and evidence remain outstanding.
+
+Triage amendment 2026-11-03: The user explicitly approved splitting implementation from live verification so the reviewed hosting PR can merge before CI/CD deployment. TASK-59 is limited to hosting source, local verification and review; a separate issue #15 task will retain deployment, reachability, access, repeatability, cleanup and cost acceptance after TASK-62. Issue-level acceptance is unchanged. This amendment authorizes adding that CLI-created follow-up task record to PR #77; no deployment, merge or issue closure is authorized.
+
+Split verification: compiled Bicep and contract checks passed; the digest-pinned image built locally and its readiness endpoint returned local-check inside the container. Full local baseline passed after task metadata corrections (phonebuddy-quality-j89ii9ny). TASK-71 retains live provisioning, external reachability, access readback, repeat deployment, cleanup and cost. Host-forwarded local probe returned an empty response; this is not evidence of deployed reachability. Final hosted checks and independent review remain required.
 <!-- SECTION:NOTES:END -->
