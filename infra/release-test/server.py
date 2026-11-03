@@ -1,12 +1,20 @@
 """Small, secret-free release verification endpoint."""
 import json
 import os
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 VERSION = os.environ.get('RELEASE_VERSION', 'unknown')
 
 
+class ReleaseServer(ThreadingHTTPServer):
+    request_timeout = 5
+
+
 class Handler(BaseHTTPRequestHandler):
+    def setup(self):
+        super().setup()
+        self.connection.settimeout(self.server.request_timeout)
+
     def do_GET(self):
         if self.path not in ('/', '/ready'):
             self.send_response(404)
@@ -21,4 +29,4 @@ class Handler(BaseHTTPRequestHandler):
 
 
 if __name__ == '__main__':
-    HTTPServer(('0.0.0.0', 8080), Handler).serve_forever()
+    ReleaseServer(('0.0.0.0', 8080), Handler).serve_forever()

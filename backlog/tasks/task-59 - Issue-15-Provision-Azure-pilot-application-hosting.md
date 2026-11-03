@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-02T16:36:00Z'
-updated_date: '2026-11-03T17:58:00Z'
+updated_date: '2026-11-03T18:03:00Z'
 labels:
   - infrastructure
   - cicd
@@ -77,4 +77,6 @@ Triage amendment 2026-11-03: The user explicitly approved splitting implementati
 Split verification: compiled Bicep and contract checks passed; the digest-pinned image built locally and its readiness endpoint returned local-check inside the container. Full local baseline passed after task metadata corrections (phonebuddy-quality-j89ii9ny). TASK-71 retains live provisioning, external reachability, access readback, repeat deployment, cleanup and cost. Host-forwarded local probe returned an empty response; this is not evidence of deployed reachability. Final hosted checks and independent review remain required.
 
 Implementation criteria verified on PR head 7e620ca: local full baseline phonebuddy-quality-j89ii9ny, Bicep contract checks, Docker build and internal readiness test passed; hosted Quality run 41689180450 and advisory risk run 41689194336 passed. This is review evidence, not live deployment evidence; TASK-71 retains the latter. Independent review and final-head checks remain required.
+
+Review feedback on PR #77: the readiness server now handles connections concurrently and applies a five-second socket timeout. Regression test holds an incomplete request open while another readiness request succeeds and confirms the stalled connection closes. Both focused endpoint tests passed; full local and final-head hosted checks remain required.
 <!-- SECTION:NOTES:END -->
