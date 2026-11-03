@@ -37,7 +37,7 @@ def foundry_evidence(location='westeurope', lifecycle='GenerallyAvailable', capa
                      model='gpt-5-mini', version='2025-08-07', sku='Standard',
                      model_sku='Standard', model_capacity=100, deprecation='2027-01-01T00:00:00Z'):
     return (
-        {'value': [{'model': {
+        {'value': [{'location': location, 'model': {
             'format': 'OpenAI', 'name': model, 'version': version,
             'lifecycleStatus': lifecycle,
             'deprecation': {'inference': deprecation},
@@ -92,6 +92,26 @@ class FoundryAvailabilityTests(unittest.TestCase):
         )
         self.assertEqual(result['availableCapacity'], 20)
         self.assertEqual(result['location'], 'westeurope')
+
+    def test_identical_catalog_entries_by_sku_are_deduplicated(self):
+        models, capacities = foundry_evidence()
+        models['value'].append(dict(models['value'][0]))
+        result = validate_foundry_model_evidence(
+            models, capacities, 'westeurope', 'gpt-5-mini', '2025-08-07',
+            'Standard', 2, today=date(2026, 11, 3),
+        )
+        self.assertEqual(result['model'], 'gpt-5-mini')
+
+    def test_conflicting_duplicate_lifecycle_evidence_fails(self):
+        models, capacities = foundry_evidence()
+        conflicting = json.loads(json.dumps(models['value'][0]))
+        conflicting['model']['lifecycleStatus'] = 'Deprecated'
+        models['value'].append(conflicting)
+        with self.assertRaisesRegex(ValueError, 'conflicting lifecycle'):
+            validate_foundry_model_evidence(
+                models, capacities, 'westeurope', 'gpt-5-mini', '2025-08-07',
+                'Standard', 2, today=date(2026, 11, 3),
+            )
 
     def test_does_not_fallback_to_another_geography(self):
         models, capacities = foundry_evidence(location='swedencentral')

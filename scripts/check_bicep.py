@@ -68,10 +68,24 @@ def validate_foundry_model_evidence(models, capacities, location, model_name,
         model = item.get('model', {}) if isinstance(item, dict) else {}
         if (model.get('format') == 'OpenAI' and model.get('name') == model_name
                 and model.get('version') == model_version):
+            if str(item.get('location', '')).lower() != location.lower():
+                raise ValueError('Foundry catalog returned the pinned model outside the selected region')
             matches.append(model)
-    if len(matches) != 1:
-        raise ValueError('Pinned Foundry model/version is missing or ambiguous in the selected region')
-    model = matches[0]
+    if not matches:
+        raise ValueError('Pinned Foundry model/version is missing in the selected region')
+    lifecycle = {(item.get('lifecycleStatus'),
+                  json.dumps(item.get('deprecation'), sort_keys=True)) for item in matches}
+    if len(lifecycle) != 1:
+        raise ValueError('Pinned Foundry model/version has conflicting lifecycle evidence')
+    model = dict(matches[0])
+    sku_evidence = {}
+    for item in matches:
+        for sku in item.get('skus', []):
+            if not isinstance(sku, dict) or not sku.get('name'):
+                raise ValueError('Foundry model contains malformed SKU lifecycle evidence')
+            sku_key = (sku['name'].lower(), json.dumps(sku, sort_keys=True))
+            sku_evidence[sku_key] = sku
+    model['skus'] = list(sku_evidence.values())
     if model.get('lifecycleStatus') != 'GenerallyAvailable':
         raise ValueError('Foundry model must be GenerallyAvailable')
     deprecation = model.get('deprecation', {}).get('inference')

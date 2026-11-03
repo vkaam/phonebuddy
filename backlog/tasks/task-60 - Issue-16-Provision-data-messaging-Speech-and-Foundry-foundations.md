@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-02T16:36:00Z'
-updated_date: '2026-11-03T21:04:00Z'
+updated_date: '2026-11-03T21:12:00Z'
 labels:
   - infrastructure
   - cicd
@@ -92,4 +92,6 @@ Local verification on current source:
 External acceptance remains open: no authorized Azure deployment, live model quota preflight, data-plane smoke, or backup/restore/deletion exercise was run. The SQL Entra admin parameters and prod environment inputs remain UNRESOLVED. No acceptance criterion is checked until these current-source gates have evidence. Do not deploy or delete resources without separate authorization.
 
 Draft PR #84 was created from the recorded feature branch on latest main. PR head: `44cc55d78535e48a389810d17a6e78692165367c`. The PR is draft because the required authorized Azure deployment and live nonproduction/restore evidence remain outstanding. Hosted checks are pending; task remains In Progress and acceptance criteria remain unchecked.
+
+Read-only current Azure evidence, collected 2026-11-03 in the configured subscription: `gpt-5-mini` version `2025-08-07` is Generally Available in West Europe with inference through 2027-07-13, but it has no regional `Standard` SKU in the model catalog. The catalog lists `GlobalStandard` and `DataZoneStandard`; capacity API reports 500 Global Standard units and 0 Data Zone Standard units for this model/version. The configured policy requires regional Standard and rejects global/data-zone processing, so the dev and test model preflights correctly fail closed with “not available on the Standard SKU.” A legacy regional `gpt-4.1-mini` catalog entry also had 0 Standard capacity. No geography fallback was used, no Azure writes occurred, and no deployment was attempted. Model SKU/geography or capacity approval is needed before this gate can pass.
 <!-- SECTION:NOTES:END -->
