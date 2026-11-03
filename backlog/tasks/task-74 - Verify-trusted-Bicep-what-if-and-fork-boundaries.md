@@ -1,10 +1,11 @@
 ---
 id: TASK-74
 title: Verify trusted Bicep what-if and fork boundaries
-status: To Do
-assignee: []
+status: In Progress
+assignee:
+  - '@codex'
 created_date: '2026-11-03T18:50:00Z'
-updated_date: '2026-11-03T18:58:00Z'
+updated_date: '2026-11-03T19:24:00Z'
 labels:
   - infrastructure
   - cicd
@@ -12,6 +13,7 @@ dependencies:
   - TASK-58
 references:
   - https://github.com/vkaam/phonebuddy/issues/14
+  - https://github.com/vkaam/phonebuddy/actions/runs/41699912355
 priority: high
 type: task
 ordinal: 68000
@@ -37,3 +39,17 @@ Spec: TASK-58 must be complete on default branch. Any workflow or permission cha
 - [ ] #2 Hosted tests demonstrate invalid templates and policy violations fail, and missing or incomplete evidence does not pass.
 - [ ] #3 Hosted fork and PR tests demonstrate that untrusted code cannot obtain Azure deployment credentials.
 <!-- AC:END -->
+
+## Implementation Plan
+
+<!-- SECTION:PLAN:BEGIN -->
+1. Record the successful trusted main what-if run and verify its source and identity permission evidence. 2. Inspect existing hosted PR, fork and failure-path runs for objective evidence; perform only authorized tests within the task scope. 3. Run the declared local and hosted checks, record any missing evidence or blockers, and publish the task record for independent review.
+<!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Run 41699912355 attempt 3 succeeded on merged main 8eed705c322f06d0690e860ec56fe555c7d4faba. It verified exact-commit Quality, authenticated via dev OIDC, and reported six Create changes for the dev hosting preview with deployWorkload=false; the workflow records counts only, not detailed resource changes. Read-only Azure RBAC readback found Contributor and Role Based Access Control Administrator on the dev foundation group with no condition; this is a shared dev/test identity and is not evidence of least privilege or lack of other permissions. No resources were deployed. Hosted Quality 41699306514 exercised invalid-environment and failure-path regression tests on the implementation PR, but no actual cross-repository fork PR was found and the full hosted evidence is incomplete.
+
+Local checks passed on the current verification branch: full baseline phonebuddy-quality-ir3rjeme, pinned Bicep 0.34.44, actionlint 1.7.12 and git diff --check. Hosted implementation PR tests cover several invalid inputs and policy/failure cases, but no hosted malformed-template PR or actual fork PR has been evidenced. The successful live run reports only change counts and no retained per-resource preview; a complete auditable preview remains unverified. All acceptance criteria remain open.
+<!-- SECTION:NOTES:END -->
