@@ -1,11 +1,11 @@
 ---
 id: TASK-59
 title: Issue 15 - Provision Azure pilot application hosting
-status: In Progress
+status: Done
 assignee:
   - '@codex'
 created_date: '2026-11-02T16:36:00Z'
-updated_date: '2026-11-03T18:03:00Z'
+updated_date: '2026-11-03T19:45:00Z'
 labels:
   - infrastructure
   - cicd
@@ -79,4 +79,12 @@ Split verification: compiled Bicep and contract checks passed; the digest-pinned
 Implementation criteria verified on PR head 7e620ca: local full baseline phonebuddy-quality-j89ii9ny, Bicep contract checks, Docker build and internal readiness test passed; hosted Quality run 41689180450 and advisory risk run 41689194336 passed. This is review evidence, not live deployment evidence; TASK-71 retains the latter. Independent review and final-head checks remain required.
 
 Review feedback on PR #77: the readiness server now handles connections concurrently and applies a five-second socket timeout. Regression test holds an incomplete request open while another readiness request succeeds and confirms the stalled connection closes. Both focused endpoint tests passed; full local and final-head hosted checks remain required.
+
+Completion reconciliation 2026-11-03: PR #77 merged to main at 170d59dc17e3681a77ff2f8b824c44366d70a891. Its final head 722f0d83e166baeed5b5a400852251d0c6aeab12 passed hosted Quality run 41690318360 and advisory Risk run 41690312395; the single review thread was resolved. The merged image was rebuilt locally and returned the configured readiness version. GitHub records no independent human approval; after this was disclosed, the owner instructed “close it”. This records the owner instruction, not a claim that an unrecorded review occurred. TASK-71 retains live deployment evidence; issue #15 remains open.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Hosting implementation merged in PR #77, with local image readiness and final-head CI verified. The owner directed task closure after disclosure that no independent human approval is recorded. Completion does not assert deployment: TASK-71 retains the live deployment, access, readiness and cost gates, and issue #15 remains open. This reconciliation is provisional until its PR merges.
+<!-- SECTION:FINAL_SUMMARY:END -->
