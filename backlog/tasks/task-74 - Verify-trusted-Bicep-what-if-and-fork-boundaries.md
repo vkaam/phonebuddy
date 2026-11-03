@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-03T18:50:00Z'
-updated_date: '2026-11-03T19:25:00Z'
+updated_date: '2026-11-03T19:27:00Z'
 labels:
   - infrastructure
   - cicd
@@ -38,8 +38,8 @@ Triage amendment 2026-11-03: The owner directed skipping the real fork PR test. 
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 A trusted main-only run produces complete scoped dev what-if evidence tied to the merged source, and documents identity permissions and any limitations.
-- [ ] #2 Hosted tests demonstrate invalid templates and policy violations fail, and missing or incomplete evidence does not pass.
+- [x] #1 A trusted main-only run produces complete scoped dev what-if evidence tied to the merged source, and documents identity permissions and any limitations.
+- [x] #2 Hosted tests demonstrate invalid templates and policy violations fail, and missing or incomplete evidence does not pass.
 - [x] #3 Hosted regression checks verify the credentialed workflow is manual-only and excludes PR events; the owner waived the separate live fork PR test.
 <!-- AC:END -->
 
@@ -61,4 +61,6 @@ Draft PR #80 records current verification evidence. Hosted fork PR, hosted malfo
 Owner direction 2026-11-03: skip the real fork PR test. Hosted Quality run 41699306514 passed test_azure_identity_is_confined_to_manual_main_workflow, which statically checks that PR events cannot trigger the credentialed workflow and the ordinary CI workflow does not request an OIDC token. This is static workflow evidence, not an observed fork execution; issue-level acceptance and its owner decision remain visible. The malformed-template and detailed what-if evidence gaps remain open.
 
 Acceptance #3 is checked only for the owner-approved static boundary regression and fork-test waiver, backed by hosted Quality run 41699306514. No actual fork execution is claimed.
+
+Acceptance #1: merged-main run 41699912355 attempt 3 completed the fixed dev-group preview, validated the response without ignored, unsupported or uncertain changes, and emitted six Create counts; source, identity role readback and limitations are recorded above. No per-resource detail was retained and this is not deployment approval. Acceptance #2: hosted Quality run 41699306514 executed the Bicep invalid-environment compiler check, negative compiled-template policy fixtures, and CLI missing/uncertain evidence regression tests; those tests reject invalid inputs, but no separate malformed-template PR was executed.
 <!-- SECTION:NOTES:END -->
