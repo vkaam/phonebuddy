@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-03T18:40:00Z'
-updated_date: '2026-11-03T18:41:00Z'
+updated_date: '2026-11-03T18:42:00Z'
 labels:
   - factory
   - autonomy
@@ -50,4 +50,6 @@ Spec: Replace the proposed GitHub-hosted agent runtime with a signed-in Codex su
 
 <!-- SECTION:NOTES:BEGIN -->
 Owner selected individual subscription-funded Codex for agent work, GitHub Actions for verification, and no paid OpenAI API use. Live claim check passed with claim_verified true. Local baseline passed: /private/var/folders/zs/9bq4j3rx3wng_vzz52w8hrf80000gn/T/phonebuddy-quality-_pqjw3j0/report.json. Hosted checks and human review remain outstanding.
+
+Draft PR: https://github.com/vkaam/phonebuddy/pull/79. Hosted checks and independent human review remain outstanding.
 <!-- SECTION:NOTES:END -->
