@@ -1,5 +1,10 @@
 """Deployment preflight rejects unresolved or mismatched environment inputs."""
 import unittest
+import json
+from pathlib import Path
+import subprocess
+import sys
+import tempfile
 
 from scripts.check_bicep import (
     FOUNDATION_DEPLOYMENT_NAME,
@@ -8,6 +13,8 @@ from scripts.check_bicep import (
     deployment_ready,
     expected_resource_group_names,
     validate_foundation_isolation,
+    validate_what_if,
+    validate_quality_evidence,
 )
 
 
@@ -135,6 +142,48 @@ class FoundationIsolationTests(unittest.TestCase):
         }
         with self.assertRaisesRegex(ValueError, 'tagged with its environment'):
             validate_foundation_isolation(template)
+
+
+class WhatIfEvidenceTests(unittest.TestCase):
+    def test_complete_results_are_accepted(self):
+        changes = [{'changeType': 'Create', 'resourceId': '/subscriptions/example/resourceGroups/dev'}]
+        self.assertEqual(validate_what_if({'status': 'Succeeded', 'changes': changes}), changes)
+
+    def test_cli_rejects_missing_results_without_running_bicep(self):
+        root = Path(__file__).resolve().parents[1]
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / 'what-if.json'
+            path.write_text(json.dumps({'status': 'Succeeded', 'changes': []}))
+            result = subprocess.run(
+                [sys.executable, '-B', str(root / 'scripts/check_bicep.py'),
+                 '--what-if-result', str(path)], capture_output=True, text=True,
+            )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('Missing what-if changes', result.stderr)
+
+    def test_missing_uncertain_or_unexpected_results_fail(self):
+        for result in (None, {}, {'status': 'Failed'}, {'status': 'Succeeded', 'changes': []},
+                       {'status': 'Succeeded', 'changes': [{'changeType': 'Ignore', 'resourceId': '/x'}]},
+                       {'status': 'Succeeded', 'changes': [{'changeType': 'Unsupported', 'resourceId': '/x'}]},
+                       {'status': 'Succeeded', 'changes': [{'changeType': 'Create'}]},
+                       {'status': 'Succeeded', 'changes': [{'changeType': 'Create', 'resourceId': '/x'}], 'potentialChanges': [{'resourceId': '/y'}]}):
+            with self.subTest(result=result):
+                with self.assertRaises(ValueError):
+                    validate_what_if(result)
+
+
+class QualityEvidenceTests(unittest.TestCase):
+    def test_exact_commit_latest_check_must_pass(self):
+        run = {'id': 1, 'name': 'Quality', 'head_sha': 'abc',
+               'app': {'slug': 'github-actions'}, 'status': 'completed', 'conclusion': 'success'}
+        validate_quality_evidence([{'check_runs': [run]}], 'abc')
+        for pages, sha in (([], 'abc'), ([{'check_runs': [run]}], 'other'),
+                           ([{'check_runs': [run, dict(run, id=2, status='in_progress', conclusion=None)]}], 'abc'),
+                           ([{'check_runs': [dict(run, conclusion='skipped')]}], 'abc'),
+                           ([{'check_runs': [dict(run, app={'slug': 'other'})]}], 'abc')):
+            with self.subTest(pages=pages, sha=sha):
+                with self.assertRaises(ValueError):
+                    validate_quality_evidence(pages, sha)
 
 
 if __name__ == '__main__':

@@ -129,11 +129,58 @@ def validate_hosting(template):
         raise ValueError('Hosting outputs must contain only public resource identifiers')
 
 
+def validate_what_if(result):
+    """Fail closed when Azure returns no usable preview or an uncertain change."""
+    if not isinstance(result, dict) or result.get('status') != 'Succeeded' or result.get('error'):
+        raise ValueError('What-if did not report success')
+    if result.get('potentialChanges') or result.get('diagnostics'):
+        raise ValueError('What-if reported unverified changes or diagnostics')
+    changes = result.get('changes')
+    if not isinstance(changes, list) or not changes:
+        raise ValueError('Missing what-if changes')
+    allowed = {'Create', 'Modify', 'NoChange'}
+    if any(not isinstance(change, dict) or change.get('changeType') not in allowed
+           or not change.get('resourceId') for change in changes):
+        raise ValueError('Incomplete or unexpected what-if result')
+    return changes
+
+
+def validate_quality_evidence(pages, expected_sha):
+    """Require the latest GitHub Actions Quality check for the exact source."""
+    if (not isinstance(pages, list) or not pages or not expected_sha
+            or any(not isinstance(page, dict) or not isinstance(page.get('check_runs'), list)
+                   for page in pages)):
+        raise ValueError('Missing Quality check evidence')
+    runs = [run for page in pages for run in page['check_runs']
+            if isinstance(run, dict) and run.get('name') == 'Quality'
+            and run.get('head_sha') == expected_sha
+            and isinstance(run.get('app'), dict)
+            and run['app'].get('slug') == 'github-actions']
+    if not runs or any(not isinstance(run.get('id'), int) for run in runs):
+        raise ValueError('Missing Quality check for this commit')
+    latest = max(runs, key=lambda run: run['id'])
+    if latest.get('status') != 'completed' or latest.get('conclusion') != 'success':
+        raise ValueError('Latest Quality check is not successful')
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--what-if-result', type=Path, help='validate an Azure what-if JSON result')
+    parser.add_argument('--quality-evidence', type=Path, help='validate GitHub check-run evidence')
+    parser.add_argument('--expected-sha', help='expected commit for Quality evidence')
     parser.add_argument('--deployment-ready', choices=['dev', 'test', 'prod'],
                         help='also reject unresolved inputs for this environment')
     options = parser.parse_args()
+    if options.quality_evidence:
+        validate_quality_evidence(json.loads(options.quality_evidence.read_text()), options.expected_sha)
+        print('Exact-commit Quality check passed')
+        return
+    if options.what_if_result:
+        changes = validate_what_if(json.loads(options.what_if_result.read_text()))
+        counts = {kind: sum(item['changeType'] == kind for item in changes)
+                  for kind in ('Create', 'Modify', 'NoChange')}
+        print(json.dumps({'whatIfChangeCounts': counts}))
+        return
     binary = os.environ.get('BICEP', 'bicep')
     version = run(binary, '--version')
     if not version.startswith('Bicep CLI version ' + VERSION + ' '):
