@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-02T16:36:00Z'
-updated_date: '2026-11-03T21:20:00Z'
+updated_date: '2026-11-03T21:22:00Z'
 labels:
   - infrastructure
   - cicd
@@ -98,4 +98,6 @@ Read-only current Azure evidence, collected 2026-11-03 in the configured subscri
 Final local validation before this task-record update, on code commit `9226b257488a898747585e1ad8cb48500b7ceb5a`: full `python3 -B scripts/check.py` passed; evidence `/private/var/folders/zs/9bq4j3rx3wng_vzz52w8hrf80000gn/T/phonebuddy-quality-0j_j04k_/report.json`. `BICEP=/private/tmp/phonebuddy-azure-cli/bin/bicep python3 -B scripts/check_bicep.py` passed with CLI 0.34.44; focused Foundry/data-platform suite passed 24 tests; `git diff --check` passed. This validation covers the code subsequently carried forward by the task-record-only update. Hosted CI for this exact PR head remains to be recorded.
 
 Hosted verification: PR Quality run 41720401060 for head `b3c6f43cd80673c013887f103f4cb1f01b14a0ec` completed successfully. Repository/policy tests, Backlog consistency, web install/audit/lint/tests/browser/build, workflow validation, credential-free Bicep validation, secret scan and evidence retention all succeeded. This run covered the code and task state before this final hosted-evidence note. The PR remains draft and TASK-60 remains In Progress because the configured Foundry regional SKU is unavailable and live data-plane plus backup/recovery evidence is outstanding.
+
+Final hosted check: Quality run 41720961205 passed on current head `0b5c9c896de1ea4538cd9a35fa6ff6796b9ed1db`, including Backlog consistency and credential-free Bicep validation. This task-record note is documentation-only; all acceptance criteria remain unchecked pending a compliant model SKU/quota and authorized Azure smoke and backup/recovery evidence.
 <!-- SECTION:NOTES:END -->
