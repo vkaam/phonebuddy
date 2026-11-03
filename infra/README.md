@@ -98,3 +98,25 @@ resources as part of a test. A deployment rollback does not delete resources
 removed from a template; resource group deletion is destructive and must follow
 the owner's approved cleanup procedure. Record what remains and any protected
 resources instead of bypassing locks.
+
+## Trusted dev hosting what-if
+
+After the workflow is reviewed and merged, open **Actions → CI → Run workflow**,
+select `main`, and set **Preview dev hosting changes after merge** to true. The
+credentialed job runs only for that manual request on this repository's `main`,
+after the Quality job passes; pull requests cannot enter it. It uses the `dev`
+environment and previews `infra/hosting.bicep` against
+`rg-pb-dev-westeurope-foundation` with the release workload disabled. It does not
+deploy resources or preview the subscription-scoped foundation template. The
+job prints change counts without resource identifiers or property values; it does
+not provide sufficient detail to approve deployment. Review a detailed preview
+through an appropriately protected channel before deployment. A preview does not
+authorize deployment. Incomplete, ignored or unsupported results fail.
+
+Azure what-if can require the same permissions as deployment, including role
+assignment permissions for the hosting template. The shared identity currently
+has Contributor on dev and test foundation groups; that does not grant role
+assignment permissions, and the job may fail until the owner reviews an
+appropriate permission design. Do not grant privileges merely to make the job
+green. TASK-58's post-merge follow-up must record the run, permission scope and
+hosted PR/fork failure-boundary evidence; no live result is claimed here.
