@@ -1,16 +1,17 @@
 ---
 id: TASK-57
 title: Issue 13 - Bootstrap federated GitHub deployment identities
-status: In Progress
+status: To Do
 assignee:
   - '@codex'
 created_date: '2026-11-02T16:35:00Z'
-updated_date: '2026-11-02T18:24:00Z'
+updated_date: '2026-11-02T21:16:00Z'
 labels:
   - infrastructure
   - cicd
 dependencies:
   - TASK-5
+  - TASK-69
 references:
   - https://github.com/vkaam/phonebuddy/issues/13
   - https://github.com/vkaam/phonebuddy/pull/55
@@ -34,20 +35,22 @@ ordinal: 54000
 Need: Trusted workflows require environment-scoped Azure access without long-lived credentials.
 
 Issue: https://github.com/vkaam/phonebuddy/issues/13
-Approved revision: 2026-11-01T09:24:42Z; body SHA-256 e49bb04e65519b8d40380feda8a7e091f4d3f2c94b25766da0812a8cd0d684e5.
+Approved revision: 2026-11-02T20:47:52Z; body SHA-256 31d3571e5b62e2fc8a4efa86f325d5f757bccc09f4516fc7f7cabf17d417305b.
 Approval evidence: The human user directly authorized reconciliation in Codex on 2026-11-02 with “fix this”. This authorizes triage into a bounded execution task; it does not authorize Azure deployment or issue closure.
 Branch: agent/gh-13-1-bootstrap-federated-identities
-Scope: scripts/bootstrap_github_oidc.py; tests/test_azure_oidc_bootstrap.py; .github/workflows/azure-oidc-smoke.yml; infra/github-oidc.md; infra/README.md; backlog/tasks/task-57 - Issue-13-Bootstrap-federated-GitHub-deployment-identities.md. Archived TASK-6 is historical and is not restored.
+Scope: scripts/bootstrap_github_oidc.py; tests/test_azure_oidc_bootstrap.py; infra/github-oidc.md; infra/README.md; backlog/tasks/task-57 - Issue-13-Bootstrap-federated-GitHub-deployment-identities.md. Archived TASK-6 is historical and is not restored.
 Verify: From repository root run python3 -B scripts/check.py; python3 -B scripts/run_required_unittests.py; python3 -B -m unittest discover -s tests -p test_azure_oidc_bootstrap.py -v; actionlint .github/workflows/azure-oidc-smoke.yml .github/workflows/ci.yml .github/workflows/pr-safety.yml; git diff --check. Node/npm, registry access and pinned Playwright Chromium are required for the complete local bundle. Hosted Quality and advisory checks must pass on the current PR head. External gates: review bootstrap/runbook; repository owner configures dev/test main-only GitHub environments; approved Azure federation/RBAC readback and trusted dev/test OIDC authentication/cross-environment denial runs. No live bootstrap is authorized by this reconciliation.
 Spec: Implement only issue #13's approved identity and federation controls. Keep untrusted pull-request code outside the Azure credential path.
 
 Triage amendment, 2026-11-02 (TASK-67): The current user reconciliation instruction authorizes retaining existing draft PR https://github.com/vkaam/phonebuddy/pull/55 and its actual branch, transferring the active claim from archived TASK-6 to TASK-57, and enumerating the exact source/test scope already implemented there. The issue requirements and all three unchecked acceptance criteria remain unchanged. This corrects migration bookkeeping; it grants no identity bootstrap, deployment, merge or issue-closing authority.
+
+Triage amendment 2026-11-02: The owner approved splitting the main-only OIDC smoke workflow into TASK-69 and its own PR so TASK-57 can gather live evidence. TASK-57 depends on TASK-69 and retains the shared-principal bootstrap, tests and documentation; issue acceptance and live verification remain unchanged.
 <!-- SECTION:DESCRIPTION:END -->
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 Distinct environment identities use restricted repository and environment federation with least-privilege Azure roles.
-- [ ] #2 Trusted workflow authentication succeeds while fork PR access and cross-environment writes are rejected.
+- [ ] #1 One shared principal uses restricted repository and dev/test environment federation, with Azure roles scoped to the approved nonproduction resource groups.
+- [ ] #2 Trusted workflow authentication succeeds from both environments; untrusted PRs cannot obtain the deployment identity. Shared dev/test access is explicitly documented.
 - [ ] #3 Bootstrap and GitHub environment configuration are reproducible or explicitly documented; credentials never enter logs.
 <!-- AC:END -->
 
@@ -76,4 +79,6 @@ Addressed both inline review findings in commit 921da72eb080e132968254a4cfc2573f
 After integrating origin/main, local scripts/quality.py and all 40 Python tests passed; npm audit passed when rerun with network access. Local bundled browser verification could not launch because Playwright Chromium is not installed on this workstation; the hosted Quality check passed browser build/test and workflow lint on PR head 412d167fa6e97bd3c67685f30fa954d15df10e24, and advisory Risk report passed. PR #55 is current with main and review findings are resolved. TASK-6 remains In Progress pending reviewed Azure identity bootstrap, GitHub dev/test environment configuration, Azure federation/RBAC readback, and successful trusted dev/test OIDC smoke runs.
 
 TASK-67 metadata reconciliation integrated main d015e6a into existing PR #55 without changing its five implementation files relative to the prior PR head. The full local scripts/check.py bundle passed on the integrated source (evidence: /private/var/folders/zs/9bq4j3rx3wng_vzz52w8hrf80000gn/T/phonebuddy-quality-93yvg6in/report.json). TASK-57 replaces the historical TASK-6 PR record; TASK-6 matches main and remains archived. Acceptance remains unchecked pending all existing live identity gates. Current-head hosted CI is required after push.
+
+Paused for TASK-69: the existing PR #55 retains its claim and must be resumed after the smoke workflow PR merges and live authentication runs are collected.
 <!-- SECTION:NOTES:END -->
