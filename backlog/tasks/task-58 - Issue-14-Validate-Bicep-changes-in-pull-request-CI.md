@@ -1,11 +1,11 @@
 ---
 id: TASK-58
 title: Issue 14 - Validate Bicep changes in pull-request CI
-status: In Progress
+status: Done
 assignee:
   - '@codex'
 created_date: '2026-11-02T16:35:00Z'
-updated_date: '2026-11-03T18:58:00Z'
+updated_date: '2026-11-03T19:00:00Z'
 labels:
   - infrastructure
   - cicd
@@ -49,9 +49,9 @@ Triage amendment 2026-11-03: The owner requested creation of the trusted job and
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 Required Quality CI lints and builds Bicep, validates parameters and workflows with pinned tooling, without Azure credentials in PR jobs.
-- [ ] #2 A manually requested main-only dev job is configured for environment-scoped authentication and hosting what-if, and is excluded from PRs.
-- [ ] #3 Missing, incomplete or uncertain what-if evidence fails; usage, permissions and retained live verification are documented and required checks pass.
+- [x] #1 Required Quality CI lints and builds Bicep, validates parameters and workflows with pinned tooling, without Azure credentials in PR jobs.
+- [x] #2 A manually requested main-only dev job is configured for environment-scoped authentication and hosting what-if, and is excluded from PRs.
+- [x] #3 Missing, incomplete or uncertain what-if evidence fails; usage, permissions and retained live verification are documented and required checks pass.
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -82,4 +82,12 @@ After correcting Azure CLI flattened what-if result handling, full local baselin
 The manual what-if is now a separate workflow so normal PRs do not receive a skipped credentialed-job check. Before Azure login it requires the latest GitHub Actions Quality check for the exact source commit to have completed successfully. The workflow itself remains manual, main-only and scoped to the dev environment; live proof remains TASK-74.
 
 Integrated main db48351 and validated the separate manual-only workflow: full local baseline phonebuddy-quality-xt43ehxy passed; pinned Bicep, actionlint for all three workflows, focused Quality-evidence and what-if tests, and diff checks passed. TASK-74 remains responsible for actual Azure what-if and hosted fork/failure evidence.
+
+Implementation acceptance evidence on head 006fedc: full local baseline phonebuddy-quality-xt43ehxy, pinned Bicep, actionlint and focused tests passed; hosted Quality run 41698968802 and advisory risk run 41698987624 passed. These results do not establish live Azure execution or hosted fork evidence, which remain in TASK-74. Independent review and final-head hosted checks remain required.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Added credential-free pinned Bicep PR validation and a separate manually dispatched main-only dev hosting what-if workflow guarded by exact-commit Quality evidence and environment-scoped identity. Local and hosted checks passed on the implementation head. TASK-74 retains post-merge live Azure what-if and hosted fork/failure evidence; existing identity permissions have not been verified for what-if. Proposed completion is provisional pending this PR, independent review and final-head checks.
+<!-- SECTION:FINAL_SUMMARY:END -->
