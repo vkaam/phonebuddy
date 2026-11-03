@@ -1,11 +1,11 @@
 ---
 id: TASK-73
 title: Record subscription-funded Codex factory direction
-status: In Progress
+status: Done
 assignee:
   - '@codex'
 created_date: '2026-11-03T18:40:00Z'
-updated_date: '2026-11-03T18:42:00Z'
+updated_date: '2026-11-03T18:45:00Z'
 labels:
   - factory
   - autonomy
@@ -35,9 +35,9 @@ Spec: Replace the proposed GitHub-hosted agent runtime with a signed-in Codex su
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 The contract reflects the owner selection of subscription-funded Codex for agent work and GitHub Actions for verification; paid OpenAI API use is not authorized.
-- [ ] #2 The document distinguishes the intended direction from unverified automation, account eligibility, isolation and coordination, and preserves review and stop gates.
-- [ ] #3 The declared checks pass and the change remains in the approved scope.
+- [x] #1 The contract reflects the owner selection of subscription-funded Codex for agent work and GitHub Actions for verification; paid OpenAI API use is not authorized.
+- [x] #2 The document distinguishes the intended direction from unverified automation, account eligibility, isolation and coordination, and preserves review and stop gates.
+- [x] #3 The declared checks pass and the change remains in the approved scope.
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -52,4 +52,12 @@ Spec: Replace the proposed GitHub-hosted agent runtime with a signed-in Codex su
 Owner selected individual subscription-funded Codex for agent work, GitHub Actions for verification, and no paid OpenAI API use. Live claim check passed with claim_verified true. Local baseline passed: /private/var/folders/zs/9bq4j3rx3wng_vzz52w8hrf80000gn/T/phonebuddy-quality-_pqjw3j0/report.json. Hosted checks and human review remain outstanding.
 
 Draft PR: https://github.com/vkaam/phonebuddy/pull/79. Hosted checks and independent human review remain outstanding.
+
+Hosted Quality and advisory Risk report passed on head 491468c272e1285f1ec6221c1fb32f2a14776ce2. Branch-local completion is provisional until merge; independent human review remains required.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Recorded the owner-selected subscription-funded Codex direction and prohibition on paid OpenAI API usage, with GitHub Actions for checks. Preserved the unverified automation, isolation, coordination and human-review gates. Local baseline and hosted Quality and Risk checks passed; PR #79 awaits human review.
+<!-- SECTION:FINAL_SUMMARY:END -->
