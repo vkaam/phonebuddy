@@ -1,9 +1,11 @@
 ---
 id: TASK-59
 title: Issue 15 - Provision Azure pilot application hosting
-status: To Do
-assignee: []
+status: In Progress
+assignee:
+  - '@codex'
 created_date: '2026-11-02T16:36:00Z'
+updated_date: '2026-11-03T17:11:00Z'
 labels:
   - infrastructure
   - cicd
@@ -12,6 +14,8 @@ dependencies:
   - TASK-57
 references:
   - https://github.com/vkaam/phonebuddy/issues/15
+  - infra/main.bicep
+  - infra/modules/foundation.bicep
 priority: high
 type: task
 ordinal: 56000
@@ -37,3 +41,15 @@ Spec: Preserve the issue's approved acceptance. Do not broaden scope or weaken r
 - [ ] #2 A minimal version-identifying release-test workload is reachable and exposes readiness without secrets.
 - [ ] #3 Runtime access is scoped, administration is restricted, and repeat deployment, cleanup boundaries and baseline cost are demonstrated.
 <!-- AC:END -->
+
+## Implementation Plan
+
+<!-- SECTION:PLAN:BEGIN -->
+1. Design a resource-group-scoped hosting module with a Container Apps environment and versioned readiness workload, Basic registry, Static Web App, RBAC-enabled Key Vault, managed identities and the networking required by those services. Use managed identity for registry pulls and grant only the required registry role; keep registry admin and vault public secret exposure disabled. 2. Add deterministic, environment-scoped names and tags, secret-free outputs and safeguards, and document the deployment, access, cleanup and cost boundaries. 3. Validate compiled templates and failure cases with the required local checks. 4. After explicit authorization of the design and live deployment, review what-if, deploy twice to the designated pilot, and verify version, readiness, access, cleanup and cost evidence. 5. Publish and monitor the PR; leave acceptance open until every live gate is verified.
+<!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Dependencies TASK-5 and TASK-57 are completed on origin/main. No existing TASK-59 PR was found. The proposed hosting and identity design requires review before implementation; live deployment is not yet authorized by the recorded intake.
+<!-- SECTION:NOTES:END -->
