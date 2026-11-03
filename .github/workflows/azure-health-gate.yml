@@ -1,0 +1,70 @@
+name: Azure release health gate
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Deployed environment to observe
+        required: true
+        type: choice
+        options: [dev, test]
+      release_version:
+        description: Expected version reported by the deployed workload
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  health-gate:
+    name: Observe deployed release
+    if: github.repository == 'vkaam/phonebuddy' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: ${{ inputs.environment }}
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: azure/login@a641126d1b8aa4d1fa005f4f92df94a3a4c4c906 # v3.1.0
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: Resolve deployed workload and telemetry resource
+        id: target
+        env:
+          TARGET_ENVIRONMENT: ${{ inputs.environment }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          resource_group="rg-pb-${TARGET_ENVIRONMENT}-westeurope-foundation"
+          app_name="ca-pb-${TARGET_ENVIRONMENT}-release-test"
+          app_url=$(az resource show --resource-group "$resource_group" --name "$app_name" --resource-type Microsoft.App/containerApps --query 'properties.configuration.ingress.fqdn' --output tsv)
+          insights_id=$(az resource list --resource-group "$resource_group" --resource-type Microsoft.Insights/components --query "[?starts_with(name, 'appi-pb-${TARGET_ENVIRONMENT}-')].id | [0]" --output tsv)
+          test -n "$app_url"
+          test -n "$insights_id"
+          echo "url=https://${app_url}" >> "$GITHUB_OUTPUT"
+          echo "insights_id=${insights_id}" >> "$GITHUB_OUTPUT"
+      - name: Run bounded readiness and observation gate
+        env:
+          TARGET_URL: ${{ steps.target.outputs.url }}
+          EXPECTED_VERSION: ${{ inputs.release_version }}
+        run: python3 -B scripts/health_gate.py --url "$TARGET_URL" --expected-version "$EXPECTED_VERSION"
+      - name: Record successful release annotation
+        env:
+          INSIGHTS_RESOURCE_ID: ${{ steps.target.outputs.insights_id }}
+          TARGET_ENVIRONMENT: ${{ inputs.environment }}
+          RELEASE_VERSION: ${{ inputs.release_version }}
+        run: >-
+          python3 -B scripts/release_annotation.py
+          --resource-id "$INSIGHTS_RESOURCE_ID"
+          --environment "$TARGET_ENVIRONMENT"
+          --release-version "$RELEASE_VERSION"
+          --commit-sha "$GITHUB_SHA"
+          --workflow-ref "$GITHUB_WORKFLOW_REF"

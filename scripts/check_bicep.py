@@ -99,7 +99,9 @@ def validate_hosting(template):
     required = {'Microsoft.ContainerRegistry/registries', 'Microsoft.KeyVault/vaults',
                 'Microsoft.Web/staticSites', 'Microsoft.ManagedIdentity/userAssignedIdentities',
                 'Microsoft.Authorization/roleAssignments', 'Microsoft.App/managedEnvironments',
-                'Microsoft.App/containerApps'}
+                'Microsoft.App/containerApps', 'Microsoft.OperationalInsights/workspaces',
+                'Microsoft.Insights/components', 'Microsoft.Insights/diagnosticSettings',
+                'Microsoft.Insights/scheduledQueryRules'}
     if not required.issubset(resources):
         raise ValueError('Hosting template is missing required resources')
     registry = resources['Microsoft.ContainerRegistry/registries']['properties']
@@ -125,7 +127,33 @@ def validate_hosting(template):
         raise ValueError('Workload image must use the provisioned registry and digest')
     if parameters['deployWorkload'].get('defaultValue') is not False:
         raise ValueError('Workload deployment must be opt-in')
-    if set(template.get('outputs', {})) != {'registryName', 'registryServer', 'workloadUrl'}:
+    workspace = resources['Microsoft.OperationalInsights/workspaces']['properties']
+    if workspace.get('retentionInDays') != 30:
+        raise ValueError('Health telemetry retention must be explicitly bounded to 30 days')
+    insights = resources['Microsoft.Insights/components']
+    insight_properties = insights.get('properties', {})
+    if (insights.get('kind') != 'web'
+            or insight_properties.get('IngestionMode') != 'LogAnalytics'
+            or 'Microsoft.OperationalInsights/workspaces'
+            not in insight_properties.get('WorkspaceResourceId', '')):
+        raise ValueError('Application Insights must use the bounded Log Analytics workspace')
+    alerts = [resource for resource in template.get('resources', [])
+              if resource.get('type') == 'Microsoft.Insights/scheduledQueryRules']
+    if len(alerts) != 3 or any(resource.get('kind') != 'LogAlert'
+                              or resource.get('properties', {}).get('evaluationFrequency') != 'PT5M'
+                              or resource.get('properties', {}).get('windowSize') != 'PT5M'
+                              for resource in alerts):
+        raise ValueError('Expected three five-minute health telemetry log alerts')
+    alert_queries = '\n'.join(
+        condition.get('query', '')
+        for resource in alerts
+        for condition in resource.get('properties', {}).get('criteria', {}).get('allOf', [])
+    ) + json.dumps(template.get('variables', {}), sort_keys=True)
+    for signal in ('health_request', 'health.status', 'health.duration_ms'):
+        if signal not in alert_queries:
+            raise ValueError(f'Health alert queries must cover {signal}')
+    if set(template.get('outputs', {})) != {
+            'registryName', 'registryServer', 'workloadUrl', 'logWorkspaceName', 'insightsName'}:
         raise ValueError('Hosting outputs must contain only public resource identifiers')
 
 
