@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-02T16:36:00Z'
-updated_date: '2026-11-03T20:45:00Z'
+updated_date: '2026-11-03T20:48:00Z'
 labels:
   - infrastructure
   - cicd
@@ -82,4 +82,6 @@ Spec: Preserve the issue's approved acceptance. Do not broaden scope or weaken r
 Implemented opt-in media networking and VM resources, static IPs, a narrow inbound port set, egress allowlist, Bastion-only SSH, exact Compute Gallery version selection, versioned Asterisk/coturn configuration templates, and owner-only runtime secret rendering. Added Bicep contract checks and renderer/security tests. Verification passed: python3 -B scripts/check.py; python3 -B scripts/run_required_unittests.py (89 tests); BICEP=/private/tmp/phonebuddy-task65-azure/bin/bicep with DOTNET_BUNDLE_EXTRACT_BASE_DIR=/private/tmp/phonebuddy-task65-bicep-extract python3 -B scripts/check_bicep.py. The full local quality bundle passed after network and loopback access were enabled. No image build pipeline or Azure deployment was performed; live forced-TURN browser call, image provenance, and update/drain/rollback exercise remain unverified acceptance gates.
 
 Final-source verification rerun passed: python3 -B scripts/check.py (Local baseline: pass) and BICEP=/private/tmp/phonebuddy-task65-azure/bin/bicep DOTNET_BUNDLE_EXTRACT_BASE_DIR=/private/tmp/phonebuddy-task65-bicep-extract python3 -B scripts/check_bicep.py (Bicep baseline checks passed). git diff --check passed. origin/main was fetched and is an ancestor of this branch. Acceptance criteria 2-4 remain open pending reproducible image build provenance and authorized Azure deployment, forced-TURN synthetic call, and update/drain/rollback exercise.
+
+Published draft PR: https://github.com/vkaam/phonebuddy/pull/83 (Refs #21). GitHub CI Quality job passed on head f46cc520142e73c31fe3c27cc75171776e466323, including repository/policy checks, web build/tests, Bicep validation and history secret scan. PR remains draft and TASK-65 remains In Progress because live acceptance gates are outstanding.
 <!-- SECTION:NOTES:END -->
