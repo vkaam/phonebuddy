@@ -14,6 +14,7 @@ from scripts.check_bicep import (
     expected_resource_group_names,
     validate_foundation_isolation,
     validate_what_if,
+    validate_quality_evidence,
 )
 
 
@@ -169,6 +170,20 @@ class WhatIfEvidenceTests(unittest.TestCase):
             with self.subTest(result=result):
                 with self.assertRaises(ValueError):
                     validate_what_if(result)
+
+
+class QualityEvidenceTests(unittest.TestCase):
+    def test_exact_commit_latest_check_must_pass(self):
+        run = {'id': 1, 'name': 'Quality', 'head_sha': 'abc',
+               'app': {'slug': 'github-actions'}, 'status': 'completed', 'conclusion': 'success'}
+        validate_quality_evidence([{'check_runs': [run]}], 'abc')
+        for pages, sha in (([], 'abc'), ([{'check_runs': [run]}], 'other'),
+                           ([{'check_runs': [run, dict(run, id=2, status='in_progress', conclusion=None)]}], 'abc'),
+                           ([{'check_runs': [dict(run, conclusion='skipped')]}], 'abc'),
+                           ([{'check_runs': [dict(run, app={'slug': 'other'})]}], 'abc')):
+            with self.subTest(pages=pages, sha=sha):
+                with self.assertRaises(ValueError):
+                    validate_quality_evidence(pages, sha)
 
 
 if __name__ == '__main__':

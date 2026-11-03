@@ -1,0 +1,53 @@
+name: Dev hosting what-if
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dev-hosting-what-if:
+    name: Dev hosting what-if
+    if: >-
+      github.repository == 'vkaam/phonebuddy' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment: dev
+    permissions:
+      contents: read
+      checks: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Verify Quality passed for this commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/check-runs?per_page=100" > "$RUNNER_TEMP/check-runs.json"
+          python3 -B scripts/check_bicep.py --quality-evidence "$RUNNER_TEMP/check-runs.json" --expected-sha "$GITHUB_SHA"
+      - name: Compile reviewed hosting template
+        run: |
+          curl --fail --silent --show-error --location --retry 3 \
+            https://github.com/Azure/bicep/releases/download/v0.34.44/bicep-linux-x64 \
+            -o "$RUNNER_TEMP/bicep"
+          printf '%s  %s\n' dcc869edf53652303d4822b650d727419eeac33bce80cfb61f8ccc5cd2ccee47 "$RUNNER_TEMP/bicep" | sha256sum --check
+          chmod +x "$RUNNER_TEMP/bicep"
+          "$RUNNER_TEMP/bicep" build infra/hosting.bicep --outfile "$RUNNER_TEMP/hosting.json"
+      - uses: azure/login@a641126d1b8aa4d1fa005f4f92df94a3a4c4c906 # v3.1.0
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: Preview dev hosting without deployment
+        run: |
+          set -euo pipefail
+          az deployment group what-if \
+            --resource-group rg-pb-dev-westeurope-foundation \
+            --template-file "$RUNNER_TEMP/hosting.json" \
+            --parameters environment=dev owner=PHONEBUDDY-PLATFORM costCenter=PHONEBUDDY-NONPROD deployWorkload=false imageDigest=0000000000000000000000000000000000000000000000000000000000000000 releaseVersion=preview \
+            --result-format FullResourcePayloads --no-pretty-print --output json > "$RUNNER_TEMP/hosting-what-if.json"
+          python3 -B scripts/check_bicep.py --what-if-result "$RUNNER_TEMP/hosting-what-if.json"

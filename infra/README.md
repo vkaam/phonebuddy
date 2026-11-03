@@ -101,10 +101,10 @@ resources instead of bypassing locks.
 
 ## Trusted dev hosting what-if
 
-After the workflow is reviewed and merged, open **Actions → CI → Run workflow**,
-select `main`, and set **Preview dev hosting changes after merge** to true. The
+After the workflow is reviewed and merged, open **Actions → Dev hosting what-if → Run workflow** and select `main`. The
 credentialed job runs only for that manual request on this repository's `main`,
-after the Quality job passes; pull requests cannot enter it. It uses the `dev`
+after the latest Quality check for the exact commit passes; pull requests cannot
+enter it. It uses the `dev`
 environment and previews `infra/hosting.bicep` against
 `rg-pb-dev-westeurope-foundation` with the release workload disabled. It does not
 deploy resources or preview the subscription-scoped foundation template. The

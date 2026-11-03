@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-02T16:35:00Z'
-updated_date: '2026-11-03T18:55:00Z'
+updated_date: '2026-11-03T18:58:00Z'
 labels:
   - infrastructure
   - cicd
@@ -25,6 +25,7 @@ modified_files:
   - scripts/check_bicep.py
   - tests/test_bicep_preflight.py
   - tests/test_bicep_ci_boundary.py
+  - .github/workflows/azure-hosting-what-if.yml
 priority: high
 type: task
 ordinal: 55000
@@ -39,9 +40,11 @@ Issue: https://github.com/vkaam/phonebuddy/issues/14
 Approved revision: 2026-11-01T09:24:44Z; body SHA-256 17ae7da5cbf33307a4ab96b173258c85762f3764cdf30382143091346eb1ef09.
 Approval evidence: The human user directly authorized reconciliation in Codex on 2026-11-02 with “fix this”. This authorizes triage into a bounded native task; it does not authorize deployment, merge or issue closure.
 Branch: agent/gh-14-1-bicep-pr-validation
-Scope: .github/workflows/ci.yml; scripts/check_bicep.py; infra/**; tests/**; backlog/tasks/task-58 - Issue-14-Validate-Bicep-changes-in-pull-request-CI.md; backlog/tasks/task-74 - Verify-trusted-Bicep-what-if-and-fork-boundaries.md
+Scope: .github/workflows/ci.yml; .github/workflows/azure-hosting-what-if.yml; scripts/check_bicep.py; infra/**; tests/**; backlog/tasks/task-58 - Issue-14-Validate-Bicep-changes-in-pull-request-CI.md; backlog/tasks/task-74 - Verify-trusted-Bicep-what-if-and-fork-boundaries.md
 Verify: From repository root run python3 -B scripts/check.py, python3 -B scripts/check_bicep.py and actionlint .github/workflows/ci.yml .github/workflows/pr-safety.yml. Hosted checks validate the implementation PR. Post-merge trusted what-if and hosted fork and failure-path evidence are retained in TASK-74.
 Spec: Owner-approved split on 2026-11-03: TASK-58 implements the trusted what-if job and credential-free PR validation; TASK-74 retains post-merge what-if and hosted fork and failure-path evidence. Issue #14 aggregate acceptance remains unchanged. No Azure role changes, live run, merge or issue closure are authorized by this split.
+
+Triage amendment 2026-11-03: The owner requested creation of the trusted job and correct project management. A separate manual-only workflow is included in scope so PRs do not create an intentionally skipped credentialed check. The job remains main-only and uses the dev environment; live verification stays in TASK-74.
 <!-- SECTION:DESCRIPTION:END -->
 
 ## Acceptance Criteria
@@ -75,4 +78,8 @@ Implemented the owner-requested manual main-only dev hosting what-if job in the 
 Implementation verification: full local baseline passed (phonebuddy-quality-cgw3n2iv); Bicep 0.34.44, actionlint 1.7.12, 15 focused tests, live claim check and diff check passed. PR/fork execution boundaries and unsuccessful what-if inputs have local regression coverage; hosted fork behavior and live Azure results remain TASK-74. No live preview has been run and identity permissions remain unverified.
 
 After correcting Azure CLI flattened what-if result handling, full local baseline passed (phonebuddy-quality-3xghbou5), pinned Bicep and actionlint passed, and focused tests cover missing, failed, uncertain and incomplete results plus the PR credential boundary. The job has not been run against Azure; TASK-74 retains that evidence and hosted fork/failure verification.
+
+The manual what-if is now a separate workflow so normal PRs do not receive a skipped credentialed-job check. Before Azure login it requires the latest GitHub Actions Quality check for the exact source commit to have completed successfully. The workflow itself remains manual, main-only and scoped to the dev environment; live proof remains TASK-74.
+
+Integrated main db48351 and validated the separate manual-only workflow: full local baseline phonebuddy-quality-xt43ehxy passed; pinned Bicep, actionlint for all three workflows, focused Quality-evidence and what-if tests, and diff checks passed. TASK-74 remains responsible for actual Azure what-if and hosted fork/failure evidence.
 <!-- SECTION:NOTES:END -->

@@ -4,7 +4,7 @@ title: Verify trusted Bicep what-if and fork boundaries
 status: To Do
 assignee: []
 created_date: '2026-11-03T18:50:00Z'
-updated_date: '2026-11-03T18:51:00Z'
+updated_date: '2026-11-03T18:58:00Z'
 labels:
   - infrastructure
   - cicd
@@ -27,7 +27,7 @@ Approved revision: 2026-11-01T09:24:44Z; body SHA-256 17ae7da5cbf33307a4ab96b173
 Approval evidence: Owner requested the trusted job and corrected project management in this Codex chat on 2026-11-03, including a post-merge verification split. This does not authorize Azure role changes, deployment, merge or issue closure.
 Branch: agent/gh-14-2-what-if-verification
 Scope: backlog/tasks/task-74 - Verify-trusted-Bicep-what-if-and-fork-boundaries.md
-Verify: From repository root run python3 -B scripts/check.py, python3 -B scripts/check_bicep.py and actionlint .github/workflows/ci.yml .github/workflows/pr-safety.yml. After explicit approval for any required Azure permissions or live invocation, run the trusted dev what-if on merged main and retain source, permission and result evidence. Exercise fork and invalid-template failure paths through hosted CI and retain evidence; required hosted checks and independent review apply.
+Verify: From repository root run python3 -B scripts/check.py, python3 -B scripts/check_bicep.py and actionlint .github/workflows/ci.yml .github/workflows/pr-safety.yml .github/workflows/azure-hosting-what-if.yml. After explicit approval for any required Azure permissions or live invocation, run the trusted dev what-if on merged main and retain source, permission and result evidence. Exercise fork and invalid-template failure paths through hosted CI and retain evidence; required hosted checks and independent review apply.
 Spec: TASK-58 must be complete on default branch. Any workflow or permission changes require separately approved triage; preserve issue 14 aggregate acceptance.
 <!-- SECTION:DESCRIPTION:END -->
 
