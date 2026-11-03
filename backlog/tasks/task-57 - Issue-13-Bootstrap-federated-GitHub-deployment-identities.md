@@ -1,11 +1,11 @@
 ---
 id: TASK-57
 title: Issue 13 - Bootstrap federated GitHub deployment identities
-status: In Progress
+status: Done
 assignee:
   - '@codex'
 created_date: '2026-11-02T16:35:00Z'
-updated_date: '2026-11-03T05:00:00Z'
+updated_date: '2026-11-03T05:07:00Z'
 labels:
   - infrastructure
   - cicd
@@ -53,9 +53,9 @@ Triage amendment 2026-11-02: The owner approved splitting the main-only OIDC smo
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 One shared principal uses restricted repository and dev/test environment federation, with Azure roles scoped to the approved nonproduction resource groups.
-- [ ] #2 Trusted workflow authentication succeeds from both environments; untrusted PRs cannot obtain the deployment identity. Shared dev/test access is explicitly documented.
-- [ ] #3 Bootstrap and GitHub environment configuration are reproducible or explicitly documented; credentials never enter logs.
+- [x] #1 One shared principal uses restricted repository and dev/test environment federation, with Azure roles scoped to the approved nonproduction resource groups.
+- [x] #2 Trusted workflow authentication succeeds from both environments; untrusted PRs cannot obtain the deployment identity. Shared dev/test access is explicitly documented.
+- [x] #3 Bootstrap and GitHub environment configuration are reproducible or explicitly documented; credentials never enter logs.
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -90,4 +90,12 @@ Owner-approved amendment implemented: shared app ID is explicit; bootstrap valid
 TASK-69 merged in PR #75. Owner configured main-only dev/test branch policies and supplied the shared principal; readback showed Contributor assignments at both foundation resource groups. Main workflow authenticated successfully for dev (https://github.com/vkaam/phonebuddy/actions/runs/41581057192) and test (https://github.com/vkaam/phonebuddy/actions/runs/41581143105); each run read both foundation groups. These runs prove authentication and read access, not absence of additional Azure privileges or external credentials.
 
 2026-11-03 readback confirmed exactly the two expected repository-ID-qualified environment federations and Contributor role assignments for the shared principal at both approved foundation resource groups in the active subscription. Both GitHub environments restrict branches to main. The pre-existing shared app also has one password credential (value not inspected); its ownership and continued need require review and this task does not assert that the app is exclusively credential-free. The merged integration passed 71 Python tests, repository checks, actionlint, diff checks and the full local bundle (evidence /private/var/folders/zs/9bq4j3rx3wng_vzz52w8hrf80000gn/T/phonebuddy-quality-0syh2srg/report.json). Acceptance and completion remain pending review of existing app access and current-head hosted checks.
+
+2026-11-03: Repository owner confirmed the acceptance criteria are okay and requested this status reconciliation after being informed that the shared app has one pre-existing password credential. Owner accepted the shared dev/test principal design. Evidence: PR #55 merged at 389932db8cbaead4365b7acaec980bbed2a87bd0 with Quality run 41581316885 and advisory run 41581327544 passing; PR #75 merged the trusted smoke workflow; dev run 41581057192 and test run 41581143105 authenticated and read both foundation groups. Readback found exactly the two expected GitHub federations and Contributor on both foundation groups in the active subscription; both GitHub environments restricted to main. Focused credential-redaction tests and the 71-test integrated suite passed. The pre-existing password remains in place; this records owner acceptance, not an assertion about its purpose or a proof of no other inherited access. Completion is provisional until this reconciliation PR merges.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Shared GitHub OIDC identity configured and verified for dev and test; both main-only smoke runs passed and role/federation configuration was read back. The owner accepted the criteria after disclosure of the existing password credential. Implementation PR #55 and smoke PR #75 merged; completion remains provisional until the reconciliation PR merges.
+<!-- SECTION:FINAL_SUMMARY:END -->
