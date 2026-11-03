@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-02T16:36:00Z'
-updated_date: '2026-11-03T20:34:00Z'
+updated_date: '2026-11-03T20:36:00Z'
 labels:
   - infrastructure
   - cicd
@@ -83,4 +83,6 @@ Spec: Preserve the issue's approved acceptance. Do not broaden scope or weaken r
 
 <!-- SECTION:NOTES:BEGIN -->
 Implemented structured health telemetry that excludes request lines, client addresses, query strings and bodies; added 30-day Log Analytics, Application Insights, Container Apps diagnostics, and Azure Monitor rules for missing telemetry, non-200 health responses, and p95 latency. Added the 60-second warm-up/10-minute dev-test gate, source-bound deployment annotations, and a manual main-only workflow that observes an existing deployment without deploying it. Live Backlog claim validation passed with claim_verified=true against origin/main; TASK-59 is completed. Verification on the implementation source: full local baseline passed (report /private/var/folders/zs/9bq4j3rx3wng_vzz52w8hrf80000gn/T/phonebuddy-quality-rwk2dj6b/report.json); pinned Bicep 0.34.44 validation passed; actionlint passed on all five workflows. The required hosted Azure checks have not run: the task's recorded approval explicitly excludes deployment, and no release-test workload has been deployed. No Azure resource was changed.
+
+Draft PR #82: https://github.com/vkaam/phonebuddy/pull/82 at head 37656a7d19db0f1b9fb71645e8bb60cd50154eac. PR is draft while hosted Azure alert-injection and healthy-release evidence remain outstanding; no task acceptance criteria are checked and no Azure resources were changed.
 <!-- SECTION:NOTES:END -->
