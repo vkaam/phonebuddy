@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-02T16:36:00Z'
-updated_date: '2026-11-03T20:54:00Z'
+updated_date: '2026-11-03T21:04:00Z'
 labels:
   - infrastructure
   - cicd
@@ -27,6 +27,7 @@ references:
   - infra/modules/data-platform.bicep
   - scripts/azure_foundations_smoke.py
   - infra/README.md
+  - https://github.com/vkaam/phonebuddy/pull/84
 modified_files:
   - >-
     backlog/tasks/task-60 -
@@ -89,4 +90,6 @@ Local verification on current source:
 - Focused `python3 -B -m unittest tests.test_bicep_preflight -v` passed (22 tests).
 
 External acceptance remains open: no authorized Azure deployment, live model quota preflight, data-plane smoke, or backup/restore/deletion exercise was run. The SQL Entra admin parameters and prod environment inputs remain UNRESOLVED. No acceptance criterion is checked until these current-source gates have evidence. Do not deploy or delete resources without separate authorization.
+
+Draft PR #84 was created from the recorded feature branch on latest main. PR head: `44cc55d78535e48a389810d17a6e78692165367c`. The PR is draft because the required authorized Azure deployment and live nonproduction/restore evidence remain outstanding. Hosted checks are pending; task remains In Progress and acceptance criteria remain unchecked.
 <!-- SECTION:NOTES:END -->
