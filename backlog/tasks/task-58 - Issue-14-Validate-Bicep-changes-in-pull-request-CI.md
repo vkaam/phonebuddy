@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-02T16:35:00Z'
-updated_date: '2026-11-02T20:29:00Z'
+updated_date: '2026-11-03T18:44:00Z'
 labels:
   - infrastructure
   - cicd
@@ -16,6 +16,7 @@ references:
   - .github/workflows/ci.yml
   - scripts/check_bicep.py
   - infra/main.bicep
+  - https://github.com/vkaam/phonebuddy/pull/74
 modified_files:
   - .github/workflows/ci.yml
 priority: high
@@ -47,7 +48,7 @@ Spec: Preserve the issue's approved acceptance. Do not broaden scope or weaken r
 ## Implementation Plan
 
 <!-- SECTION:PLAN:BEGIN -->
-1. Add pinned, digest-verified Bicep validation to the existing required Quality job, with no Azure credentials on PR runs. 2. Run the prescribed local checks and verify the workflow configuration. 3. Publish a draft PR and record any remaining trusted what-if and hosted fork-evidence gates; keep the task active until they are satisfied.
+1. Retain credential-free pinned Bicep validation in the required Quality job and integrate current main. 2. Add a separately gated manual, main-only trusted what-if path in the approved CI workflow, with environment-scoped OIDC and no credentialed PR execution, after review of its precise scope and permissions. 3. Exercise invalid-template and fork credential boundaries and capture hosted evidence. 4. Verify the trusted what-if in an explicitly approved nonproduction scope, then record evidence and complete review.
 <!-- SECTION:PLAN:END -->
 
 ## Implementation Notes
@@ -58,4 +59,6 @@ Added the existing pinned Bicep preflight to the required Quality job without Az
 Blocked after integrating latest main: mandatory live claim check reports TASK-57 issue body changed and requires authorized triage reassessment. Hook-generated .github-scripts_WARNINGS.txt was removed. Authenticated what-if and hosted fork/invalid-template evidence remain incomplete; do not resume until the live claim check succeeds.
 
 Draft PR: https://github.com/vkaam/phonebuddy/pull/74. Work remains blocked pending the mandatory live claim check and the outstanding acceptance evidence.
+
+2026-11-03: Integrated origin/main 31eed2478721ad27cefb380cb1ba60ffff7f2c49; mandatory live claim verification passed. Full local baseline passed (phonebuddy-quality-s9kjnhvw), Bicep 0.34.44 preflight and actionlint 1.7.12 passed. The trusted what-if workflow design, permitted Azure deployment scope and required hosted fork/invalid-template evidence remain unresolved; no Azure credentials were used.
 <!-- SECTION:NOTES:END -->
