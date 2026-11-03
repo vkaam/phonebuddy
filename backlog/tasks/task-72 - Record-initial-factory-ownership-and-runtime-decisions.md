@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-03T18:27:00Z'
-updated_date: '2026-11-03T18:29:00Z'
+updated_date: '2026-11-03T18:30:00Z'
 labels:
   - factory
   - autonomy
@@ -51,4 +51,6 @@ Spec: Record decisions and distinguish desired model use from verified access, a
 
 <!-- SECTION:NOTES:BEGIN -->
 Recorded owner-directed decisions in the operating contract; preserved unverified access, limits, durable coordination and human-review gates. Local baseline python3 -B scripts/check.py passed; evidence /private/var/folders/zs/9bq4j3rx3wng_vzz52w8hrf80000gn/T/phonebuddy-quality-8e2p6q0k/report.json. Git diff --check passed. Hosted checks and independent review remain outstanding.
+
+Draft PR: https://github.com/vkaam/phonebuddy/pull/78. Integrated local baseline passed on the tree based on main 170d59dc17e3681a77ff2f8b824c44366d70a891; evidence /private/var/folders/zs/9bq4j3rx3wng_vzz52w8hrf80000gn/T/phonebuddy-quality-om81m3b1/report.json. Hosted checks and independent review remain outstanding.
 <!-- SECTION:NOTES:END -->
