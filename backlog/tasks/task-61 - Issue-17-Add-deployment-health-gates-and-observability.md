@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-02T16:36:00Z'
-updated_date: '2026-11-04T05:31:00Z'
+updated_date: '2026-11-04T05:36:00Z'
 labels:
   - infrastructure
   - cicd
@@ -107,4 +107,6 @@ Implementation update (2026-11-04): the Azure health workflow now queries the se
 Validation: python3 -B scripts/check.py passed (report /private/var/folders/zs/9bq4j3rx3wng_vzz52w8hrf80000gn/T/phonebuddy-quality-hy_t0prt/report.json); pinned Bicep 0.34.44 baseline passed; actionlint passed on all five workflows; 13 focused health-gate/Bicep-boundary tests passed.
 
 The user asked to skip further live Azure telemetry validation and keep the deployed state as-is. No additional Azure deployment or alert verification was performed after that direction. The dev app remains deployed and previously returned ready=true at version 8c420b3e2f6dc8fa925db5361ecda10d0c70ef9d. Workspace ingestion and unhealthy-alert firing remain unverified; no acceptance criteria are checked and TASK-61 remains In Progress.
+
+Hosted CI on 4843ba5 caught actionlint ShellCheck SC2129 in the new workflow output writes. Grouped the three GITHUB_OUTPUT writes, then reran the full baseline successfully (report /private/var/folders/zs/9bq4j3rx3wng_vzz52w8hrf80000gn/T/phonebuddy-quality-22cpt7bc/report.json), pinned Bicep 0.34.44 validation, actionlint on all five workflows, and 13 focused tests. The source fix is ready for a new commit; CI on the next head remains outstanding.
 <!-- SECTION:NOTES:END -->

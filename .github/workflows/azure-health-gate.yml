@@ -51,9 +51,11 @@ jobs:
           test -n "$app_url"
           test -n "$insights_id"
           test -n "$workspace_id"
-          echo "url=https://${app_url}" >> "$GITHUB_OUTPUT"
-          echo "insights_id=${insights_id}" >> "$GITHUB_OUTPUT"
-          echo "workspace_id=${workspace_id}" >> "$GITHUB_OUTPUT"
+          {
+            echo "url=https://${app_url}"
+            echo "insights_id=${insights_id}"
+            echo "workspace_id=${workspace_id}"
+          } >> "$GITHUB_OUTPUT"
       - name: Run bounded readiness and observation gate
         env:
           TARGET_URL: ${{ steps.target.outputs.url }}
