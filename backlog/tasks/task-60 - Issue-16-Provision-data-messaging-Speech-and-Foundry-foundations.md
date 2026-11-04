@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-02T16:36:00Z'
-updated_date: '2026-11-04T05:55:00Z'
+updated_date: '2026-11-04T08:03:00Z'
 labels:
   - infrastructure
   - cicd
@@ -98,4 +98,12 @@ Runtime SQL administrator handling: dev/test parameter files remain `UNRESOLVED`
 Validation after this change: 27 focused Foundry/data-platform tests passed; pinned Bicep baseline passed; dev/test readiness passed using the current signed-in identity via temporary process environment variables; `git diff --check` passed. No Azure deployment was run.
 
 Post-merge validation: `python3 -B scripts/check.py` passed with report `/private/var/folders/zs/9bq4j3rx3wng_vzz52w8hrf80000gn/T/phonebuddy-quality-xxyc03pe/report.json`. Live TASK-60 claim validation passed against updated `origin/main` (`6ce96012526ec1790d631361b86688cd64d25903`) with `claim_verified: true`. Bicep deployment readiness passed for dev and test using runtime-only values from the current signed-in Entra identity. The repository is now up to date with TASK-61 on main.
+
+Authorized nonproduction deployment attempt 2026-11-04: the initial dev subscription deployment name collided with the foundation module deployment name and failed before child resources were applied. Retrying with a distinct root name partially provisioned dev. Service Bus, blob storage, workload identity, Speech/Foundry accounts, the GlobalStandard model deployment, and role assignments succeeded; SQL server creation failed with Azure `RegionDoesNotAllowProvisioning` because West Europe is not accepting new SQL Database servers. Foundry project creation also failed with `RequestConflict` while project and model child writes ran concurrently. Existing hosting resources were unchanged. No deletes were attempted.
+
+Test deployment was not attempted after the same West Europe SQL creation failure made it predictably partial. Production remains deferred. Added an explicit project-before-model dependency to serialize Foundry child writes for the next deployment attempt. No acceptance criteria are checked until all required nonproduction resources and smoke/recovery evidence pass.
+
+Independent read-only review of the Foundry sequencing fix found no actionable issues; reviewer confirmed the compiled model dependency targets `Microsoft.CognitiveServices/accounts/projects`. Its effect still needs verification in Azure because the dev deployment was blocked by West Europe SQL server creation.
+
+Post-merge validation after the sequencing fix: Bicep baseline passed; 30 focused tests passed; full `python3 -B scripts/check.py` passed with report `/private/var/folders/zs/9bq4j3rx3wng_vzz52w8hrf80000gn/T/phonebuddy-quality-0c8tpoiw/report.json`; `git diff --check` passed. These checks were run after merging main commit `ec7368c`.
 <!-- SECTION:NOTES:END -->

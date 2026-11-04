@@ -201,6 +201,10 @@ def validate_data_platform(template):
             raise ValueError('Speech and Foundry must disable key-based local authentication')
     deployment = by_type['Microsoft.CognitiveServices/accounts/deployments'][0]
     model = deployment.get('properties', {}).get('model', {})
+    if not any('Microsoft.CognitiveServices/accounts/projects' in dependency
+               for dependency in deployment.get('dependsOn', [])
+               if isinstance(dependency, str)):
+        raise ValueError('Foundry model deployment must wait for its project resource')
     if (deployment.get('sku', {}).get('name') != 'GlobalStandard'
             or not model.get('name') or not model.get('version')
             or deployment.get('properties', {}).get('versionUpgradeOption') != 'NoAutoUpgrade'

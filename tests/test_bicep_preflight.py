@@ -196,7 +196,9 @@ def data_platform_template():
         {'type': 'Microsoft.CognitiveServices/accounts', 'kind': 'AIServices',
          'properties': {'disableLocalAuth': True}},
         {'type': 'Microsoft.CognitiveServices/accounts/projects'},
-        {'type': 'Microsoft.CognitiveServices/accounts/deployments', 'sku': {'name': 'GlobalStandard'},
+        {'type': 'Microsoft.CognitiveServices/accounts/deployments',
+         'dependsOn': ["[resourceId('Microsoft.CognitiveServices/accounts/projects', 'foundry', 'phonebuddy-dev')]"],
+         'sku': {'name': 'GlobalStandard'},
          'properties': {'model': {'name': 'gpt-5-mini', 'version': '2025-08-07'},
                         'versionUpgradeOption': 'NoAutoUpgrade'}},
         {'type': 'Microsoft.Authorization/roleAssignments'},
@@ -210,6 +212,12 @@ def data_platform_template():
 class DataPlatformTemplateTests(unittest.TestCase):
     def test_required_secure_data_platform_resources_pass(self):
         self.assertTrue(validate_data_platform(data_platform_template()))
+
+    def test_foundry_model_waits_for_project_resource(self):
+        template = data_platform_template()
+        template['resources'][13].pop('dependsOn')
+        with self.assertRaisesRegex(ValueError, 'must wait for its project'):
+            validate_data_platform(template)
 
     def test_storage_keys_public_blobs_and_nonregional_fallback_fail(self):
         for mutate, message in (

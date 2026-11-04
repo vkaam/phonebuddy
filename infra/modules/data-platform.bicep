@@ -286,6 +286,9 @@ resource foundryProject 'Microsoft.CognitiveServices/accounts/projects@2025-06-0
 resource foundryModel 'Microsoft.CognitiveServices/accounts/deployments@2024-10-01' = {
   parent: foundry
   name: foundryModelDeploymentName
+  dependsOn: [
+    foundryProject
+  ]
   sku: {
     name: 'GlobalStandard'
     capacity: foundryModelCapacity
