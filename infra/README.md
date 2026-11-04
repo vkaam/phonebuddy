@@ -126,11 +126,12 @@ hosted PR/fork failure-boundary evidence; no live result is claimed here.
 `infra/main.bicep` also deploys `modules/data-platform.bicep` into that
 environment's foundation group. It provisions an Entra-only SQL serverless
 database, private blob container with versioning and soft-delete, keyless
-Service Bus queues, Speech, an Azure AI Foundry project and a pinned regional
-model deployment. A user-assigned workload identity receives only the Blob
-Data Contributor, Service Bus sender/receiver, Speech User and Cognitive
-Services OpenAI User roles required by the application. Resource names and
-outputs contain identifiers and endpoints only; no credentials are emitted.
+Service Bus queues, Speech, an Azure AI Foundry project and a pinned
+`GlobalStandard` model deployment. A user-assigned workload identity receives
+only the Blob Data Contributor, Service Bus sender/receiver, Speech User and
+Cognitive Services OpenAI User roles required by the application. Resource
+names and outputs contain identifiers and endpoints only; no credentials are
+emitted.
 
 Retention is environment-specific: SQL point-in-time recovery and blob/container
 soft-delete use 7 days for dev, 14 for test and 35 for prod. Blob versions are

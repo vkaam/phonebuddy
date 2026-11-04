@@ -193,7 +193,7 @@ def validate_data_platform(template):
             or not model.get('name') or not model.get('version')
             or deployment.get('properties', {}).get('versionUpgradeOption') != 'NoAutoUpgrade'
             or deployment.get('properties', {}).get('spilloverDeploymentName')):
-        raise ValueError('Foundry deployment must pin a regional model version without spillover')
+        raise ValueError('Foundry deployment must pin a model version without spillover')
     return True
 
 

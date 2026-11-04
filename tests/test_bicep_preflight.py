@@ -194,7 +194,7 @@ class DataPlatformTemplateTests(unittest.TestCase):
             (lambda t: t['resources'][4]['properties'].__setitem__('allowSharedKeyAccess', True), 'Shared Key'),
             (lambda t: t['resources'][8]['properties'].__setitem__('deadLetteringOnMessageExpiration', False), 'dead-letter'),
             (lambda t: t['resources'][-1]['properties'].__setitem__('maxDeliveryCount', 0), 'dead-letter'),
-            (lambda t: t['resources'][13]['properties'].__setitem__('spilloverDeploymentName', 'fallback'), 'regional model'),
+            (lambda t: t['resources'][13]['properties'].__setitem__('spilloverDeploymentName', 'fallback'), 'model version'),
         ):
             template = data_platform_template()
             mutate(template)

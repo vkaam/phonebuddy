@@ -32,7 +32,10 @@ Other prerequisites include the tenant and RBAC model, supported browsers,
 usage and concurrency, retention and recording policy, data residency, service
 SKUs/quotas, DNS, and a responsible on-call contact. Validate service and model
 availability and processing location rather than assuming an EU resource ensures
-EU inference. An unresolved required input blocks enabling its environment.
+EU inference. The owner selected Foundry `GlobalStandard`, which may process
+prompts and responses in any Azure region; resource geography remains separately
+configured and preflighted. An unresolved required input blocks enabling its
+environment.
 
 ## Delivery order
 
