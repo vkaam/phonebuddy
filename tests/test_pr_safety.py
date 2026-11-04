@@ -107,15 +107,21 @@ class SafetyTests(unittest.TestCase):
                 item["quality"][key] = value
                 self.assertFalse(assess(item)["auto_merge_candidate"])
 
-    def test_review_must_be_current_independent_and_human(self):
-        for change in [{"state": "CHANGES_REQUESTED"}, {"state": "DISMISSED"},
-                       {"commit_id": "d" * 40}, {"author_association": "NONE"},
-                       {"user": {"login": "author", "type": "User"}},
-                       {"user": {"login": "review-bot", "type": "Bot"}}]:
-            with self.subTest(change=change):
+    def test_review_is_separate_from_risk_classification(self):
+        for reviews in [[], [{"state": "APPROVED", "commit_id": "a" * 40,
+                             "author_association": "NONE",
+                             "user": {"login": "review-bot", "type": "Bot"}}]]:
+            with self.subTest(reviews=reviews):
                 item = evidence()
-                item["reviews"][0].update(change)
-                self.assertFalse(assess(item)["auto_merge_candidate"])
+                item["reviews"] = reviews
+                self.assertTrue(assess(item)["auto_merge_candidate"])
+
+    def test_active_changes_requested_vetoes_candidate(self):
+        item = evidence()
+        item["reviews"][0]["state"] = "CHANGES_REQUESTED"
+        report = assess(item)
+        self.assertFalse(report["auto_merge_candidate"])
+        self.assertEqual(report["decision"], "needs-attention")
 
     def test_comment_does_not_erase_changes_requested(self):
         item = evidence()

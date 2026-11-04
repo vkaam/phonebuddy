@@ -21,8 +21,8 @@ results to Backlog criterion IDs; keep pending checks explicit.
 - CI run and artifact links for the current commit:
 - Acceptance criteria demonstrated:
 - Approved file scope, task/spec revision and authorized amendments:
-- Independent review and unresolved findings:
-- Remaining issue-level tasks, aggregate acceptance and applicable release gates:
+- Independent agent reviewer, reviewed head, findings and resolution:
+- Remaining issue-level tasks and issue/Backlog sync state:
 
 ## Risk and delivery
 
@@ -30,9 +30,10 @@ results to Backlog criterion IDs; keep pending checks explicit.
 - Deployment prerequisites, migration/rollback, and operational impact (or explain why none apply):
 - PR safety report decision, head/base SHAs, and reasons:
 
-Passing CI and a low-risk classification are evidence for review. GitHub protections
-and current independent approval remain mandatory before merging.
+Merge as soon as scoped acceptance, independent agent review, required
+pre-merge checks and blocking findings are clear under effective GitHub rules.
 Follow [Issue and Backlog governance](../docs/issue-backlog-governance.md).
 Task completion is proposed on this branch until merge; avoid closing keywords
-and auto-closing development links for intermediate PRs. Only the authorized
-completion process may close the parent issue after aggregate acceptance.
+and auto-closing development links for intermediate PRs. After merge, reconcile
+the task and issue, inspect default-branch CI/CD, and create linked follow-up
+work for any failure.

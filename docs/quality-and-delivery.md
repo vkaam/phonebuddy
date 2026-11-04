@@ -37,13 +37,14 @@ link a dedicated record. Record failed and pending checks as well as successes.
 These templates support the Phase 0 delivery loop; cloud execution and independent
 review still require their own evidence.
 
-Task completion on a feature branch is provisional until merge. Intermediate PRs
-must use neutral issue references; a human owner or authorized trusted completion
-controller closes the issue only after all required tasks merge, aggregate
-acceptance passes and applicable release health is verified. Progress/evidence
-reporting does not authorize rewriting human-owned requirements. Runtime triage,
-leases and enforcement remain future factory work; these instructions do not
-claim that automation is installed.
+Task completion on a feature branch is provisional until merge. An independent
+agent may validate task acceptance and review the PR. Merge a small, ready PR
+after required pre-merge checks and blocking findings are clear. The merge makes
+its task Done final; close the parent issue when all required task PRs merge.
+Report task and PR transitions on the issue without rewriting approved intent.
+Observe default-branch CI/CD afterward. A failure creates a new linked issue
+and native task; it does not reopen the merged work. Runtime reconciliation and
+leases remain future factory work, so record and retry any sync failure visibly.
 
 Run from the repository root with Python 3.9 or newer:
 
@@ -249,23 +250,23 @@ branch, from this repository, with clean mergeability and all of:
   whose run title records the current test merge commit (`CI <github.sha>`).
   Failed, skipped, stale, missing,
   wrong-workflow, or unknown evidence requires review.
-- A current independent human approval from a repository collaborator/member/
-  owner, no active changes-requested review, and no `do-not-merge`,
-  `no-auto-merge`, `needs-review`, or `security` label.
+- No active changes-requested review or `do-not-merge`, `no-auto-merge`,
+  `needs-review`, or `security` label. Independent agent review and task
+  acceptance validation are recorded separately from this risk classifier.
 
-All other changes receive `manual-review`, including code, tests, lockfiles,
+All other changes receive `needs-attention`, including code, tests, lockfiles,
 contracts, database migrations, identities, organization isolation, telephony,
 recording/retention, Azure configuration, prompts/evaluation thresholds,
 architecture plans, delivery instructions, and the safety policy itself.
 The classifier measures bounded change risk; it does not verify the truth of
-documentation or prove absence of defects. An agent/LLM review is supplementary.
+documentation or prove absence of defects. Independent agent review is required
+by the governance policy and may cover code as well as documentation.
 
 Every report has `merge_authorized: false`. No merge automation is installed.
-A later merger must re-read live head/base identities, current approvals,
-resolved conversations, required checks, and the protected policy immediately
-before using native GitHub auto-merge. It must stop on changes or unknown state,
-and must never bypass rules. Saved JSON is not an authorization token. Policy
-changes require maintainer review, including when a PR claims to be low risk.
+A permitted merger must re-read live head/base identities, the independent
+review and task acceptance evidence, resolved conversations, required checks,
+and protected policy immediately before merge. It must stop on changes or
+unknown state and never bypass rules. Saved JSON is not an authorization token.
 
 To reproduce a report with saved API-shaped evidence:
 
@@ -276,32 +277,26 @@ python3 scripts/pr_safety.py --input /tmp/pr-evidence.json --output /tmp/pr-safe
 For read-only live collection, a maintainer can run `--collect <PR-number>`
 from a trusted default-branch checkout with `GH_TOKEN` and `GITHUB_REPOSITORY`
 set. Never run the collector from an untrusted PR checkout. API failures produce
-`manual-review`, not a positive recommendation.
+`needs-attention`, not a positive recommendation.
 
 ## GitHub activation
 
-Observed on 29 October 2026: the public repository's default branch is `main`,
-branch protection is absent, and repository auto-merge is disabled. Local files
-do not change these settings. After this bootstrap is reviewed and CI has run:
+The effective default-branch rules must be inspected before enabling an agent
+merge path. Keep PR, required `Quality`, resolved-conversation and
+force-push/deletion protections. Remove a per-PR human approval requirement
+only through an authorized repository-settings change; local policy text alone
+cannot change GitHub enforcement. Agent review and acceptance evidence must be
+bound to the current source head. Exercise a passing PR, failing CI PR and
+stale-review PR before relying on the path. Enable native auto-merge or a trusted
+merger only after its credentials, required checks and fail-closed behavior are
+verified. A merger may act after independent agent review without a separate
+human approval when the effective rules permit it.
 
-1. Protect `main`: require a PR, at least one independent approval, Code Owner
-   approval, dismissal of stale approvals, approval of the most recent push by
-   someone other than its pusher, and resolved review conversations.
-2. Require the `Quality` status check from GitHub Actions, with branches up to
-   date before merge (or use a protected merge queue). Include administrators,
-   prohibit force pushes/deletions, and avoid bypass actors.
-3. Verify `.github/CODEOWNERS` resolves to maintainers with write access. It
-   currently names `@vkaam` for delivery/security-sensitive paths. Add another
-   maintainer before relying on independent approval for that owner's PRs.
-4. Keep fork workflow approval enabled, default workflow permissions read-only,
-   and workflow approval/PR-creation rights disabled. Enable GitHub secret
-   scanning and push protection where available as additional controls.
-5. Exercise one successful documentation PR, one deliberately failed CI PR, and
-   one policy-change PR. Confirm the latter two cannot bypass protection and
-   that the trusted report binds to the current commits.
-6. Leave repository auto-merge disabled until a separately reviewed merger
-   enforces this contract. Native auto-merge can also be enabled manually per
-   PR after policy review; the advisory report does not enable it.
+As inspected on 4 November 2026, the effective `main` rules require a PR,
+resolved review threads and strict `Quality`; they prohibit deletion and
+non-fast-forward updates and require zero approving reviews. This setting
+permits the adopted agent-review policy, but the advisory report still does
+not authorize a merge.
 
 GitHub's [required-check behavior](https://docs.github.com/en/pull-requests/how-tos/merge-and-close-pull-requests/troubleshooting-required-status-checks)
 accepts skipped/neutral checks in some cases, so the evaluator specifically
