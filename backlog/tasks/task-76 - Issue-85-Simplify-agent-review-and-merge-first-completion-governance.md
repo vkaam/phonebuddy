@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-04T05:57:00Z'
-updated_date: '2026-11-04T06:10:00Z'
+updated_date: '2026-11-04T06:14:00Z'
 labels: []
 dependencies: []
 references:
@@ -56,11 +56,11 @@ Spec: Keep intent approval in GitHub Issues and atomic execution in native Backl
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 Repository instructions and governance permit independent agent PR review and acceptance validation without a per-PR human approval gate.
+- [x] #1 Repository instructions and governance permit independent agent PR review and acceptance validation without a per-PR human approval gate.
 - [ ] #2 Issue and native Backlog task states are linked and reconciled at each transition, including partial multi-task issues and visible sync failures.
 - [ ] #3 A merged PR to the default branch is sufficient to mark its scoped task Done and close its issue once all required tasks merge; post-merge defects create linked new issues/tasks.
 - [ ] #4 PR instructions favor early merge after required checks and blocking findings, followed by default-branch CI/CD observation.
-- [ ] #5 Conflicting policy, templates, and advisory code agree on the new authority model; focused tests and repository checks pass.
+- [x] #5 Conflicting policy, templates, and advisory code agree on the new authority model; focused tests and repository checks pass.
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -78,4 +78,6 @@ Spec: Keep intent approval in GitHub Issues and atomic execution in native Backl
 Triage amendment (2026-11-04): the Azure delivery policy and software plan also prescribe the superseded human review and post-release closure gates. The owner's direct issue #85 instruction covers these policy documents; added their exact paths to scope before editing. Required checks and acceptance are unchanged.
 
 PR #86 is open as a draft on f324a83a55cea71ef9617fd24f6ad77a719ad645. Local focused tests passed (16), full scripts/check.py passed all 12 checks (report /private/var/folders/zs/9bq4j3rx3wng_vzz52w8hrf80000gn/T/phonebuddy-quality-uhjey2a9/report.json), git diff --check passed, and live claim consistency passed with claim_verified: true. Independent agent final-diff review and hosted checks are pending. Effective main rules require PR, resolved threads and strict Quality, with zero approving reviews.
+
+Verified on PR #86 head 718e083bb4d6f51d0a5dc29503a31e53941d17b9: AGENTS.md and governance permit independent agent review and acceptance validation, and the effective main rules require zero approving reviews (AC1). Advisory code and policy documents align; 16 focused tests passed, full scripts/check.py passed all 12 local checks at /private/var/folders/zs/9bq4j3rx3wng_vzz52w8hrf80000gn/T/phonebuddy-quality-uhjey2a9/report.json, live consistency passed, and hosted Quality plus Risk report passed on this head (AC5). Independent reviewer /root/independent_review found no actionable findings and independently passed focused tests, scripts/quality.py, offline consistency and git diff --check. Issue #85 comments link TASK-76 claim, scope amendment and PR publication. The documented multi-task and failed-sync behavior, actual merge-based completion, and post-merge CI/CD observation have not been exercised yet; AC2-4 remain unchecked. Durable automatic reconciliation remains future factory work.
 <!-- SECTION:NOTES:END -->
