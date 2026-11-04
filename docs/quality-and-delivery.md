@@ -10,9 +10,11 @@ TASK-60 adds a separate infrastructure validation layer. `python3 -B
 scripts/check_bicep.py` requires Bicep CLI 0.34.44, compiles the main, hosting
 and data-platform templates, validates all environment parameter files, and
 checks security-critical resource settings. Its Foundry model preflight calls
-Azure Resource Manager and requires current lifecycle and exact-region capacity
-evidence; it needs an Azure CLI identity with read access and never substitutes
-another geography. `--deployment-ready <environment>` rejects unresolved SQL
+Azure Resource Manager and requires current lifecycle, model catalog and
+`GlobalStandard` quota evidence for the selected resource region; it needs an
+Azure CLI identity with read access and never substitutes another SKU, model,
+or resource region. The selected SKU can process prompts and responses in any
+Azure region. `--deployment-ready <environment>` rejects unresolved SQL
 administrator and environment values. Neither check deploys resources.
 
 After a separate, authorized dev/test deployment, the operator may run

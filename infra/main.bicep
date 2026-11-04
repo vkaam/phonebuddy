@@ -57,7 +57,7 @@ module dataPlatform './modules/data-platform.bicep' = {
     sqlAdminLogin: sqlAdminLogin
     foundryModelName: foundryModelName
     foundryModelVersion: foundryModelVersion
-    foundryModelCapacity: environment == 'prod' ? 10 : environment == 'test' ? 2 : 1
+    foundryModelCapacity: environment == 'prod' ? 50 : environment == 'test' ? 20 : 10
   }
 }
 

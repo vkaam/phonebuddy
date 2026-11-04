@@ -15,9 +15,9 @@ VERSION = '0.34.44'
 ENVIRONMENTS = ('dev', 'test', 'prod')
 FOUNDRY_API_VERSION = '2024-10-01'
 FOUNDRY_MODEL = {
-    'dev': ('gpt-5-mini', '2025-08-07', 'Standard', 1),
-    'test': ('gpt-5-mini', '2025-08-07', 'Standard', 2),
-    'prod': ('gpt-5-mini', '2025-08-07', 'Standard', 10),
+    'dev': ('gpt-5-mini', '2025-08-07', 'GlobalStandard', 10),
+    'test': ('gpt-5-mini', '2025-08-07', 'GlobalStandard', 20),
+    'prod': ('gpt-5-mini', '2025-08-07', 'GlobalStandard', 50),
 }
 FOUNDATION_DEPLOYMENT_NAME = (
     "[format('phonebuddy-{0}-{1}-foundation', parameters('environment'), "
@@ -113,9 +113,9 @@ def validate_foundry_model_evidence(models, capacities, location, model_name,
     capacity_config = sku.get('capacity')
     if not isinstance(capacity_config, dict):
         raise ValueError('Foundry model SKU capacity rules are missing')
-    minimum = capacity_config.get('minimum')
+    minimum = capacity_config.get('minimum', capacity_config.get('default'))
     maximum = capacity_config.get('maximum')
-    step = capacity_config.get('step')
+    step = capacity_config.get('step', 1)
     if (not all(isinstance(value, int) for value in (minimum, maximum, step))
             or step <= 0 or requested_capacity < minimum or requested_capacity > maximum
             or (requested_capacity - minimum) % step):
@@ -189,7 +189,7 @@ def validate_data_platform(template):
             raise ValueError('Speech and Foundry must disable key-based local authentication')
     deployment = by_type['Microsoft.CognitiveServices/accounts/deployments'][0]
     model = deployment.get('properties', {}).get('model', {})
-    if (deployment.get('sku', {}).get('name') != 'Standard'
+    if (deployment.get('sku', {}).get('name') != 'GlobalStandard'
             or not model.get('name') or not model.get('version')
             or deployment.get('properties', {}).get('versionUpgradeOption') != 'NoAutoUpgrade'
             or deployment.get('properties', {}).get('spilloverDeploymentName')):

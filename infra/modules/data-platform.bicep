@@ -23,8 +23,8 @@ param foundryModelName string = 'gpt-5-mini'
 param foundryModelVersion string = '2025-08-07'
 
 @minValue(1)
-@description('Standard deployment capacity units. Must be checked against subscription quota before deployment.')
-param foundryModelCapacity int = 1
+@description('GlobalStandard deployment capacity units. Must be checked against subscription quota before deployment.')
+param foundryModelCapacity int = 10
 
 var suffix = uniqueString(subscription().id, resourceGroup().id)
 var tags = {
@@ -287,7 +287,7 @@ resource foundryModel 'Microsoft.CognitiveServices/accounts/deployments@2024-10-
   parent: foundry
   name: foundryModelDeploymentName
   sku: {
-    name: 'Standard'
+    name: 'GlobalStandard'
     capacity: foundryModelCapacity
   }
   properties: {

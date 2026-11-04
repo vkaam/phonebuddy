@@ -103,14 +103,17 @@ Bus, Speech, and an Azure AI Foundry project and model deployment inside each
 environment's region-specific foundation group. The environment settings use
 7/14/35-day SQL point-in-time restore and blob/container soft-delete windows,
 1/7/30-day Service Bus message TTLs, LRS/ZRS storage, Standard/Premium Service
-Bus, and Foundry Standard model capacity of 1/2/10 units for dev/test/prod.
-Production inputs remain unresolved and block deployment.
+Bus, and Foundry `GlobalStandard` model capacity of 10/20/50 units for
+dev/test/prod. Production inputs remain unresolved and block deployment.
 
-The pinned `gpt-5-mini` model version is checked in the exact target region for
-Generally Available status, an unexpired inference and SKU lifecycle, valid
-capacity step/range, and sufficient regional subscription capacity. Missing or
-insufficient evidence fails closed; no global, data-zone, or alternate-region
-fallback is permitted. Capacity evidence is time-sensitive and does not reserve
+The owner explicitly selected `GlobalStandard` for `gpt-5-mini` on 2026-11-04.
+This SKU may process prompts and responses in any Azure region. The account is
+created in the configured resource region, and preflight checks that region's
+model catalog and subscription capacity for the exact `GlobalStandard` SKU,
+Generally Available lifecycle, unexpired inference and SKU lifecycle, and
+valid capacity default/range. Missing or insufficient evidence fails closed;
+the deployment does not automatically substitute another SKU, model, or
+resource region. Capacity evidence is time-sensitive and does not reserve
 quota. Repeat it immediately before a deployment preview, and treat an Azure
 capacity rejection as a failed gate.
 

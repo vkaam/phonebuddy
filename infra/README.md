@@ -142,17 +142,21 @@ Premium Service Bus; dev/test use LRS storage and Standard Service Bus.
 
 Before deployment, replace SQL administrator placeholders and run
 `python3 -B scripts/check_bicep.py --deployment-ready <environment>`. Check the
-exact model/version, Generally Available inference lifecycle, regional model
-capacity and requested deployment units against Azure before preview/deploy:
+exact model/version, Generally Available inference lifecycle, `GlobalStandard`
+SKU, West Europe model catalog, available quota and requested deployment units
+against Azure before preview/deploy:
 
 ```sh
 python3 -B scripts/check_bicep.py --foundry-preflight dev --subscription-id <subscription-id>
 ```
 
-The preflight has no cross-region fallback. Prod remains blocked until its
-geography, owner, cost center and SQL administrator are approved and supplied.
-The model capacity API check is evidence at preflight time, not a reservation;
-deployment can still fail if capacity changes.
+The account and quota check use the selected resource geography. The approved
+`GlobalStandard` SKU can process prompts and responses in any Azure region.
+There is no automatic alternate-SKU or alternate-resource-region fallback.
+Prod remains blocked until its geography, owner, cost center and SQL
+administrator are approved and supplied. The model capacity API check is
+evidence at preflight time, not a reservation; deployment can still fail if
+capacity changes.
 
 After an authorized dev/test deployment and RBAC propagation, run the synthetic
 data-plane probes with the intended Entra identity:

@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-02T16:36:00Z'
-updated_date: '2026-11-03T21:22:00Z'
+updated_date: '2026-11-04T05:24:00Z'
 labels:
   - infrastructure
   - cicd
@@ -100,4 +100,10 @@ Final local validation before this task-record update, on code commit `9226b2574
 Hosted verification: PR Quality run 41720401060 for head `b3c6f43cd80673c013887f103f4cb1f01b14a0ec` completed successfully. Repository/policy tests, Backlog consistency, web install/audit/lint/tests/browser/build, workflow validation, credential-free Bicep validation, secret scan and evidence retention all succeeded. This run covered the code and task state before this final hosted-evidence note. The PR remains draft and TASK-60 remains In Progress because the configured Foundry regional SKU is unavailable and live data-plane plus backup/recovery evidence is outstanding.
 
 Final hosted check: Quality run 41720961205 passed on current head `0b5c9c896de1ea4538cd9a35fa6ff6796b9ed1db`, including Backlog consistency and credential-free Bicep validation. This task-record note is documentation-only; all acceptance criteria remain unchecked pending a compliant model SKU/quota and authorized Azure smoke and backup/recovery evidence.
+
+Owner direction 2026-11-04: explicitly select GlobalStandard for gpt-5-mini. This changes the prior SKU selection after the owner confirmed the SKU; the account and quota preflight remain tied to the configured resource region, while the selected SKU may process prompts and responses in any Azure region. No automatic SKU, model, or resource-region substitution is permitted. The approved issue body was not changed.
+
+Read-only Azure preflight on 2026-11-04 passed for dev (GlobalStandard requested capacity 10, available capacity 500) and test (requested 20, available 500) in West Europe. Production remains unpreflighted because its geography and other inputs are unresolved. No Azure writes or deployments were performed.
+
+Validation on this source: `python3 -B -m unittest tests.test_bicep_preflight -v` passed 25 tests; pinned Bicep baseline check passed with CLI 0.34.44; `python3 -B scripts/check.py` passed with report `/private/var/folders/zs/9bq4j3rx3wng_vzz52w8hrf80000gn/T/phonebuddy-quality-acjrk28u/report.json`; `git diff --check` passed. External synthetic data-plane, backup/restore and deletion evidence is still outstanding, so acceptance remains unchecked and the task remains In Progress.
 <!-- SECTION:NOTES:END -->

@@ -34,15 +34,15 @@ def params(environment='dev', location='westeurope', owner='team', cost_center='
 
 
 def foundry_evidence(location='westeurope', lifecycle='GenerallyAvailable', capacity=20,
-                     model='gpt-5-mini', version='2025-08-07', sku='Standard',
-                     model_sku='Standard', model_capacity=100, deprecation='2027-01-01T00:00:00Z'):
+                     model='gpt-5-mini', version='2025-08-07', sku='GlobalStandard',
+                     model_sku='GlobalStandard', model_capacity=1000000, deprecation='2027-01-01T00:00:00Z'):
     return (
         {'value': [{'location': location, 'model': {
             'format': 'OpenAI', 'name': model, 'version': version,
             'lifecycleStatus': lifecycle,
             'deprecation': {'inference': deprecation},
             'skus': [{'name': model_sku, 'deprecationDate': '2027-01-01T00:00:00Z',
-                      'capacity': {'minimum': 1, 'maximum': model_capacity, 'step': 1}}],
+                      'capacity': {'default': 10, 'maximum': model_capacity}}],
         }}]},
         {'value': [{'location': location,
                     'properties': {'skuName': sku, 'availableCapacity': capacity}}]},
@@ -84,21 +84,29 @@ class DeploymentReadinessTests(unittest.TestCase):
 
 
 class FoundryAvailabilityTests(unittest.TestCase):
-    def test_exact_regional_model_lifecycle_and_capacity_pass(self):
+    def test_exact_location_catalog_and_global_capacity_pass(self):
         models, capacities = foundry_evidence()
         result = validate_foundry_model_evidence(
             models, capacities, 'westeurope', 'gpt-5-mini', '2025-08-07',
-            'Standard', 2, today=date(2026, 11, 3),
+            'GlobalStandard', 20, today=date(2026, 11, 3),
         )
         self.assertEqual(result['availableCapacity'], 20)
         self.assertEqual(result['location'], 'westeurope')
+
+    def test_global_capacity_default_is_minimum_when_minimum_is_omitted(self):
+        models, capacities = foundry_evidence()
+        with self.assertRaisesRegex(ValueError, 'SKU limits'):
+            validate_foundry_model_evidence(
+                models, capacities, 'westeurope', 'gpt-5-mini', '2025-08-07',
+                'GlobalStandard', 5, today=date(2026, 11, 3),
+            )
 
     def test_identical_catalog_entries_by_sku_are_deduplicated(self):
         models, capacities = foundry_evidence()
         models['value'].append(dict(models['value'][0]))
         result = validate_foundry_model_evidence(
             models, capacities, 'westeurope', 'gpt-5-mini', '2025-08-07',
-            'Standard', 2, today=date(2026, 11, 3),
+            'GlobalStandard', 20, today=date(2026, 11, 3),
         )
         self.assertEqual(result['model'], 'gpt-5-mini')
 
@@ -110,7 +118,7 @@ class FoundryAvailabilityTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'conflicting lifecycle'):
             validate_foundry_model_evidence(
                 models, capacities, 'westeurope', 'gpt-5-mini', '2025-08-07',
-                'Standard', 2, today=date(2026, 11, 3),
+                'GlobalStandard', 20, today=date(2026, 11, 3),
             )
 
     def test_does_not_fallback_to_another_geography(self):
@@ -118,7 +126,7 @@ class FoundryAvailabilityTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'no geography fallback'):
             validate_foundry_model_evidence(
                 models, capacities, 'westeurope', 'gpt-5-mini', '2025-08-07',
-                'Standard', 2, today=date(2026, 11, 3),
+                'GlobalStandard', 20, today=date(2026, 11, 3),
             )
 
     def test_retired_preview_and_deprecating_models_fail(self):
@@ -127,19 +135,19 @@ class FoundryAvailabilityTests(unittest.TestCase):
             with self.subTest(status=status), self.assertRaisesRegex(ValueError, 'GenerallyAvailable'):
                 validate_foundry_model_evidence(
                     models, capacities, 'westeurope', 'gpt-5-mini', '2025-08-07',
-                    'Standard', 2, today=date(2026, 11, 3),
+                    'GlobalStandard', 20, today=date(2026, 11, 3),
                 )
 
     def test_missing_model_version_or_insufficient_quota_fails(self):
         for models, capacities in (
             foundry_evidence(model='other-model'),
             foundry_evidence(capacity=1),
-            foundry_evidence(sku='GlobalStandard'),
+            foundry_evidence(sku='DataZoneStandard'),
         ):
             with self.subTest(models=models, capacities=capacities), self.assertRaises(ValueError):
                 validate_foundry_model_evidence(
                     models, capacities, 'westeurope', 'gpt-5-mini', '2025-08-07',
-                    'Standard', 2, today=date(2026, 11, 3),
+                    'GlobalStandard', 20, today=date(2026, 11, 3),
                 )
 
 
@@ -166,7 +174,7 @@ def data_platform_template():
         {'type': 'Microsoft.CognitiveServices/accounts', 'kind': 'AIServices',
          'properties': {'disableLocalAuth': True}},
         {'type': 'Microsoft.CognitiveServices/accounts/projects'},
-        {'type': 'Microsoft.CognitiveServices/accounts/deployments', 'sku': {'name': 'Standard'},
+        {'type': 'Microsoft.CognitiveServices/accounts/deployments', 'sku': {'name': 'GlobalStandard'},
          'properties': {'model': {'name': 'gpt-5-mini', 'version': '2025-08-07'},
                         'versionUpgradeOption': 'NoAutoUpgrade'}},
         {'type': 'Microsoft.Authorization/roleAssignments'},
