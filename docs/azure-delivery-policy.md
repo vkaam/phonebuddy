@@ -79,6 +79,39 @@ before enabling the component; tests and metrics must identify the candidate
 version. Evaluate production before completing its rollout as well as earlier
 stages. Changes to thresholds require reviewed evidence.
 
+### Health telemetry and pilot observation
+
+The Azure release-test workload emits one structured event for each `/ready`, `/`
+or unknown-route request. Events contain only the configured release version,
+HTTP status and response duration. Request lines, client addresses, query strings,
+request bodies, secrets and call content are excluded. Azure Monitor sends
+container console and system logs to the environment's 30-day Log Analytics
+workspace; queries are restricted to this synthetic health event.
+
+After a 60-second warm-up, the manual dev/test health workflow probes `/ready`
+and `/` for 10 consecutive minutes, with 10 requests in each one-minute sample.
+It requires at least 100 responses, the expected version and readiness value on
+every response, a server-error rate below 1% and p95 latency below 2 seconds in
+each rolling five-minute window. Before recording the release annotation, the
+workflow also queries the environment's Log Analytics workspace and requires at
+least 100 health events matching the candidate version, with no unhealthy
+responses. It polls for up to five minutes for Azure Monitor ingestion. Empty or
+insufficient telemetry after that wait, unhealthy events, a failed query,
+missing response, version mismatch, timeout or dependency outage fails closed.
+The report distinguishes an unavailable dependency from an unhealthy service
+response and records counts and timings without storing response bodies or target
+URLs.
+
+Azure Monitor evaluates missing health telemetry, server errors and p95 latency
+every five minutes over a five-minute window. Log ingestion can take several
+minutes, so an alert is an operational signal and the health workflow remains
+the promotion gate. Alert rules create Azure Monitor alert state; notification
+recipients and on-call routing are not configured until the environment owner
+assigns approved contacts. Successful gates add a source-bound Application
+Insights deployment annotation with environment, release version, commit and
+workflow reference. The workflow only observes and annotates an existing dev or
+test deployment; it does not deploy or promote resources.
+
 On a failed first release there is no previous healthy artifact: stop, keep the
 service unavailable or isolated, alert the incident owner, and investigate; do
 not claim rollback succeeded. On later releases, the deployment automation stops

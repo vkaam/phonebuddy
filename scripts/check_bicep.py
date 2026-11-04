@@ -99,7 +99,9 @@ def validate_hosting(template):
     required = {'Microsoft.ContainerRegistry/registries', 'Microsoft.KeyVault/vaults',
                 'Microsoft.Web/staticSites', 'Microsoft.ManagedIdentity/userAssignedIdentities',
                 'Microsoft.Authorization/roleAssignments', 'Microsoft.App/managedEnvironments',
-                'Microsoft.App/containerApps'}
+                'Microsoft.App/containerApps', 'Microsoft.OperationalInsights/workspaces',
+                'Microsoft.Insights/components', 'Microsoft.Insights/diagnosticSettings',
+                'Microsoft.Insights/scheduledQueryRules'}
     if not required.issubset(resources):
         raise ValueError('Hosting template is missing required resources')
     registry = resources['Microsoft.ContainerRegistry/registries']['properties']
@@ -125,12 +127,63 @@ def validate_hosting(template):
         raise ValueError('Workload image must use the provisioned registry and digest')
     if parameters['deployWorkload'].get('defaultValue') is not False:
         raise ValueError('Workload deployment must be opt-in')
-    if set(template.get('outputs', {})) != {'registryName', 'registryServer', 'workloadUrl'}:
+    workspace = resources['Microsoft.OperationalInsights/workspaces']['properties']
+    if workspace.get('retentionInDays') != 30:
+        raise ValueError('Health telemetry retention must be explicitly bounded to 30 days')
+    insights = resources['Microsoft.Insights/components']
+    insight_properties = insights.get('properties', {})
+    if (insights.get('kind') != 'web'
+            or insight_properties.get('IngestionMode') != 'LogAnalytics'
+            or 'Microsoft.OperationalInsights/workspaces'
+            not in insight_properties.get('WorkspaceResourceId', '')):
+        raise ValueError('Application Insights must use the bounded Log Analytics workspace')
+    diagnostic_settings = [resource for resource in template['resources']
+                           if resource.get('type') == 'Microsoft.Insights/diagnosticSettings']
+    environment_diagnostics = next(
+        (resource for resource in diagnostic_settings
+         if '/managedEnvironments/' in resource.get('scope', '')), None)
+    app_diagnostics = next(
+        (resource for resource in diagnostic_settings
+         if '/containerApps/' in resource.get('scope', '')), None)
+    environment_log_categories = {
+        item.get('category')
+        for item in environment_diagnostics.get('properties', {}).get('logs', [])
+    } if environment_diagnostics else set()
+    if not {'ContainerAppConsoleLogs', 'ContainerAppSystemLogs'}.issubset(
+            environment_log_categories):
+        raise ValueError('Console and system logs must route from the Container Apps environment')
+    if app_diagnostics is None or app_diagnostics.get('properties', {}).get('logs'):
+        raise ValueError('Container App-level diagnostics may route metrics, not logs')
+    app_metric_categories = {
+        item.get('category')
+        for item in app_diagnostics.get('properties', {}).get('metrics', [])
+    }
+    if 'AllMetrics' not in app_metric_categories:
+        raise ValueError('Container App-level diagnostics must route AllMetrics')
+    alerts = [resource for resource in template.get('resources', [])
+              if resource.get('type') == 'Microsoft.Insights/scheduledQueryRules']
+    if len(alerts) != 3 or any(resource.get('kind') != 'LogAlert'
+                              or resource.get('properties', {}).get('evaluationFrequency') != 'PT5M'
+                              or resource.get('properties', {}).get('windowSize') != 'PT5M'
+                              for resource in alerts):
+        raise ValueError('Expected three five-minute health telemetry log alerts')
+    alert_queries = '\n'.join(
+        condition.get('query', '')
+        for resource in alerts
+        for condition in resource.get('properties', {}).get('criteria', {}).get('allOf', [])
+    ) + json.dumps(template.get('variables', {}), sort_keys=True)
+    for signal in ('health_request', 'health.status', 'health.duration_ms'):
+        if signal not in alert_queries:
+            raise ValueError(f'Health alert queries must cover {signal}')
+    if 'substring(Log, indexof(Log' not in alert_queries:
+        raise ValueError('Health alert queries must parse timestamp-prefixed console JSON')
+    if set(template.get('outputs', {})) != {
+            'registryName', 'registryServer', 'workloadUrl', 'logWorkspaceName', 'insightsName'}:
         raise ValueError('Hosting outputs must contain only public resource identifiers')
 
 
 def validate_what_if(result):
-    """Fail closed when Azure returns no usable preview or an uncertain change."""
+    """Fail closed except for Azure's known unmodified App Insights action group."""
     if not isinstance(result, dict) or result.get('status') != 'Succeeded' or result.get('error'):
         raise ValueError('What-if did not report success')
     if result.get('potentialChanges') or result.get('diagnostics'):
@@ -138,10 +191,17 @@ def validate_what_if(result):
     changes = result.get('changes')
     if not isinstance(changes, list) or not changes:
         raise ValueError('Missing what-if changes')
-    allowed = {'Create', 'Modify', 'NoChange'}
+    allowed = {'Create', 'Modify', 'NoChange', 'Ignore'}
     if any(not isinstance(change, dict) or change.get('changeType') not in allowed
            or not change.get('resourceId') for change in changes):
         raise ValueError('Incomplete or unexpected what-if result')
+    ignored = [change for change in changes if change['changeType'] == 'Ignore']
+    expected_ignored_id_suffix = (
+        '/providers/microsoft.insights/actiongroups/application insights smart detection'
+    )
+    if any(not change['resourceId'].lower().endswith(expected_ignored_id_suffix)
+           for change in ignored):
+        raise ValueError('Only the Azure-managed App Insights Smart Detection action group may be ignored')
     return changes
 
 
@@ -178,7 +238,7 @@ def main():
     if options.what_if_result:
         changes = validate_what_if(json.loads(options.what_if_result.read_text()))
         counts = {kind: sum(item['changeType'] == kind for item in changes)
-                  for kind in ('Create', 'Modify', 'NoChange')}
+                  for kind in ('Create', 'Modify', 'NoChange', 'Ignore')}
         print(json.dumps({'whatIfChangeCounts': counts}))
         return
     binary = os.environ.get('BICEP', 'bicep')
