@@ -175,6 +175,8 @@ def validate_hosting(template):
     for signal in ('health_request', 'health.status', 'health.duration_ms'):
         if signal not in alert_queries:
             raise ValueError(f'Health alert queries must cover {signal}')
+    if 'substring(Log, indexof(Log' not in alert_queries:
+        raise ValueError('Health alert queries must parse timestamp-prefixed console JSON')
     if set(template.get('outputs', {})) != {
             'registryName', 'registryServer', 'workloadUrl', 'logWorkspaceName', 'insightsName'}:
         raise ValueError('Hosting outputs must contain only public resource identifiers')

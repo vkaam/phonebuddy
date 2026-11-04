@@ -4,6 +4,7 @@ import argparse
 from datetime import datetime, timezone
 import json
 import math
+import subprocess
 import sys
 import time
 from urllib.error import HTTPError, URLError
@@ -130,10 +131,80 @@ def run_gate(url, expected_version, warmup_seconds=60, observation_seconds=600,
     return report
 
 
+def query_workspace_telemetry(workspace_id, app_name, expected_version, runner=subprocess.run):
+    """Require enough version-matched health events and no unhealthy responses."""
+    if not workspace_id or not app_name or not expected_version:
+        return {'status': 'fail', 'telemetry_event_count': 0,
+                'unhealthy_event_count': 0, 'reasons': ['dependency_outage']}
+    quote = lambda value: "'" + value.replace("'", "''") + "'"
+    query = (
+        'ContainerAppConsoleLogs '
+        f'| where ContainerAppName == {quote(app_name)} '
+        '| where TimeGenerated > ago(15m) '
+        '| extend health=parse_json(substring(Log, indexof(Log, \'{\'))) '
+        '| where tostring(health.event) == "health_request" '
+        f'| where tostring(health.version) == {quote(expected_version)} '
+        '| summarize telemetry_event_count=countif(todouble(health.duration_ms) >= 0), '
+        'unhealthy_event_count=countif(toint(health.status) != 200)'
+    )
+    try:
+        result = runner(
+            ['az', 'monitor', 'log-analytics', 'query', '--workspace', workspace_id,
+             '--analytics-query', query, '--output', 'json'],
+            check=False, capture_output=True, text=True, timeout=60,
+        )
+        if result.returncode != 0:
+            raise ValueError('Log Analytics query failed')
+        payload = json.loads(result.stdout)
+        if (not isinstance(payload, list) or len(payload) != 1
+                or not isinstance(payload[0], dict)):
+            raise ValueError('Log Analytics query returned an unexpected result')
+        row = payload[0]
+        telemetry_count = int(row['telemetry_event_count'])
+        unhealthy_count = int(row['unhealthy_event_count'])
+        if telemetry_count < 100:
+            reasons = ['missing_telemetry']
+        else:
+            reasons = []
+        if unhealthy_count:
+            reasons.append('unhealthy_response')
+        return {
+            'status': 'pass' if not reasons else 'fail',
+            'telemetry_event_count': telemetry_count,
+            'unhealthy_event_count': unhealthy_count,
+            'reasons': reasons,
+        }
+    except (subprocess.SubprocessError, OSError, ValueError, KeyError, IndexError,
+            TypeError, json.JSONDecodeError):
+        return {'status': 'fail', 'telemetry_event_count': 0,
+                'unhealthy_event_count': 0, 'reasons': ['dependency_outage']}
+
+
+def wait_for_workspace_telemetry(workspace_id, app_name, expected_version,
+                                 max_wait_seconds=300, poll_interval_seconds=30,
+                                 query=query_workspace_telemetry, sleeper=time.sleep,
+                                 clock=time.monotonic):
+    """Allow bounded ingestion lag before failing on missing workspace events."""
+    if max_wait_seconds < 0 or poll_interval_seconds <= 0:
+        raise ValueError('Telemetry wait must be nonnegative with a positive polling interval')
+    deadline = clock() + max_wait_seconds
+    while True:
+        report = query(workspace_id, app_name, expected_version)
+        if (report['status'] == 'pass' or 'unhealthy_response' in report['reasons']
+                or 'dependency_outage' in report['reasons']):
+            return report
+        remaining = deadline - clock()
+        if remaining <= 0:
+            return report
+        sleeper(min(poll_interval_seconds, remaining))
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--url', required=True, help='HTTPS service base URL; no query or fragment')
     parser.add_argument('--expected-version', required=True)
+    parser.add_argument('--workspace-id', required=True, help='Log Analytics workspace customer ID')
+    parser.add_argument('--app-name', required=True, help='Azure Container App name')
     parser.add_argument('--warmup-seconds', type=int, default=60)
     parser.add_argument('--observation-seconds', type=int, default=600)
     parser.add_argument('--sample-interval-seconds', type=int, default=60)
@@ -144,6 +215,11 @@ def main(argv=None):
         report = run_gate(args.url, args.expected_version, args.warmup_seconds,
                           args.observation_seconds, args.sample_interval_seconds,
                           args.requests_per_sample, args.timeout_seconds)
+        telemetry = wait_for_workspace_telemetry(
+            args.workspace_id, args.app_name, args.expected_version)
+        report['workspace_telemetry'] = telemetry
+        report['reasons'] = sorted(set(report['reasons'] + telemetry['reasons']))
+        report['status'] = 'pass' if report['status'] == 'pass' and telemetry['status'] == 'pass' else 'fail'
     except ValueError as error:
         parser.error(str(error))
     print(json.dumps(report, sort_keys=True))

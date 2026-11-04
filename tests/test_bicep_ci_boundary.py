@@ -59,6 +59,8 @@ class BicepCiBoundaryTests(unittest.TestCase):
         self.assertIn('persist-credentials: false', workflow)
         self.assertIn('scripts/health_gate.py', workflow)
         self.assertIn('scripts/release_annotation.py', workflow)
+        self.assertIn('--workspace-id', workflow)
+        self.assertIn('--app-name', workflow)
         self.assertLess(workflow.index('Run bounded readiness'),
                         workflow.index('Record successful release annotation'))
         self.assertNotIn('az deployment', workflow)

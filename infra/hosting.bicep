@@ -148,7 +148,7 @@ resource appDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-previe
   }
 }
 
-var telemetryRows = 'ContainerAppConsoleLogs | where ContainerAppName == \'${app.name}\' | where Log contains \'"event":"health_request"\' | extend health=parse_json(Log) | where todouble(health.duration_ms) >= 0'
+var telemetryRows = 'ContainerAppConsoleLogs | where ContainerAppName == \'${app.name}\' | where Log contains \'"event":"health_request"\' | extend health=parse_json(substring(Log, indexof(Log, \'{\'))) | where todouble(health.duration_ms) >= 0'
 var missingTelemetryQuery = 'print telemetryCount=toscalar(${telemetryRows} | where TimeGenerated > ago(5m) | count)'
 var unhealthyResponseQuery = 'print failureCount=toscalar(${telemetryRows} | where TimeGenerated > ago(5m) | where toint(health.status) != 200 | count)'
 var latencyQuery = 'print p95LatencyMs=toscalar(${telemetryRows} | where TimeGenerated > ago(5m) | summarize percentile(todouble(health.duration_ms), 95))'

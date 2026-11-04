@@ -92,8 +92,12 @@ After a 60-second warm-up, the manual dev/test health workflow probes `/ready`
 and `/` for 10 consecutive minutes, with 10 requests in each one-minute sample.
 It requires at least 100 responses, the expected version and readiness value on
 every response, a server-error rate below 1% and p95 latency below 2 seconds in
-each rolling five-minute window. A missing response, missing telemetry, version
-mismatch, timeout, insufficient sample count or dependency outage fails closed.
+each rolling five-minute window. Before recording the release annotation, the
+workflow also queries the environment's Log Analytics workspace and requires at
+least 100 health events matching the candidate version, with no unhealthy
+responses. It polls for up to five minutes for Azure Monitor ingestion. Empty or
+insufficient telemetry after that wait, unhealthy events, a failed query,
+missing response, version mismatch, timeout or dependency outage fails closed.
 The report distinguishes an unavailable dependency from an unhealthy service
 response and records counts and timings without storing response bodies or target
 URLs.

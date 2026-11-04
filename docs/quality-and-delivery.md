@@ -12,8 +12,10 @@ For the Azure release-test workload, the dev/test-only manual health gate in
 routes after warm-up, then observes the service for 10 minutes. It fails on
 missing samples, unhealthy responses, dependency outages, a server-error rate of
 1% or higher, or p95 latency of 2 seconds or more in any rolling five-minute
-window. The Azure Monitor telemetry alerts are separate evidence and are not
-replaced by this HTTP check. See the [Azure delivery policy](azure-delivery-policy.md)
+window. Before recording a release annotation, it also requires at least 100
+version-matched health events and no unhealthy responses in the environment's
+Log Analytics workspace. It waits up to five minutes for ingestion and fails
+closed on missing records or query errors. See the [Azure delivery policy](azure-delivery-policy.md)
 for log retention, alert timing, contact prerequisites and the deployment
 annotation fields. The workflow observes an existing deployment and does not
 deploy or promote it.

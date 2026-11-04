@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-02T16:36:00Z'
-updated_date: '2026-11-03T21:15:00Z'
+updated_date: '2026-11-04T05:31:00Z'
 labels:
   - infrastructure
   - cicd
@@ -77,6 +77,8 @@ Spec: Preserve the issue's approved acceptance. Do not broaden scope or weaken r
 3. Add a bounded smoke/observation runner that waits for warm-up, verifies the expected version and required routes, checks sample count, 5-minute error rate and p95 latency over the documented 10-minute window, and fails closed on missing data or dependency outages.
 4. Add a manually dispatched, read-only hosted workflow and deterministic tests for healthy, unhealthy, missing-telemetry, and dependency-outage cases.
 5. Update delivery docs with thresholds, observation windows, alert semantics, and prerequisites; run the task verification commands and record which hosted Azure gates remain outstanding.
+
+6. After HTTP observation, require at least 100 version-matched health events in the dev/test Log Analytics workspace and no unhealthy events; fail closed on empty telemetry or query/dependency failure before writing the release annotation.
 <!-- SECTION:PLAN:END -->
 
 ## Implementation Notes
@@ -99,4 +101,10 @@ Live dev state update: after the failed ARM deployment response, ARM operations 
 Evidence correction: GitHub Quality and Risk report passed on commit 9adc3c9 before the narrow Ignore-validator change; that validator/test change is not yet pushed. The actual ARM what-if validator accepted the corrected preview with 1 Create, 7 Modify, 6 NoChange, and one Ignore for only the Azure-managed Smart Detection action group. The action group has zero receivers. The required Python suite now passes all 88 tests with loopback access, and pinned Bicep validation passes. Live /ready and / returned version 8c420b3e2f6dc8fa925db5361ecda10d0c70ef9d. Current full quality baseline is rerunning after the final task-note correction.
 
 Final candidate validation: python3 -B scripts/check.py passed with report /private/var/folders/zs/9bq4j3rx3wng_vzz52w8hrf80000gn/T/phonebuddy-quality-ogz2jhx2/report.json. The candidate includes the narrow Smart Detection Ignore handling and test; current PR checks on 9adc3c9 predate that last change and must be rerun after push.
+
+Implementation update (2026-11-04): the Azure health workflow now queries the selected dev/test Log Analytics workspace after HTTP observation, requires at least 100 health_request events matching the candidate release version and zero non-200 events, polls for up to five minutes for ingestion, and blocks annotations on missing records or query/dependency failures. Alert and gate KQL now parse the JSON payload after Azure’s timestamp prefix. Added tests for the CLI result shape, query failures, unhealthy events, value escaping, and bounded ingestion polling.
+
+Validation: python3 -B scripts/check.py passed (report /private/var/folders/zs/9bq4j3rx3wng_vzz52w8hrf80000gn/T/phonebuddy-quality-hy_t0prt/report.json); pinned Bicep 0.34.44 baseline passed; actionlint passed on all five workflows; 13 focused health-gate/Bicep-boundary tests passed.
+
+The user asked to skip further live Azure telemetry validation and keep the deployed state as-is. No additional Azure deployment or alert verification was performed after that direction. The dev app remains deployed and previously returned ready=true at version 8c420b3e2f6dc8fa925db5361ecda10d0c70ef9d. Workspace ingestion and unhealthy-alert firing remain unverified; no acceptance criteria are checked and TASK-61 remains In Progress.
 <!-- SECTION:NOTES:END -->
