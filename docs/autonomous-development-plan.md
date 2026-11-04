@@ -9,6 +9,11 @@ high-level intent; native Backlog tasks are the execution plan of record.
 Former TASK-32 through TASK-42 are now intent issues #37 through #47 and require
 fresh atomic decomposition before execution. See
 [Issue and Backlog governance](issue-backlog-governance.md).
+The 4 November 2026 policy revision in issue #85 supersedes the human-review
+and post-release completion gates in this dated assessment: independent agents
+may review and validate acceptance; merge to `main` completes scoped work;
+post-merge failures become new linked work. The current governance document
+controls whenever the historical stage descriptions below differ.
 
 PhoneBuddy supports agent-assisted development today. It has useful CI and
 evidence controls, but no demonstrated unattended task-to-PR runtime, independent
@@ -32,15 +37,14 @@ to the controller's own permissions need an accountable owner.
 | Stage | Work the system completes without another operator prompt | Remaining human boundary |
 | --- | --- | --- |
 | Current: assisted | CI runs after a person or interactive agent publishes a change. | Someone starts and supervises development, handles review and merge, and supplies cloud prerequisites. |
-| A: unattended PR production | Select an opted-in task, implement, verify, independently review, repair CI and feedback, and maintain one reviewable PR. | Independent human review and merge authorization remain mandatory. |
-| B: delivery after approval | A trusted merger handles eligible approved PRs; a protected pipeline deploys immutable artifacts and verifies health or recovers. | Human approval of each PR under the current contract; exceptional changes and incidents. |
+| A: unattended PR production | Select an opted-in task, implement, verify, independently review, repair CI and feedback, and maintain one reviewable PR. | Approved issue intent and effective GitHub rules remain mandatory. |
+| B: merge-first delivery | A permitted agent or trusted merger merges reviewed PRs after required checks; default-branch CI/CD is observed and failures become new work. | Repository settings, identity, operations and incidents remain controlled. |
 | C: bounded end-to-end autonomy | An explicitly approved change class completes the same path, including merge and release, without per-PR human intervention. | Policy, sensitive changes, missing inputs, exceeded limits and unresolved incidents. |
 
-Stage C is a proposed policy expansion. The
-[software plan](software-plan.md) and [delivery baseline](quality-and-delivery.md)
-currently require independent human review and prohibit coding agents from
-merging. Native auto-merge waits for required reviews and checks; enabling it
-does not remove that boundary. See
+Stage C is an implementation and qualification milestone, not the source of
+the review policy. Issue #85 permits independent agent review and merge through
+the effective GitHub rules. Native auto-merge still waits for required checks
+and any approval enforced by those rules. See
 [GitHub's auto-merge contract](https://docs.github.com/en/pull-requests/how-tos/merge-and-close-pull-requests/automatically-merging-a-pull-request).
 Unrestricted autonomy over every kind of change is not a qualification target.
 
@@ -57,7 +61,7 @@ deployed services, model access and billing were not audited.
 | Hosted checks | `ci.yml` runs Python checks/tests, locked web install, configuration tests, TypeScript/build, actionlint and Gitleaks on disposable hosted runners. Main CI succeeded for the refreshed baseline. | No web lint command, browser behavior suite or npm dependency scan/update configuration. The new standalone Bicep compiler check is not wired into CI; TASK-7 owns that integration. API, storage, SIP/media and AI evaluation gates do not exist yet. |
 | Local evidence | `scripts/check.py` binds Python baseline results to source manifests and digests. | It omits the web checks performed in CI; passing it does not establish application correctness. It inherits host permissions and cannot bound child process trees. |
 | Effective GitHub protection | Active `Standard main` ruleset targets the default branch, requires PRs, resolved conversations and strict `Quality` from GitHub Actions, blocks deletion/force-push, and lists no bypass actors. | Approval count is **0**; Code Owner review, stale-approval dismissal and last-push approval are **off**. This differs from the documented human-review policy. Classic branch-protection returns 404, which must not be mistaken for absence of ruleset protection. |
-| Review and merge policy | `scripts/pr_safety.py` reads trusted-base policy, checks current commits and CI, and always emits `merge_authorized: false`. | Its positive classification only covers small allowlisted documentation changes with human approval. It provides neither implementation review nor merge execution. Repository auto-merge is off. |
+| Review and merge policy | `scripts/pr_safety.py` reads trusted-base policy, checks current commits and CI, and always emits `merge_authorized: false`. | Its positive classification only covers small allowlisted documentation changes. Independent agent review and merge execution remain separate; repository auto-merge was off at the assessment date. |
 | Ownership | `CODEOWNERS` names `@vkaam` for several sensitive paths. | Only one owner is named; availability of a second independent maintainer is unverified. Future factory paths and the new plan need explicit policy ownership. |
 | Coding and review runtime | Software-plan section 8 proposes Azure orchestration, disposable VMs, Foundry inference and separate reviewer contexts. No `factory/` implementation is present. | No provisioned runner path, model/tool proof, sandbox isolation, short-lived gateway authorization or independent review runtime is demonstrated by repository evidence. |
 | Scheduling and repair | The interactive workflow describes task claiming, PR repair and check monitoring. | No persistent scheduler, leases, idempotency, retry accounting, conflict reconciliation or restart/resume controller implements it. |
@@ -95,19 +99,20 @@ Use the deterministic state machine already proposed in the software plan:
 `approved issue -> triaged atomic tasks -> eligible -> leased -> implementing -> verifying -> reviewing -> PR-ready`
 
 Failures transition to bounded repair, waiting-for-owner, or failed with retained
-evidence. Stage B adds waiting-for-approval, merge, deployment and observation;
-Stage C only removes per-PR approval for a separately approved class. Track PR
-readiness and deployed health as distinct facts so Done cannot imply a release
-that has not happened. Existing Backlog statuses can remain simple while the
-factory records its more detailed run states separately.
+evidence. Stage B adds agent review, merge, deployment observation and
+reconciliation. A merged task is Done even when later deployment fails; create
+linked follow-up work for that failure. Track merge and deployed health as
+distinct facts. Existing Backlog statuses can remain simple while the factory
+records its more detailed run states separately.
 
 Triage pins the approved issue revision, creates an idempotent decomposition and
 records each task's scope, native acceptance and verification gates. Workers
 cannot code directly from issues, widen scope or treat archived dependencies as
 complete. A versioned amendment invalidates affected evidence. A separate
-completion controller aggregates all merged tasks and issue-level acceptance,
-including applicable release health, before closing the parent issue. Intermediate
-PRs use neutral references; progress reporting never rewrites human requirements.
+completion controller reconciles every merged task and closes the parent issue
+when all required task PRs merge. Default-branch CI/CD is observed afterward;
+failures create new linked work. Intermediate PRs use neutral references;
+progress reporting never rewrites human requirements.
 
 The trusted controller owns leases, policy and limits. Untrusted repository
 commands run in disposable sandboxes. A tool gateway mediates narrowly scoped
@@ -148,8 +153,8 @@ archival of unfinished tasks does not satisfy their dependencies.
 | 3 | #44 (former TASK-39): enforce budgets, audit retention, cancellation and actionable operations. | #37, #40, #41 | Platform/operations owner |
 | 4 | #43 (former TASK-38): independently review the final diff using separately executed verification. | #39, #40, #42 | Quality/security engineer |
 | 5 | #45 (former TASK-40): qualify approved issue-to-task-to-PR production on fixtures and a real PhoneBuddy task. | #38, #42, #43, #44 | Factory owner and independent evaluator |
-| 6 | #46 (former TASK-41): merge eligible human-approved PRs and reconcile aggregate issue completion. | #38, #45 | Repository/platform owner |
-| 7 | #47 (former TASK-42): qualify an explicitly approved class without per-PR human approval, including release and recovery. | #20, #45, #46 | Maintainers and service owner |
+| 6 | #46 (former TASK-41): merge eligible agent-reviewed PRs and reconcile issue/Backlog completion. | #38, #45 | Repository/platform owner |
+| 7 | #47 (former TASK-42): qualify bounded unattended delivery, including release and recovery. | #20, #45, #46 | Maintainers and service owner |
 
 #37 includes build/test instructions, architecture context and the Groma
 coverage decision. If setup reports a first scan, ask whether to curate it as
@@ -198,13 +203,14 @@ identities. A small pilot is evidence for a bounded rollout, not proof of genera
 correctness. Budget alerts alone are insufficient: the controller/gateway must
 reject additional work when approved aggregate limits are exhausted.
 
-Do not weaken branch-wide review requirements merely to make Stage C pass.
+Change effective branch rules only through an authorized settings change.
 [GitHub rules](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets)
 can enforce required reviews and trusted checks. Conditional per-change review
 needs a separately reviewed, enforceable design compatible with those rules;
 a classifier, bot self-approval or blanket bypass is insufficient. Keep policy,
 credentials, organization isolation, telephony, retention, migrations,
-infrastructure and evaluation-threshold changes under human review initially.
+infrastructure and evaluation-threshold changes under explicit owner approval
+of intent and independent agent review of implementation.
 
 ## Decisions and practical starting point
 
@@ -213,16 +219,16 @@ infrastructure and evaluation-threshold changes under human review initially.
 | Decision/input | Recommendation or outstanding fact | What it blocks |
 | --- | --- | --- |
 | Control plane | Adopted: GitHub Issues own intent; native Backlog tasks own execution; PRs/Actions retain delivery. Implement the approved intake, decomposition and completion contract. | Durable integrations and identity design. |
-| Authority | Approve Stage A first; keep existing human review until a later policy decision. | Unattended merge and expansion of eligible classes. |
-| Owners | Name a factory owner, escalation contact and second independent maintainer. | Reliable escalation and enforceable independent human review. |
+| Authority | Issue #85 permits independent agent review, agent acceptance validation and merge-based completion. | Effective GitHub rules and authorized merge credentials still govern activation. |
+| Owners | Name a factory owner and escalation contact. | Reliable escalation for policy, operations and incidents. |
 | Factory Azure access | Tenant/subscription, EU region, quota, tool-capable coding/review model access and scoped bootstrap identity are unverified. | Live sandbox/inference proof, not local planning or check improvements. |
 | Limits | Approve per-run and daily spend, token/compute/time/retry limits and evidence retention. No monetary ceiling is inferred here. | Unattended cloud execution. |
 | Domain acceptance | Approve pilot browsers, fixtures, isolation/media/evaluation gates and release ownership as components arrive. | Autonomy in those domains and production enablement. |
 
 Begin by triaging approved scope from #37 and #39 into atomic execution tasks.
 After the remaining runtime prerequisites are approved, implement the smallest
-#40/#41/#42 slice that produces one useful PR; retain human review while adding
-the independent reviewer and operations controls. Do not
+#40/#41/#42 slice that produces one useful PR; add an independent agent reviewer
+and operations controls. Do not
 wait for the complete product, and do not build a generic agent platform first.
 
 For planning capacity, allow roughly 4–7 engineer-weeks for Stage A and the

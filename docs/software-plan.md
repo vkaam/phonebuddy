@@ -258,7 +258,7 @@ Run factory orchestration on ACA, with durable run state in a separate factory d
 
 Each implementation run gets an isolated disposable Azure VM and a branch/worktree from a pinned commit. Repository code executes only inside that sandbox, with resource/time/token limits and restricted outbound access. Give the sandbox no production identity, provider credentials, or deploy rights. A separate tool gateway handles narrowly scoped model and repository operations using short-lived authorization; credentials are not embedded in the repository checkout. Destroy the sandbox after saving the patch and evidence.
 
-Separate planner, implementer, and reviewer contexts and permissions. The reviewer consumes the specification, final diff, and independently executed evidence rather than inheriting the implementer's reasoning. Start sequentially; introduce parallel work only with explicit file/contract ownership. Agent review supports human judgment and does not prove correctness.
+Separate planner, implementer, and reviewer contexts and permissions. The reviewer consumes the specification, final diff, and independently executed evidence rather than inheriting the implementer's reasoning. Start sequentially; introduce parallel work only with explicit file/contract ownership. Independent agent review validates scoped acceptance but does not prove correctness.
 
 ### Work-item-to-PR workflow
 
@@ -271,9 +271,9 @@ Separate planner, implementer, and reviewer contexts and permissions. The review
 | Review | Separate reviewer inspects final diff and evidence | Findings tied to files and acceptance criteria |
 | Propose | Orchestrator opens/updates a PR | Scope, validation, limitations, deployment/rollback notes, run IDs |
 | Release | Protected pipeline promotes reviewed artifacts | Environment checks, migration result, smoke results, release provenance |
-| Complete intent | Trusted controller or human owner verifies aggregate issue acceptance after all required tasks merge | Task/PR evidence and applicable release health; issue closure without rewriting requirements |
+| Complete intent | Reconciler confirms every required task PR has merged to the default branch | Task/PR links and issue closure; release health is tracked separately |
 
-Agents may create branches and PRs and iterate on failed checks within bounded attempts. They may not approve their own changes, change protected policy, modify credentials, expand their permissions, merge protected branches, or directly deploy production. After independent PR review and merge, the trusted pipeline automatically promotes through the gates in the delivery policy; routine human production approval is not required.
+Agents may create branches and PRs and iterate on failed checks within bounded attempts. The author may not approve their own changes, change protected policy, modify credentials, expand their permissions, or directly deploy production. A separate permitted agent or trusted controller may merge through effective GitHub rules after independent review, scoped acceptance and required pre-merge checks. The trusted pipeline then promotes through the delivery gates; a post-merge failure creates new linked work.
 
 Use managed identities for Azure-hosted automation and workload identity
 federation for trusted GitHub deployment jobs, as specified in the
@@ -284,7 +284,8 @@ identities, and run untrusted PR builds without privileged service connections.
 Durable leases, idempotent triage and reconciliation prevent duplicate work;
 branch-local task status is not a distributed lock. Workers require a recorded
 triage amendment for scope changes. Intermediate PRs reference their parent issue
-without closing it; aggregate acceptance and applicable release gates control closure.
+without closing it; all required task merges control closure. Default-branch
+CI/CD and release health are observed afterward and failures create linked work.
 
 ### Definition of done for the factory
 
