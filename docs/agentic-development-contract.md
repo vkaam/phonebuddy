@@ -14,11 +14,10 @@ or cloud identity, authorize a merge, or establish deployment readiness.
 - GitHub PRs and Actions provide review and delivery evidence. Evidence can be
   reported to the issue owner, but automation must not rewrite issue intent,
   priority, acceptance, or decisions.
-- The initial autonomy target is unattended production of a reviewable PR.
-  Independent human review and merge approval remain required. A future merger
-  may act only after that approval under a separately reviewed policy. Removing
-  per-PR human approval is a separate future decision for a narrowly named,
-  qualified change class; nothing here grants it.
+- Independent agents may review PRs and validate task acceptance. Merge through
+  the effective protected path as soon as required pre-merge checks and blocking
+  findings are clear. Merge to the default branch completes scoped task work;
+  post-merge failures become new linked issues and Backlog tasks.
 
 ## Eligible work and trusted inputs
 
@@ -61,9 +60,11 @@ particular, this contract does not grant access to secrets, production or
 customer data, cloud provisioning identities, repository settings, issue-body
 edits, dependency or policy changes, or arbitrary network services. Additional
 paths, tools, external writes, or checks require the appropriate recorded
-triage amendment and owner approval. The worker may not approve or merge its
-own PR, change branch protections, deploy, close an issue, or weaken a required
-check. Existing human review and protected delivery controls remain in force.
+triage amendment and owner approval. The author may not approve their own PR or weaken a required check. A
+separate agent may review and validate acceptance; a permitted agent or trusted
+controller may merge through the effective GitHub rules. Issue closure follows
+the merged-task mapping in the governance policy. Repository settings,
+deployment and incident actions retain their own permissions.
 
 ## Stop, resume, and escalation
 
@@ -87,7 +88,7 @@ retrying; a task status alone is not an exclusive lease.
 | Item | Current evidence | Status and consequence |
 | --- | --- | --- |
 | Intent and execution records | The repository governance selects GitHub Issues for human intent and native Backlog tasks for atomic execution. | Adopted; issue #37 remains open for its broader contract and prerequisites. |
-| Initial delivery authority | Repository policy requires independent human review and prohibits coding agents from merging. | Human review and merge approval remain mandatory for each PR. |
+| Initial delivery authority | Issue #85 authorizes independent agent review, agent acceptance validation and merge-based task completion. | Merge still follows effective GitHub rules and permissions; this policy does not install a merge controller. |
 | Repository policy owner | `.github/CODEOWNERS` names `@vkaam` for repository policy and relevant documentation. | Evidence of repository path ownership; it does not by itself name the factory service owner, incident commander, or escalation coverage. |
 | Factory and escalation owner | The owner identified themselves as `@vkaam` on 3 November 2026; no backup is designated. | `@vkaam` is accountable for factory operation and escalation. If unavailable, pause work requiring an owner decision; no substitute authority is implied. |
 | Initial factory runtime | The owner chose the signed-in Codex app and their individual ChatGPT subscription for agent work, with GitHub Actions for verification and GitHub PRs for delivery. Paid OpenAI API use is not authorized. | Intended direction, not an enabled factory. Verify supported subscription access, scheduling, execution isolation, bounded permissions and durable coordination before unattended operation. GitHub-hosted checks do not themselves provide a durable exclusive lease. |
@@ -96,7 +97,7 @@ retrying; a task status alone is not an exclusive lease.
 | Account and cloud resources | The owner has an individual ChatGPT account and selected subscription-funded Codex usage. No separate cloud tenant or subscription is approved for the factory. | Subscription automation eligibility and access remain unverified; no cloud identity is assumed. |
 | Region and quota | The autonomy plan describes EU-region access and quota as unverified; subscription usage limits and any required execution location remain unverified. | Unresolved; determine which location and quota requirements apply to the selected runtime before live operation. |
 | Run limits and evidence retention | No monetary ceiling, aggregate daily limit, per-run token/compute/time/retry cap, or approved retention period is set by this contract. | Unresolved; unattended cloud execution remains disabled until an owner records enforceable limits. |
-| Future per-PR approval removal | No separately approved change class or qualification result authorizes it. | Not authorized. It requires its own reviewed policy and successful qualification. |
+| Per-PR human approval | Issue #85 removes the repository policy requirement for a human review of each PR. | An independent agent review and applicable required checks remain necessary; effective GitHub rules may still require a human until changed. |
 
 These entries distinguish recorded evidence from decisions that still need an
 authorized owner. They are not approval requests answered by silence, defaults,
@@ -161,7 +162,7 @@ queues, and manual dispatch. It runs `scripts/quality.py`, the Python unit
 suite, the web commands above, actionlint, and Gitleaks. A local pass is not
 hosted CI evidence. Before reporting a PR ready, check all required statuses on
 the current PR head; pending, skipped, cancelled, stale, missing, or failed
-checks are not successful evidence. Independent human review remains a separate
+checks are not successful evidence. Independent agent review remains a separate
 gate.
 
 ### Groma coverage

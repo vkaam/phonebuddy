@@ -53,12 +53,21 @@ Material issue changes require reassessment. Autonomous claims need durable
 exclusive leases; branch-local status alone does not prevent duplicate work.
 
 Commit proposed task completion on its feature branch, never directly on main.
-Branch-local Done is provisional until merge and does not imply deployment.
-Intermediate PRs/commits use neutral issue references such as Refs #123 and must
-not create an auto-closing link. A human owner or authorized trusted completion
-controller closes an issue only after all required tasks merge, aggregate
-acceptance passes and applicable release/health gates are verified.
-These rules do not expand merge, deployment or self-approval permissions.
+An independent agent may review the PR and validate the task's acceptance
+criteria. The author cannot approve their own work. Merge the small, ready PR
+after applicable required checks pass and blocking review findings are resolved;
+follow the effective GitHub rules. A merge to the default branch accepts that
+task's scoped change and makes its Done status final. It does not certify a
+later deployment or health check. Observe default-branch CI/CD after merge;
+failures become new linked issues and native tasks to pick up.
+
+Keep the issue and Backlog task linked and reconcile them after every status,
+scope, PR and merge transition. Report progress on the issue without rewriting
+its approved requirements. An issue with multiple tasks stays open while any
+required task is unmerged and closes when all required task PRs merge. Record
+and retry a failed sync visibly; never report mismatched records as synchronized.
+Intermediate PRs/commits use neutral issue references such as Refs #123 and
+must not create a premature auto-closing link.
 
 ## Taking Backlog work through review
 
@@ -80,23 +89,25 @@ lease; autonomous scheduling still requires the durable lease service.
 
 Carry the assigned work through a pull request, not just a local implementation:
 
-1. Verify the acceptance criteria and record evidence using the finalization
-   guide. Keep the task active while implementation or required verification is
-   incomplete. Record the PR link and any outstanding blockers in the task.
+1. Have an independent agent review the change and validate the task acceptance
+   criteria using the finalization guide. Keep the task active while
+   implementation or required pre-merge verification is incomplete. Record the
+   PR link, review evidence and any blockers in the task and issue.
 2. Follow the publishing instructions below. Open or update the branch's PR with
    its task, scope, validation, and remaining limitations. Do not create a
    duplicate PR.
-3. Monitor all checks on the PR's current head until they complete successfully.
+3. Monitor all required checks on the PR's current head until they complete successfully.
    Inspect failures, fix issues within scope, run relevant local checks, commit
    and push, then monitor the new head again. Pending, cancelled, skipped,
    missing, stale, or otherwise inconclusive checks are not successful checks.
    If a check cannot be completed or fixed, report its name, state, and blocker;
    do not claim the PR is green.
-4. Once the work and acceptance criteria are verified and the PR checks are
-   green, complete the Backlog finalization steps. If those updates change the
-   PR branch, commit and push them and verify checks again for the final head.
-   Report the PR link, final check results, and any remaining review or other
-   blockers. A green PR still requires the project's review and merge controls.
+4. Once agent review, scoped acceptance and required pre-merge checks pass,
+   complete the Backlog finalization steps, commit and push any resulting task
+   update, and recheck the final head. Merge through the permitted GitHub path
+   as early as these gates allow. Reconcile task and issue completion after the
+   merge, then inspect default-branch CI/CD. Create linked follow-up work for
+   any post-merge failure instead of holding or reopening the merged task.
 
 ## Addressing pull request feedback
 

@@ -363,6 +363,36 @@ class WhatIfEvidenceTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     validate_what_if(result)
 
+    def test_known_conditional_workload_ignores_are_accepted(self):
+        resource_ids = []
+        for environment in ('dev', 'test'):
+            base = (f'/subscriptions/3787e2b4-802f-4b28-8793-1a32cc410b45/'
+                    f'resourceGroups/rg-pb-{environment}-westeurope-foundation/providers/')
+            resource_ids.append(base + f'Microsoft.App/containerApps/ca-pb-{environment}-release-test')
+            resource_ids.extend(base + f'Microsoft.Insights/scheduledQueryRules/alert-pb-{environment}-{name}'
+                                for name in ('health-latency', 'missing-health-telemetry',
+                                             'unhealthy-health-response'))
+
+        changes = [{'changeType': 'Ignore', 'resourceId': resource_id}
+                   for resource_id in resource_ids]
+        self.assertEqual(validate_what_if({'status': 'Succeeded', 'changes': changes}), changes)
+
+    def test_conditional_workload_ignore_allowlist_is_exact_and_scoped(self):
+        resource_ids = (
+            '/subscriptions/3787e2b4-802f-4b28-8793-1a32cc410b45/resourceGroups/rg-pb-dev-westeurope-foundation/providers/Microsoft.App/containerApps/ca-pb-dev-other',
+            '/subscriptions/3787e2b4-802f-4b28-8793-1a32cc410b45/resourceGroups/rg-pb-prod-westeurope-foundation/providers/Microsoft.App/containerApps/ca-pb-prod-release-test',
+            '/subscriptions/not-a-guid/resourceGroups/rg-pb-dev-westeurope-foundation/providers/Microsoft.App/containerApps/ca-pb-dev-release-test',
+            '/subscriptions/3787e2b4-802f-4b28-8793-1a32cc410b45/resourceGroups/rg-other/providers/Microsoft.Insights/scheduledQueryRules/alert-pb-dev-health-latency',
+            '/subscriptions/3787e2b4-802f-4b28-8793-1a32cc410b45/resourceGroups/rg-pb-dev-westeurope-foundation/providers/Microsoft.Insights/scheduledQueryRules/alert-pb-dev-other',
+        )
+        for resource_id in resource_ids:
+            with self.subTest(resource_id=resource_id):
+                result = {'status': 'Succeeded', 'changes': [
+                    {'changeType': 'Ignore', 'resourceId': resource_id},
+                ]}
+                with self.assertRaisesRegex(ValueError, 'Unexpected ignored resource'):
+                    validate_what_if(result)
+
 
 class QualityEvidenceTests(unittest.TestCase):
     def test_exact_commit_latest_check_must_pass(self):
