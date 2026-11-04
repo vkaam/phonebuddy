@@ -36,9 +36,11 @@ EU inference. An unresolved required input blocks enabling its environment.
 
 ## Delivery order
 
-1. Require a PR to protected `main`, independent human review, required CI and
-   resolved conversations before merge. Review material infrastructure and
-   migration effects in the PR. PR jobs have no Azure deployment identity.
+1. Require a PR to protected `main`, independent agent review, applicable
+   required CI and resolved blocking conversations before merge. Validate the
+   task's scoped acceptance and review material infrastructure and migration
+   effects in the PR. Merge early when these gates pass so default-branch
+   CI/CD can run. PR jobs have no Azure deployment identity.
 2. After a successful protected-main build, build once and bind immutable
    artifacts, configuration, migration version, provenance and scan results to
    that commit. Serialize releases so a later commit cannot overtake an earlier
@@ -57,6 +59,11 @@ EU inference. An unresolved required input blocks enabling its environment.
    deployment identity, and rollback outcome. No Azure deployment occurs from a
    PR or advisory workflow. Environment protections must enforce branch and
    identity restrictions without adding routine approval gates.
+
+Merge completes the scoped Backlog task and its issue when all required task
+PRs are merged. Release and health results remain separate operational facts.
+If a post-merge gate fails, open a linked issue and native task for correction
+and keep the failed release stopped or recovered under this policy.
 
 ## Gates and recovery
 
