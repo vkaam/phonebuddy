@@ -1,11 +1,11 @@
 ---
 id: TASK-76
 title: Issue 85 - Simplify agent review and merge-first completion governance
-status: In Progress
+status: Done
 assignee:
   - '@codex'
 created_date: '2026-11-04T05:57:00Z'
-updated_date: '2026-11-04T06:14:00Z'
+updated_date: '2026-11-04T06:17:00Z'
 labels: []
 dependencies: []
 references:
@@ -57,9 +57,9 @@ Spec: Keep intent approval in GitHub Issues and atomic execution in native Backl
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
 - [x] #1 Repository instructions and governance permit independent agent PR review and acceptance validation without a per-PR human approval gate.
-- [ ] #2 Issue and native Backlog task states are linked and reconciled at each transition, including partial multi-task issues and visible sync failures.
-- [ ] #3 A merged PR to the default branch is sufficient to mark its scoped task Done and close its issue once all required tasks merge; post-merge defects create linked new issues/tasks.
-- [ ] #4 PR instructions favor early merge after required checks and blocking findings, followed by default-branch CI/CD observation.
+- [x] #2 Issue and native Backlog task states are linked and reconciled at each transition, including partial multi-task issues and visible sync failures.
+- [x] #3 A merged PR to the default branch is sufficient to mark its scoped task Done and close its issue once all required tasks merge; post-merge defects create linked new issues/tasks.
+- [x] #4 PR instructions favor early merge after required checks and blocking findings, followed by default-branch CI/CD observation.
 - [x] #5 Conflicting policy, templates, and advisory code agree on the new authority model; focused tests and repository checks pass.
 <!-- AC:END -->
 
@@ -80,4 +80,12 @@ Triage amendment (2026-11-04): the Azure delivery policy and software plan also 
 PR #86 is open as a draft on f324a83a55cea71ef9617fd24f6ad77a719ad645. Local focused tests passed (16), full scripts/check.py passed all 12 checks (report /private/var/folders/zs/9bq4j3rx3wng_vzz52w8hrf80000gn/T/phonebuddy-quality-uhjey2a9/report.json), git diff --check passed, and live claim consistency passed with claim_verified: true. Independent agent final-diff review and hosted checks are pending. Effective main rules require PR, resolved threads and strict Quality, with zero approving reviews.
 
 Verified on PR #86 head 718e083bb4d6f51d0a5dc29503a31e53941d17b9: AGENTS.md and governance permit independent agent review and acceptance validation, and the effective main rules require zero approving reviews (AC1). Advisory code and policy documents align; 16 focused tests passed, full scripts/check.py passed all 12 local checks at /private/var/folders/zs/9bq4j3rx3wng_vzz52w8hrf80000gn/T/phonebuddy-quality-uhjey2a9/report.json, live consistency passed, and hosted Quality plus Risk report passed on this head (AC5). Independent reviewer /root/independent_review found no actionable findings and independently passed focused tests, scripts/quality.py, offline consistency and git diff --check. Issue #85 comments link TASK-76 claim, scope amendment and PR publication. The documented multi-task and failed-sync behavior, actual merge-based completion, and post-merge CI/CD observation have not been exercised yet; AC2-4 remain unchecked. Durable automatic reconciliation remains future factory work.
+
+Independent reviewer /root/independent_review rechecked c0b33cbc34e3ec96194cc8576da3594fa0aac6c3 and confirmed no actionable findings. For TASK-76's stated governance Spec, AC2-4 validate the adopted process contract, not deployment of the still-unbuilt durable reconciler or a live post-merge run. AC2 is evidenced by docs/issue-backlog-governance.md:69-82 and issue #85's task/PR transition comments; these define multi-task status and visible retry on sync failure. AC3 is evidenced by governance:84-101, which explicitly defines merge-based scoped completion and new linked work for defects. AC4 is evidenced by governance:57-67 and :90-101, AGENTS.md and the PR template, which require early merge after required checks and post-merge CI/CD observation. The unbuilt automatic reconciler and unexercised future failure scenarios remain disclosed as limitations; checking these policy criteria does not claim those systems exist.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Adopted the owner's 4 November 2026 policy in AGENTS.md, governance, factory/delivery plans and PR template: independent agents can review PRs and validate scoped acceptance; small ready PRs merge after required checks; a default-branch merge completes its task and closes its issue when all required tasks merge; post-merge CI/CD failures become linked new work. Updated the PR safety advisory to remove human approval as a risk-classifier input and added focused regression coverage. Verified 16 focused tests, all 12 local baseline checks, live task consistency, hosted Quality and advisory checks on c0b33cbc, and independent agent review with no actionable findings. Effective main rules require zero approving reviews. Automatic durable issue/Backlog reconciliation and a merger service remain unimplemented; the process contract requires visible transition reporting and retry. Final task-record commit and its hosted checks must be verified before merge.
+<!-- SECTION:FINAL_SUMMARY:END -->
