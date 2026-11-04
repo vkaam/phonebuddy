@@ -1,17 +1,18 @@
 ---
 id: TASK-77
 title: Allow intentional workload ignores in the trusted Bicep what-if
-status: In Progress
+status: Done
 assignee:
   - '@codex'
 created_date: '2026-11-04T06:02:00Z'
-updated_date: '2026-11-04T06:13:00Z'
+updated_date: '2026-11-04T06:17:00Z'
 labels:
   - infrastructure
   - cicd
 dependencies: []
 references:
   - https://github.com/vkaam/phonebuddy/issues/17
+  - https://github.com/vkaam/phonebuddy/pull/87
 modified_files:
   - scripts/check_bicep.py
   - tests/test_bicep_preflight.py
@@ -40,9 +41,9 @@ Spec: Accept only the exact dev/test release-test App and the three named health
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 The checker accepts only the known conditional dev/test release-test App and three scheduled health alert rules as Ignore entries, as well as the Azure-managed Smart Detection action group.
-- [ ] #2 Tests prove that unknown or unexpected ignored resource IDs still fail closed and that the known conditional resources pass.
-- [ ] #3 The trusted dev what-if from merged main passes validation with the expected Ignore entries and no deployment is performed.
+- [x] #1 The checker accepts only the known conditional dev/test release-test App and three scheduled health alert rules as Ignore entries, as well as the Azure-managed Smart Detection action group.
+- [x] #2 Tests prove that unknown or unexpected ignored resource IDs still fail closed and that the known conditional resources pass.
+- [x] #3 The trusted dev what-if from merged main passes validation with the expected Ignore entries and no deployment is performed.
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -60,4 +61,12 @@ Reproduced merged-main run 41781619804 locally with deployWorkload=false. Azure 
 
 Implementation: validate_what_if now accepts only the prior Smart Detection suffix plus exact release-test Container App and the three named health scheduled query rules for dev/test foundation resource groups. IDs must include a canonical subscription GUID; prod, wrong resource group, wrong type/name, and malformed IDs continue to fail closed.
 Local validation: 20 focused Bicep tests passed; python3 -B scripts/check.py passed (report /private/var/folders/zs/9bq4j3rx3wng_vzz52w8hrf80000gn/T/phonebuddy-quality-61b4ud7c/report.json); pinned Bicep 0.34.44 check passed; actionlint on ci.yml, pr-safety.yml, and azure-hosting-what-if.yml passed. Saved read-only dev What-if passed with 0 Create, 6 Modify, 3 NoChange, and 5 Ignore entries, including the four conditional workload resources. No deployment or telemetry drill occurred.
+
+Hosted PR verification: PR #87 head 3f5d360 passed Quality run 41784323825 and advisory Risk report 41784323840. PR is ready for review. Independent review and merge remain pending; no issue state was changed.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Updated the trusted What-if checker to accept only Azure Smart Detection and the exact conditional dev/test release-test app and health alert rules, while keeping unknown IDs fail-closed. Added allowlist and negative tests. Focused tests, full local baseline, pinned Bicep, actionlint, saved read-only What-if, and hosted Quality/Risk checks passed. PR #87 is ready for review; merge and independent review remain outstanding. No Azure deployment or telemetry/alert drill was performed.
+<!-- SECTION:FINAL_SUMMARY:END -->
