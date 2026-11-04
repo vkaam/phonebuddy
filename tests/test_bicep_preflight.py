@@ -6,6 +6,7 @@ from pathlib import Path
 import subprocess
 import sys
 import tempfile
+from unittest.mock import patch
 
 from scripts.check_bicep import (
     DATA_PLATFORM_DEPLOYMENT_NAME,
@@ -14,6 +15,7 @@ from scripts.check_bicep import (
     FOUNDATION_RESOURCE_GROUP_OUTPUT,
     deployment_ready,
     expected_resource_group_names,
+    runtime_sql_admin_overrides,
     validate_foundation_isolation,
     validate_foundry_model_evidence,
     validate_data_platform,
@@ -81,6 +83,26 @@ class DeploymentReadinessTests(unittest.TestCase):
             with self.subTest(field=field):
                 with self.assertRaisesRegex(ValueError, field):
                     deployment_ready('dev', values)
+
+    def test_runtime_sql_admin_environment_values_resolve_placeholders(self):
+        values = params()
+        values['sqlAdminObjectId']['value'] = 'UNRESOLVED'
+        values['sqlAdminLogin']['value'] = 'UNRESOLVED'
+        with patch.dict('os.environ', {
+            'PHONEBUDDY_SQL_ADMIN_OBJECT_ID': '00000000-0000-0000-0000-000000000002',
+            'PHONEBUDDY_SQL_ADMIN_LOGIN': 'owner@example.test',
+        }, clear=True):
+            deployment_ready('dev', values, runtime_sql_admin_overrides())
+
+    def test_partial_runtime_sql_admin_values_fail_closed(self):
+        values = params()
+        values['sqlAdminObjectId']['value'] = 'UNRESOLVED'
+        values['sqlAdminLogin']['value'] = 'UNRESOLVED'
+        with patch.dict('os.environ', {
+            'PHONEBUDDY_SQL_ADMIN_OBJECT_ID': '00000000-0000-0000-0000-000000000002',
+        }, clear=True):
+            with self.assertRaisesRegex(ValueError, 'sqlAdminLogin'):
+                deployment_ready('dev', values, runtime_sql_admin_overrides())
 
 
 class FoundryAvailabilityTests(unittest.TestCase):

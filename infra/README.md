@@ -141,8 +141,19 @@ the separate `foundation-smoke` queue has a one-day TTL and a delivery limit of
 three for nonproduction probes. Production uses zone-redundant storage and
 Premium Service Bus; dev/test use LRS storage and Standard Service Bus.
 
-Before deployment, replace SQL administrator placeholders and run
-`python3 -B scripts/check_bicep.py --deployment-ready <environment>`. Check the
+The checked-in parameter files leave the SQL administrator unresolved. Supply
+the deploying Entra user's identifiers in process environment variables so
+they do not enter source control or shell history, then run the readiness check:
+
+```sh
+export PHONEBUDDY_SQL_ADMIN_OBJECT_ID="$(az ad signed-in-user show --query id -o tsv)"
+export PHONEBUDDY_SQL_ADMIN_LOGIN="$(az ad signed-in-user show --query userPrincipalName -o tsv)"
+python3 -B scripts/check_bicep.py --deployment-ready dev
+```
+
+Pass these variables as `sqlAdminObjectId` and `sqlAdminLogin` parameter
+overrides when creating the deployment. Production inputs remain unresolved for
+later setup. Check the
 exact model/version, Generally Available inference lifecycle, `GlobalStandard`
 SKU, West Europe model catalog, available quota and requested deployment units
 against Azure before preview/deploy:

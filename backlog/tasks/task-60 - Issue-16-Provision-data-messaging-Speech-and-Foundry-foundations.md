@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-02T16:36:00Z'
-updated_date: '2026-11-04T05:24:00Z'
+updated_date: '2026-11-04T05:55:00Z'
 labels:
   - infrastructure
   - cicd
@@ -83,27 +83,19 @@ Spec: Preserve the issue's approved acceptance. Do not broaden scope or weaken r
 ## Implementation Notes
 
 <!-- SECTION:NOTES:BEGIN -->
-Local verification on current source:
-- `python3 -B scripts/check.py` passed; report: `/private/var/folders/zs/9bq4j3rx3wng_vzz52w8hrf80000gn/T/phonebuddy-quality-k74s3q7c/report.json`. This includes the complete required Python suite, web audit, lint, tests, browser smoke and build.
-- `DOTNET_BUNDLE_EXTRACT_BASE_DIR=/private/tmp/bicep-extract BICEP=/private/tmp/phonebuddy-azure-cli/bin/bicep python3 -B scripts/check_bicep.py` passed with Bicep CLI 0.34.44.
-- `git diff --check` passed.
-- Focused `python3 -B -m unittest tests.test_bicep_preflight -v` passed (22 tests).
+Owner direction 2026-11-04: pin gpt-5-mini to GlobalStandard. This SKU can process prompts and responses in any Azure region; account/model catalog and quota checks remain tied to the configured resource region, with no automatic SKU, model, or resource-region fallback. Production setup is deferred by the owner.
 
-External acceptance remains open: no authorized Azure deployment, live model quota preflight, data-plane smoke, or backup/restore/deletion exercise was run. The SQL Entra admin parameters and prod environment inputs remain UNRESOLVED. No acceptance criterion is checked until these current-source gates have evidence. Do not deploy or delete resources without separate authorization.
+Read-only Azure preflight on 2026-11-04 passed in West Europe: dev requested 10 GlobalStandard units and test requested 20; both returned 500 available units. Production remains unresolved and unpreflighted by design.
 
-Draft PR #84 was created from the recorded feature branch on latest main. PR head: `44cc55d78535e48a389810d17a6e78692165367c`. The PR is draft because the required authorized Azure deployment and live nonproduction/restore evidence remain outstanding. Hosted checks are pending; task remains In Progress and acceptance criteria remain unchecked.
+The owner designated their Entra account as dev/test SQL administrator. Its identifiers are intentionally supplied at runtime and omitted from repository task notes and tracked parameter files. Production SQL administrator inputs remain unresolved. No Azure resources were deployed.
 
-Read-only current Azure evidence, collected 2026-11-03 in the configured subscription: `gpt-5-mini` version `2025-08-07` is Generally Available in West Europe with inference through 2027-07-13, but it has no regional `Standard` SKU in the model catalog. The catalog lists `GlobalStandard` and `DataZoneStandard`; capacity API reports 500 Global Standard units and 0 Data Zone Standard units for this model/version. The configured policy requires regional Standard and rejects global/data-zone processing, so the dev and test model preflights correctly fail closed with “not available on the Standard SKU.” A legacy regional `gpt-4.1-mini` catalog entry also had 0 Standard capacity. No geography fallback was used, no Azure writes occurred, and no deployment was attempted. Model SKU/geography or capacity approval is needed before this gate can pass.
+Local validation before the runtime-override change: full `python3 -B scripts/check.py` passed with report `/private/var/folders/zs/9bq4j3rx3wng_vzz52w8hrf80000gn/T/phonebuddy-quality-kefhuqkv/report.json`; 25 focused tests passed; pinned Bicep baseline and dev/test deployment readiness passed; `git diff --check` passed. Latest hosted Quality pass remains run 41779641622 on head 198ac649b861456b9bc3caa8a65752c93edbf838. Acceptance remains unchecked pending authorized nonproduction deployment, live data-plane smoke, and backup/restore/deletion evidence.
 
-Final local validation before this task-record update, on code commit `9226b257488a898747585e1ad8cb48500b7ceb5a`: full `python3 -B scripts/check.py` passed; evidence `/private/var/folders/zs/9bq4j3rx3wng_vzz52w8hrf80000gn/T/phonebuddy-quality-0j_j04k_/report.json`. `BICEP=/private/tmp/phonebuddy-azure-cli/bin/bicep python3 -B scripts/check_bicep.py` passed with CLI 0.34.44; focused Foundry/data-platform suite passed 24 tests; `git diff --check` passed. This validation covers the code subsequently carried forward by the task-record-only update. Hosted CI for this exact PR head remains to be recorded.
+Modified files: backlog/tasks/task-60 - Issue-16-Provision-data-messaging-Speech-and-Foundry-foundations.md, infra/modules/data-platform.bicep, infra/main.bicep, infra/environments/dev.bicepparam, infra/environments/test.bicepparam, infra/environments/prod.bicepparam, scripts/check_bicep.py, tests/test_bicep_preflight.py, scripts/azure_foundations_smoke.py, infra/README.md, docs/azure-delivery-policy.md, docs/quality-and-delivery.md
 
-Hosted verification: PR Quality run 41720401060 for head `b3c6f43cd80673c013887f103f4cb1f01b14a0ec` completed successfully. Repository/policy tests, Backlog consistency, web install/audit/lint/tests/browser/build, workflow validation, credential-free Bicep validation, secret scan and evidence retention all succeeded. This run covered the code and task state before this final hosted-evidence note. The PR remains draft and TASK-60 remains In Progress because the configured Foundry regional SKU is unavailable and live data-plane plus backup/recovery evidence is outstanding.
+Runtime SQL administrator handling: dev/test parameter files remain `UNRESOLVED` in source control. `scripts/check_bicep.py --deployment-ready` now accepts `PHONEBUDDY_SQL_ADMIN_OBJECT_ID` and `PHONEBUDDY_SQL_ADMIN_LOGIN` from the process environment, and fails closed if either is absent. The README shows how the signed-in Entra user can provide these values for a local readiness check and deployment override. Exact identifiers are omitted from task notes and tracked parameter files.
 
-Final hosted check: Quality run 41720961205 passed on current head `0b5c9c896de1ea4538cd9a35fa6ff6796b9ed1db`, including Backlog consistency and credential-free Bicep validation. This task-record note is documentation-only; all acceptance criteria remain unchecked pending a compliant model SKU/quota and authorized Azure smoke and backup/recovery evidence.
+Validation after this change: 27 focused Foundry/data-platform tests passed; pinned Bicep baseline passed; dev/test readiness passed using the current signed-in identity via temporary process environment variables; `git diff --check` passed. No Azure deployment was run.
 
-Owner direction 2026-11-04: explicitly select GlobalStandard for gpt-5-mini. This changes the prior SKU selection after the owner confirmed the SKU; the account and quota preflight remain tied to the configured resource region, while the selected SKU may process prompts and responses in any Azure region. No automatic SKU, model, or resource-region substitution is permitted. The approved issue body was not changed.
-
-Read-only Azure preflight on 2026-11-04 passed for dev (GlobalStandard requested capacity 10, available capacity 500) and test (requested 20, available 500) in West Europe. Production remains unpreflighted because its geography and other inputs are unresolved. No Azure writes or deployments were performed.
-
-Validation on this source: `python3 -B -m unittest tests.test_bicep_preflight -v` passed 25 tests; pinned Bicep baseline check passed with CLI 0.34.44; `python3 -B scripts/check.py` passed with report `/private/var/folders/zs/9bq4j3rx3wng_vzz52w8hrf80000gn/T/phonebuddy-quality-acjrk28u/report.json`; `git diff --check` passed. External synthetic data-plane, backup/restore and deletion evidence is still outstanding, so acceptance remains unchecked and the task remains In Progress.
+Post-merge validation: `python3 -B scripts/check.py` passed with report `/private/var/folders/zs/9bq4j3rx3wng_vzz52w8hrf80000gn/T/phonebuddy-quality-xxyc03pe/report.json`. Live TASK-60 claim validation passed against updated `origin/main` (`6ce96012526ec1790d631361b86688cd64d25903`) with `claim_verified: true`. Bicep deployment readiness passed for dev and test using runtime-only values from the current signed-in Entra identity. The repository is now up to date with TASK-61 on main.
 <!-- SECTION:NOTES:END -->

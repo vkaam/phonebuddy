@@ -72,10 +72,47 @@ resource managedEnvironment 'Microsoft.App/managedEnvironments@2023-05-01' = {
   properties: { appLogsConfiguration: { destination: 'azure-monitor' } }
 }
 
+resource logWorkspace 'Microsoft.OperationalInsights/workspaces@2022-10-01' = {
+  name: 'log-pb-${environment}-${substring(suffix, 0, 10)}'
+  location: location
+  tags: tags
+  properties: {
+    retentionInDays: 30
+    features: { enableLogAccessUsingOnlyResourcePermissions: true }
+    sku: { name: 'PerGB2018' }
+  }
+}
+
+resource insights 'Microsoft.Insights/components@2020-02-02' = {
+  name: 'appi-pb-${environment}-${substring(suffix, 0, 10)}'
+  location: location
+  kind: 'web'
+  tags: tags
+  properties: {
+    Application_Type: 'web'
+    IngestionMode: 'LogAnalytics'
+    WorkspaceResourceId: logWorkspace.id
+  }
+}
+
+resource environmentDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
+  name: 'phonebuddy-environment-system-logs'
+  scope: managedEnvironment
+  properties: {
+    workspaceId: logWorkspace.id
+    logAnalyticsDestinationType: 'Dedicated'
+    logs: [
+      { category: 'ContainerAppSystemLogs', enabled: true }
+      { category: 'ContainerAppConsoleLogs', enabled: true }
+    ]
+    metrics: [{ category: 'AllMetrics', enabled: true }]
+  }
+}
+
 resource app 'Microsoft.App/containerApps@2023-05-01' = if (deployWorkload) {
   name: 'ca-pb-${environment}-release-test'
   location: location
-  tags: tags
+  tags: union(tags, { releaseVersion: releaseVersion })
   identity: {
     type: 'UserAssigned'
     userAssignedIdentities: { '${identity.id}': {} }
@@ -101,6 +138,104 @@ resource app 'Microsoft.App/containerApps@2023-05-01' = if (deployWorkload) {
   dependsOn: [pull]
 }
 
+resource appDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = if (deployWorkload) {
+  name: 'phonebuddy-health-telemetry'
+  scope: app
+  properties: {
+    workspaceId: logWorkspace.id
+    logAnalyticsDestinationType: 'Dedicated'
+    metrics: [{ category: 'AllMetrics', enabled: true }]
+  }
+}
+
+var telemetryRows = 'ContainerAppConsoleLogs | where ContainerAppName == \'${app.name}\' | where Log contains \'"event":"health_request"\' | extend health=parse_json(substring(Log, indexof(Log, \'{\'))) | where todouble(health.duration_ms) >= 0'
+var missingTelemetryQuery = 'print telemetryCount=toscalar(${telemetryRows} | where TimeGenerated > ago(5m) | count)'
+var unhealthyResponseQuery = 'print failureCount=toscalar(${telemetryRows} | where TimeGenerated > ago(5m) | where toint(health.status) != 200 | count)'
+var latencyQuery = 'print p95LatencyMs=toscalar(${telemetryRows} | where TimeGenerated > ago(5m) | summarize percentile(todouble(health.duration_ms), 95))'
+
+resource missingTelemetryAlert 'Microsoft.Insights/scheduledQueryRules@2023-12-01' = if (deployWorkload) {
+  name: 'alert-pb-${environment}-missing-health-telemetry'
+  kind: 'LogAlert'
+  location: location
+  tags: tags
+  properties: {
+    displayName: 'Phonebuddy ${environment}: missing health telemetry'
+    description: 'Fails closed when no synthetic health telemetry is observed in a five-minute window.'
+    severity: 2
+    enabled: true
+    evaluationFrequency: 'PT5M'
+    windowSize: 'PT5M'
+    scopes: [logWorkspace.id]
+    criteria: {
+      allOf: [{
+        query: missingTelemetryQuery
+        timeAggregation: 'Maximum'
+        metricMeasureColumn: 'telemetryCount'
+        operator: 'LessThan'
+        threshold: 1
+        failingPeriods: { numberOfEvaluationPeriods: 1, minFailingPeriodsToAlert: 1 }
+      }]
+    }
+    autoMitigate: true
+  }
+}
+
+resource unhealthyResponseAlert 'Microsoft.Insights/scheduledQueryRules@2023-12-01' = if (deployWorkload) {
+  name: 'alert-pb-${environment}-unhealthy-health-response'
+  kind: 'LogAlert'
+  location: location
+  tags: tags
+  properties: {
+    displayName: 'Phonebuddy ${environment}: unhealthy health response'
+    description: 'Fires when a synthetic health request returns a non-success status.'
+    severity: 1
+    enabled: true
+    evaluationFrequency: 'PT5M'
+    windowSize: 'PT5M'
+    scopes: [logWorkspace.id]
+    criteria: {
+      allOf: [{
+        query: unhealthyResponseQuery
+        timeAggregation: 'Maximum'
+        metricMeasureColumn: 'failureCount'
+        operator: 'GreaterThan'
+        threshold: 0
+        failingPeriods: { numberOfEvaluationPeriods: 1, minFailingPeriodsToAlert: 1 }
+      }]
+    }
+    autoMitigate: true
+  }
+}
+
+resource latencyAlert 'Microsoft.Insights/scheduledQueryRules@2023-12-01' = if (deployWorkload) {
+  name: 'alert-pb-${environment}-health-latency'
+  kind: 'LogAlert'
+  location: location
+  tags: tags
+  properties: {
+    displayName: 'Phonebuddy ${environment}: health response latency'
+    description: 'Fires when the p95 health response latency reaches two seconds in a five-minute window.'
+    severity: 2
+    enabled: true
+    evaluationFrequency: 'PT5M'
+    windowSize: 'PT5M'
+    scopes: [logWorkspace.id]
+    criteria: {
+      allOf: [{
+        query: latencyQuery
+        timeAggregation: 'Maximum'
+        metricMeasureColumn: 'p95LatencyMs'
+        operator: 'GreaterThanOrEqual'
+        threshold: 2000
+        failingPeriods: { numberOfEvaluationPeriods: 1, minFailingPeriodsToAlert: 1 }
+      }]
+    }
+    autoMitigate: true
+  }
+}
+
 output registryName string = registry.name
 output registryServer string = registry.properties.loginServer
 output workloadUrl string = deployWorkload ? 'https://${app.properties.configuration.ingress.fqdn}' : ''
+output logWorkspaceName string = logWorkspace.name
+output insightsName string = insights.name
