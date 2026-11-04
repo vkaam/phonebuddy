@@ -6,13 +6,18 @@ from scripts.check_bicep import validate_what_if
 
 
 class BicepWhatIfValidationTests(unittest.TestCase):
-    def test_only_the_azure_managed_smart_detection_group_may_be_ignored(self):
+    def test_smart_detection_and_known_conditional_workload_resources_may_be_ignored(self):
         safe_result = {
             'status': 'Succeeded',
             'changes': [{
                 'changeType': 'Ignore',
                 'resourceId': ('/subscriptions/sub/resourceGroups/rg/providers/'
                                'Microsoft.Insights/actionGroups/Application Insights Smart Detection'),
+            }, {
+                'changeType': 'Ignore',
+                'resourceId': ('/subscriptions/3787e2b4-802f-4b28-8793-1a32cc410b45/'
+                               'resourceGroups/rg-pb-dev-westeurope-foundation/providers/'
+                               'Microsoft.App/containerApps/ca-pb-dev-release-test'),
             }],
         }
         self.assertEqual(validate_what_if(safe_result), safe_result['changes'])
@@ -25,7 +30,7 @@ class BicepWhatIfValidationTests(unittest.TestCase):
                                'Microsoft.Insights/actionGroups/unreviewed-resource'),
             }],
         }
-        with self.assertRaisesRegex(ValueError, 'Only the Azure-managed'):
+        with self.assertRaisesRegex(ValueError, 'Unexpected ignored resource'):
             validate_what_if(unsafe_result)
 
 

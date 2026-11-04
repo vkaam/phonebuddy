@@ -4,6 +4,7 @@ import argparse
 import json
 import os
 from pathlib import Path
+import re
 import subprocess
 import sys
 import tempfile
@@ -183,7 +184,7 @@ def validate_hosting(template):
 
 
 def validate_what_if(result):
-    """Fail closed except for Azure's known unmodified App Insights action group."""
+    """Fail closed except for known Azure-managed or conditionally omitted resources."""
     if not isinstance(result, dict) or result.get('status') != 'Succeeded' or result.get('error'):
         raise ValueError('What-if did not report success')
     if result.get('potentialChanges') or result.get('diagnostics'):
@@ -199,10 +200,42 @@ def validate_what_if(result):
     expected_ignored_id_suffix = (
         '/providers/microsoft.insights/actiongroups/application insights smart detection'
     )
-    if any(not change['resourceId'].lower().endswith(expected_ignored_id_suffix)
+    if any(not (change['resourceId'].lower().endswith(expected_ignored_id_suffix)
+               or is_conditional_workload_ignore(change['resourceId']))
            for change in ignored):
-        raise ValueError('Only the Azure-managed App Insights Smart Detection action group may be ignored')
+        raise ValueError(
+            'Unexpected ignored resource; only Azure-managed Smart Detection and known '
+            'conditional dev/test release-test resources may be ignored'
+        )
     return changes
+
+
+def is_conditional_workload_ignore(resource_id):
+    """Match only exact release-test resources omitted when deployWorkload is false."""
+    segments = resource_id.strip('/').lower().split('/')
+    if len(segments) != 8 or segments[0] != 'subscriptions' or segments[2] != 'resourcegroups' or segments[4] != 'providers':
+        return False
+    if not re.fullmatch(r'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}', segments[1]):
+        return False
+
+    environment = None
+    for candidate in ('dev', 'test'):
+        if re.fullmatch(rf'rg-pb-{candidate}-[a-z0-9]+-foundation', segments[3]):
+            environment = candidate
+            break
+    if environment is None:
+        return False
+
+    resource_type, resource_name = segments[6], segments[7]
+    if segments[5] == 'microsoft.app' and resource_type == 'containerapps':
+        return resource_name == f'ca-pb-{environment}-release-test'
+    if segments[5] == 'microsoft.insights' and resource_type == 'scheduledqueryrules':
+        return resource_name in {
+            f'alert-pb-{environment}-health-latency',
+            f'alert-pb-{environment}-missing-health-telemetry',
+            f'alert-pb-{environment}-unhealthy-health-response',
+        }
+    return False
 
 
 def validate_quality_evidence(pages, expected_sha):
