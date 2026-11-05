@@ -152,10 +152,12 @@ they do not enter source control or shell history, then run the readiness check:
 
 ```sh
 export PHONEBUDDY_SQL_ADMIN_OBJECT_ID="$(az ad signed-in-user show --query id -o tsv)"
-export PHONEBUDDY_SQL_ADMIN_LOGIN="$(az ad signed-in-user show --query userPrincipalName -o tsv)"
+export PHONEBUDDY_SQL_ADMIN_LOGIN="$(az ad signed-in-user show --query displayName -o tsv)"
 python3 -B scripts/check_bicep.py --deployment-ready dev
 ```
 
+Use the signed-in Entra user's display name and object ID as the SQL
+administrator; Azure accepts the display name or UPN for this administrator.
 Pass these variables as `sqlAdminObjectId` and `sqlAdminLogin` parameter
 overrides when creating the deployment. Production inputs remain unresolved for
 later setup. Check the

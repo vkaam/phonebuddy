@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-02T16:36:00Z'
-updated_date: '2026-11-05T19:03:00Z'
+updated_date: '2026-11-05T19:09:00Z'
 labels:
   - infrastructure
   - cicd
@@ -116,4 +116,6 @@ Owner direction 2026-11-05: move dev and test from West Europe to an EU region a
 France Central validation 2026-11-05: Microsoft.Sql subscription capabilities report Available; SQL provider is Registered; Storage, Service Bus and Cognitive Services metadata list the region. Repository Foundry preflight reads each environment parameter file and passed dev=10/test=20 GlobalStandard units for gpt-5-mini 2025-08-07, GenerallyAvailable, with 470 available units. Read-only ARM What-If passed for both new France Central foundation groups: 22 Creates each, 0 Modify, 0 Delete, 0 NoChange, 0 Ignore. Both deployment-readiness checks passed with runtime-only SQL admin overrides. 34 focused tests, pinned Bicep baseline and full scripts/check.py passed; local report /private/var/folders/zs/9bq4j3rx3wng_vzz52w8hrf80000gn/T/phonebuddy-quality-dd7l4c7q/report.json.
 
 Independent read-only review of the France Central region change, parameter-driven preflight and smoke harness found no actionable issues. Reviewer confirmed the smoke harness follows the configured region and no longer uses SQL as the resource-group locator for Speech/Foundry. Live deployment, data-plane probes, and backup/restore/deletion remain external acceptance gates.
+
+France Central dev deployment 2026-11-05: Azure accepted the region and provisioned non-SQL resources, then SQL administrator provisioning failed with InvalidParameterValue for the Login property. The runtime UPN is rejected by this subscription API call. Microsoft guidance permits either the Entra display name or UPN for a SQL Entra administrator; update the local procedure to supply the signed-in displayName and retry. No deletions were performed.
 <!-- SECTION:NOTES:END -->
