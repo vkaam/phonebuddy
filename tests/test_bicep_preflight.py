@@ -14,6 +14,7 @@ from scripts.check_bicep import (
     FOUNDATION_RESOURCE_GROUP_NAME,
     FOUNDATION_RESOURCE_GROUP_OUTPUT,
     deployment_ready,
+    environment_parameters,
     expected_resource_group_names,
     runtime_sql_admin_overrides,
     validate_foundation_isolation,
@@ -22,6 +23,7 @@ from scripts.check_bicep import (
     validate_what_if,
     validate_quality_evidence,
 )
+from scripts.azure_foundations_smoke import configured_location
 
 
 def params(environment='dev', location='westeurope', owner='team', cost_center='123'):
@@ -52,6 +54,27 @@ def foundry_evidence(location='westeurope', lifecycle='GenerallyAvailable', capa
 
 
 class DeploymentReadinessTests(unittest.TestCase):
+    def test_environment_parameters_drive_location(self):
+        compiled = {'parametersJson': json.dumps({'parameters': {
+            'environment': {'value': 'dev'},
+            'location': {'value': 'francecentral'},
+        }})}
+        with patch('scripts.check_bicep.run', return_value=json.dumps(compiled)) as run:
+            values = environment_parameters('dev')
+        self.assertEqual(values['location']['value'], 'francecentral')
+        run.assert_called_once_with(
+            'bicep', 'build-params', 'infra/environments/dev.bicepparam', '--stdout')
+
+    def test_environment_parameters_reject_mismatched_file(self):
+        compiled = {'parametersJson': json.dumps({'parameters': {
+            'environment': {'value': 'test'},
+            'location': {'value': 'francecentral'},
+        }})}
+        with patch('scripts.check_bicep.run', return_value=json.dumps(compiled)):
+            with self.assertRaisesRegex(ValueError, 'selects a different environment'):
+                environment_parameters('dev')
+
+
     def test_valid_values_and_environment_pass(self):
         deployment_ready('dev', params())
 
@@ -103,6 +126,28 @@ class DeploymentReadinessTests(unittest.TestCase):
         }, clear=True):
             with self.assertRaisesRegex(ValueError, 'sqlAdminLogin'):
                 deployment_ready('dev', values, runtime_sql_admin_overrides())
+
+
+class SmokeLocationTests(unittest.TestCase):
+    def test_location_is_read_from_environment_parameters(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            parameter_dir = Path(tmp) / 'infra' / 'environments'
+            parameter_dir.mkdir(parents=True)
+            (parameter_dir / 'dev.bicepparam').write_text(
+                "using '../main.bicep'\nparam environment = 'dev'\n"
+                "param location = 'francecentral'\n", encoding='utf-8')
+            with patch('scripts.azure_foundations_smoke.ROOT', Path(tmp)):
+                self.assertEqual(configured_location('dev'), 'francecentral')
+
+    def test_unresolved_location_fails_closed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            parameter_dir = Path(tmp) / 'infra' / 'environments'
+            parameter_dir.mkdir(parents=True)
+            (parameter_dir / 'dev.bicepparam').write_text(
+                "param location = 'UNRESOLVED'\n", encoding='utf-8')
+            with patch('scripts.azure_foundations_smoke.ROOT', Path(tmp)):
+                with self.assertRaisesRegex(RuntimeError, 'Could not resolve'):
+                    configured_location('dev')
 
 
 class FoundryAvailabilityTests(unittest.TestCase):
@@ -285,13 +330,13 @@ class FoundationIsolationTests(unittest.TestCase):
     def test_environment_scoped_names_are_distinct(self):
         validate_foundation_isolation(foundation_template())
         names = expected_resource_group_names({
-            'dev': 'westeurope',
-            'test': 'westeurope',
+            'dev': 'francecentral',
+            'test': 'francecentral',
             'prod': 'unresolved',
         })
         self.assertEqual(names, {
-            'dev': 'rg-pb-dev-westeurope-foundation',
-            'test': 'rg-pb-test-westeurope-foundation',
+            'dev': 'rg-pb-dev-francecentral-foundation',
+            'test': 'rg-pb-test-francecentral-foundation',
             'prod': 'rg-pb-prod-unresolved-foundation',
         })
         self.assertEqual(len(set(names.values())), 3)

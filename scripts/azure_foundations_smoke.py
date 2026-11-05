@@ -2,6 +2,8 @@
 """Run synthetic, nonproduction data-plane checks against a deployed foundation."""
 import argparse
 import json
+from pathlib import Path
+import re
 import subprocess
 import sys
 import time
@@ -10,10 +12,12 @@ import urllib.parse
 import urllib.request
 import uuid
 
+ROOT = Path(__file__).resolve().parents[1]
+
 
 def az_json(*args):
     result = subprocess.run(['az', *args, '--only-show-errors', '-o', 'json'],
-                            text=True, capture_output=True, check=True)
+                            cwd=ROOT, text=True, capture_output=True, check=True)
     return json.loads(result.stdout)
 
 
@@ -48,6 +52,17 @@ def resources(resource_group):
             raise RuntimeError(f'Expected exactly one deployed {resource_type}')
         return matches[0]
     return one
+
+
+def configured_location(environment):
+    """Read the selected nonproduction location from its parameter file."""
+    path = ROOT / 'infra' / 'environments' / f'{environment}.bicepparam'
+    contents = path.read_text(encoding='utf-8')
+    matches = re.findall(r"(?m)^\s*param\s+location\s*=\s*['\"]([^'\"]+)['\"]\s*$",
+                         contents)
+    if len(matches) != 1 or not matches[0].strip() or matches[0].upper() == 'UNRESOLVED':
+        raise RuntimeError(f'Could not resolve one deployment location from {path.name}')
+    return matches[0]
 
 
 def check_blob(one, run_id):
@@ -103,9 +118,8 @@ def service_bus(one, run_id):
     request(locked_url, 'DELETE', bearer, expected=(200, 202, 204))
 
 
-def speech(one):
-    items = az_json('resource', 'list', '--resource-group',
-                    one('Microsoft.Sql/servers')['resourceGroup'])
+def speech(one, resource_group):
+    items = az_json('resource', 'list', '--resource-group', resource_group)
     speech_account = next((item for item in items
                            if item.get('kind') == 'SpeechServices'), None)
     if not speech_account:
@@ -124,8 +138,8 @@ def speech(one):
             expected=(401, 403))
 
 
-def foundry(one):
-    items = az_json('resource', 'list', '--resource-group', one('Microsoft.Sql/servers')['resourceGroup'])
+def foundry(one, resource_group):
+    items = az_json('resource', 'list', '--resource-group', resource_group)
     account = next((item for item in items
                     if item.get('type', '').lower() == 'microsoft.cognitiveservices/accounts'
                     and item.get('kind') == 'AIServices'), None)
@@ -161,14 +175,14 @@ def main():
     current = az_json('account', 'show')
     if current.get('id', '').lower() != options.subscription_id.lower():
         raise RuntimeError('Active Azure CLI subscription does not match --subscription-id')
-    location = 'westeurope'
+    location = configured_location(options.environment)
     group = f'rg-pb-{options.environment}-{location}-foundation'
     one = resources(group)
     run_id = str(uuid.uuid4())
     checks = [('blob authorized/denied', lambda: check_blob(one, run_id)),
               ('Service Bus authorized/denied/dead-letter', lambda: service_bus(one, run_id)),
-              ('Speech authorized/denied', lambda: speech(one)),
-              ('Foundry authorized/denied inference', lambda: foundry(one))]
+              ('Speech authorized/denied', lambda: speech(one, group)),
+              ('Foundry authorized/denied inference', lambda: foundry(one, group))]
     passed = []
     for name, check in checks:
         check()

@@ -44,6 +44,17 @@ def run(*args):
     return subprocess.run(args, cwd=ROOT, text=True, capture_output=True, check=True).stdout
 
 
+def environment_parameters(environment, binary=None):
+    """Compile and load one environment's checked-in parameter values."""
+    binary = binary or os.environ.get('BICEP', 'bicep')
+    parameter_file = f'infra/environments/{environment}.bicepparam'
+    compiled = json.loads(run(binary, 'build-params', parameter_file, '--stdout'))
+    values = json.loads(compiled['parametersJson'])['parameters']
+    if values.get('environment', {}).get('value') != environment:
+        raise ValueError(f'{environment} parameter file selects a different environment')
+    return values
+
+
 def deployment_ready(environment, parameters, runtime_overrides=None):
     """Reject placeholders before an operator invokes a deployment."""
     runtime_overrides = runtime_overrides or {}
@@ -495,8 +506,8 @@ def main():
             subscription_id = run('az', 'account', 'show', '--query', 'id', '-o', 'tsv').strip()
         if not subscription_id:
             raise ValueError('Azure subscription ID is required')
-        location = 'westeurope' if environment in ('dev', 'test') else 'UNRESOLVED'
-        if location == 'UNRESOLVED':
+        location = environment_parameters(environment)['location']['value']
+        if not isinstance(location, str) or not location.strip() or location.upper() == 'UNRESOLVED':
             raise ValueError('Production geography is unresolved; no Foundry fallback is allowed')
         model_name, model_version, sku, capacity = FOUNDRY_MODEL[environment]
         evidence = foundry_preflight(subscription_id, location, model_name,

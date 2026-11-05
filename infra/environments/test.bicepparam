@@ -1,7 +1,7 @@
 using '../main.bicep'
 
 param environment = 'test'
-param location = 'westeurope'
+param location = 'francecentral'
 param owner = 'PHONEBUDDY-PLATFORM'
 param costCenter = 'PHONEBUDDY-NONPROD'
 param sqlAdminObjectId = 'UNRESOLVED'

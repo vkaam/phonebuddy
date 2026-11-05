@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-02T16:36:00Z'
-updated_date: '2026-11-04T08:03:00Z'
+updated_date: '2026-11-05T19:03:00Z'
 labels:
   - infrastructure
   - cicd
@@ -78,6 +78,8 @@ Spec: Preserve the issue's approved acceptance. Do not broaden scope or weaken r
 3. Extend deterministic preflight checks and focused tests for resource contracts, quota/model/geography failures, secret-safe outputs and environment isolation.
 4. Add synthetic nonproduction probes for authorized and denied data access, queue dead-lettering, Speech authentication and Foundry inference; document backup, deletion and secret-handling evidence.
 5. Run the required repository and Bicep checks, then gather authorized current-source Azure evidence where available; keep acceptance unchecked while any required external gate is unverified.
+
+6. Use the owner-authorized alternate EU location for dev/test; verify subscription SQL capabilities, provider location support, and exact Foundry GlobalStandard catalog/quota before changing parameters or deploying; keep production unresolved.
 <!-- SECTION:PLAN:END -->
 
 ## Implementation Notes
@@ -106,4 +108,12 @@ Test deployment was not attempted after the same West Europe SQL creation failur
 Independent read-only review of the Foundry sequencing fix found no actionable issues; reviewer confirmed the compiled model dependency targets `Microsoft.CognitiveServices/accounts/projects`. Its effect still needs verification in Azure because the dev deployment was blocked by West Europe SQL server creation.
 
 Post-merge validation after the sequencing fix: Bicep baseline passed; 30 focused tests passed; full `python3 -B scripts/check.py` passed with report `/private/var/folders/zs/9bq4j3rx3wng_vzz52w8hrf80000gn/T/phonebuddy-quality-0c8tpoiw/report.json`; `git diff --check` passed. These checks were run after merging main commit `ec7368c`.
+
+Post-fix Azure deployment retries 2026-11-04: the user explicitly authorized dev and test. Retried dev with the Foundry project-before-model dependency, then attempted test; both deployments partially provisioned the non-SQL foundations and both failed SQL server creation with Azure RegionDoesNotAllowProvisioning because West Europe is not accepting new SQL Database servers. Dev Foundry project/model provisioning completed without the earlier write conflict. No resources were deleted. Hosted PR Quality workflow 41797061702 passed for head 7e5dd6bdf03dd0312cb4411883ea9a031fdd4536. Acceptance remains unchecked pending full environment provisioning, synthetic data-plane evidence, and backup/restore/deletion validation.
+
+Owner direction 2026-11-05: move dev and test from West Europe to an EU region available for this subscription, while keeping production deferred. Microsoft.Sql provider is already Registered. SQL subscription capabilities report France Central, Sweden Central, and Germany West Central as Available; West and North Europe are only Visible. Storage, Service Bus, and Cognitive Services provider metadata list France Central. Direct Foundry preflight in France Central passed dev=10 and test=20 GlobalStandard units for gpt-5-mini 2025-08-07, GenerallyAvailable, with 470 units reported available. France Central is selected for the approved dev/test retry.
+
+France Central validation 2026-11-05: Microsoft.Sql subscription capabilities report Available; SQL provider is Registered; Storage, Service Bus and Cognitive Services metadata list the region. Repository Foundry preflight reads each environment parameter file and passed dev=10/test=20 GlobalStandard units for gpt-5-mini 2025-08-07, GenerallyAvailable, with 470 available units. Read-only ARM What-If passed for both new France Central foundation groups: 22 Creates each, 0 Modify, 0 Delete, 0 NoChange, 0 Ignore. Both deployment-readiness checks passed with runtime-only SQL admin overrides. 34 focused tests, pinned Bicep baseline and full scripts/check.py passed; local report /private/var/folders/zs/9bq4j3rx3wng_vzz52w8hrf80000gn/T/phonebuddy-quality-dd7l4c7q/report.json.
+
+Independent read-only review of the France Central region change, parameter-driven preflight and smoke harness found no actionable issues. Reviewer confirmed the smoke harness follows the configured region and no longer uses SQL as the resource-group locator for Speech/Foundry. Live deployment, data-plane probes, and backup/restore/deletion remain external acceptance gates.
 <!-- SECTION:NOTES:END -->

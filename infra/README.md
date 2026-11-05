@@ -15,12 +15,15 @@ later deployment gates.
 The original dev foundation group, `rg-pb-dev-foundation`, is in Sweden Central
 and was deployed twice on 2026-11-01; its repeat what-if reported no changes.
 Azure does not allow changing a resource group's location after creation, so this
-group is retained. The approved West Europe dev and test foundations use
-`rg-pb-dev-westeurope-foundation` and `rg-pb-test-westeurope-foundation` in
-the user-designated subscription; their parameter files use owner
-`PHONEBUDDY-PLATFORM` and cost center `PHONEBUDDY-NONPROD`. These resource groups
-deployed successfully twice on 2026-11-01; the second what-if for each reported
-no changes. They contain no application capacity. Production remains unresolved.
+group is retained. Earlier dev/test data foundation attempts in West Europe
+partially provisioned resources, but Azure rejected SQL server creation for
+this subscription. Those resources remain in
+`rg-pb-dev-westeurope-foundation` and `rg-pb-test-westeurope-foundation`; no
+cleanup was performed. The owner then selected France Central for the current
+dev/test foundation parameters after subscription SQL capability, resource
+provider, and model capacity checks passed. Those parameters use owner
+`PHONEBUDDY-PLATFORM` and cost center `PHONEBUDDY-NONPROD`. Existing dev hosting
+remains in its West Europe group. Production remains unresolved.
 
 Separate $10 USD monthly budgets `phonebuddy-dev-monthly-10usd` and
 `phonebuddy-test-monthly-10usd` are configured at the MCA billing-account scope.
@@ -54,7 +57,7 @@ is tracked separately in TASK-7.
 
 ## Deployment and recovery prerequisites
 
-The test parameter file is configured for West Europe, the approved subscription,
+The dev and test parameter files are configured for France Central, the approved subscription,
 owner and nonproduction cost center. Production still contains unresolved inputs
 and is not deployment-ready. Never put secrets in parameter files or outputs.
 The foundation output exposes only its region-qualified resource-group name.
@@ -73,8 +76,10 @@ budget or geography. It is not automatically enforced by Azure or CI: the future
 trusted deployment pipeline must invoke it and fail closed. For each approved
 environment, validate and review what-if, deploy and repeat the exact deployment
 to demonstrate convergence, then record both runs and resource state. The
-original Sweden Central dev group and the new West Europe dev/test groups have
-all been deployed and verified with repeat what-if checks; production has not.
+original Sweden Central dev group has a successful repeated deployment and
+no-change what-if. West Europe data deployments were partial; the current France
+Central parameter values still need their own what-if and deployment evidence.
+Production has not been deployed.
 
 Resource groups use fixed names per environment and region. Distinct subscriptions or
 resource groups alone are not authorization, data, network or capacity isolation;
@@ -155,7 +160,7 @@ Pass these variables as `sqlAdminObjectId` and `sqlAdminLogin` parameter
 overrides when creating the deployment. Production inputs remain unresolved for
 later setup. Check the
 exact model/version, Generally Available inference lifecycle, `GlobalStandard`
-SKU, West Europe model catalog, available quota and requested deployment units
+SKU, selected resource-region model catalog, available quota and requested deployment units
 against Azure before preview/deploy:
 
 ```sh
