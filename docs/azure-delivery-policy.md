@@ -32,7 +32,10 @@ Other prerequisites include the tenant and RBAC model, supported browsers,
 usage and concurrency, retention and recording policy, data residency, service
 SKUs/quotas, DNS, and a responsible on-call contact. Validate service and model
 availability and processing location rather than assuming an EU resource ensures
-EU inference. An unresolved required input blocks enabling its environment.
+EU inference. The owner selected Foundry `GlobalStandard`, which may process
+prompts and responses in any Azure region; resource geography remains separately
+configured and preflighted. An unresolved required input blocks enabling its
+environment.
 
 ## Delivery order
 
@@ -135,3 +138,49 @@ authorizes stateful recovery; and the budget owner responds to cost alerts. Name
 people or on-call rotations and escalation contacts are prerequisites for enabling
 each environment. TASK-10 through TASK-13 implement and exercise these controls;
 until then automatic delivery is not enabled.
+
+## Data and AI resource controls
+
+TASK-60's Bicep module provisions SQL Database, private Blob Storage, Service
+Bus, Speech, and an Azure AI Foundry project and model deployment inside each
+environment's region-specific foundation group. The environment settings use
+7/14/35-day SQL point-in-time restore and blob/container soft-delete windows,
+1/7/30-day Service Bus message TTLs, LRS/ZRS storage, Standard/Premium Service
+Bus, and Foundry `GlobalStandard` model capacity of 10/20/50 units for
+dev/test/prod. Production inputs remain unresolved and block deployment.
+
+The owner explicitly selected `GlobalStandard` for `gpt-5-mini` on 2026-11-04.
+This SKU may process prompts and responses in any Azure region. The account is
+created in the configured resource region, and preflight checks that region's
+model catalog and subscription capacity for the exact `GlobalStandard` SKU,
+Generally Available lifecycle, unexpired inference and SKU lifecycle, and
+valid capacity default/range. Missing or insufficient evidence fails closed;
+the deployment does not automatically substitute another SKU, model, or
+resource region. Capacity evidence is time-sensitive and does not reserve
+quota. Repeat it immediately before a deployment preview, and treat an Azure
+capacity rejection as a failed gate.
+
+SQL and all cognitive and messaging data-plane access use Entra authentication;
+SQL administrator object ID/login must be explicitly supplied. Blob public
+access and Shared Key are disabled, Service Bus SAS/local auth and cognitive
+account key auth are disabled, and workload access is granted through
+environment-scoped managed identity roles. Never put credentials in Bicep
+parameters, resource tags, logs, task evidence or outputs. Endpoint and resource
+names may be recorded; tokens and payloads may not.
+
+Before the environment is enabled, the data owner must approve retention,
+restore and deletion procedures. SQL short-term backup and blob versioning and
+soft-delete provide bounded recovery windows; they are not an independent
+archive. Confirm any legal hold, SQL restore point, blob versions, Service Bus
+DLQ, resource locks and owner before deletion. Validate a restore in an authorized
+nonproduction scope and record its source revision, timestamp, result and data
+owner. Never automatically reverse destructive migrations or delete a production
+resource group.
+
+The dev/test-only `scripts/azure_foundations_smoke.py` checks synthetic authorized
+and unauthenticated access to Blob Storage, Service Bus, Speech and Foundry, and
+exercises Service Bus DLQ delivery. Run it only after an authorized deployment
+and RBAC propagation with the intended identity. It does not deploy resources,
+use production data or grant permission to do either. The source implementation
+does not count as live evidence: the exact deployed commit and probe result must
+be recorded before the corresponding external gate passes.

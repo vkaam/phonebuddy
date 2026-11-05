@@ -15,12 +15,15 @@ later deployment gates.
 The original dev foundation group, `rg-pb-dev-foundation`, is in Sweden Central
 and was deployed twice on 2026-11-01; its repeat what-if reported no changes.
 Azure does not allow changing a resource group's location after creation, so this
-group is retained. The approved West Europe dev and test foundations use
-`rg-pb-dev-westeurope-foundation` and `rg-pb-test-westeurope-foundation` in
-the user-designated subscription; their parameter files use owner
-`PHONEBUDDY-PLATFORM` and cost center `PHONEBUDDY-NONPROD`. These resource groups
-deployed successfully twice on 2026-11-01; the second what-if for each reported
-no changes. They contain no application capacity. Production remains unresolved.
+group is retained. Earlier dev/test data foundation attempts in West Europe
+partially provisioned resources, but Azure rejected SQL server creation for
+this subscription. Those resources remain in
+`rg-pb-dev-westeurope-foundation` and `rg-pb-test-westeurope-foundation`; no
+cleanup was performed. The owner then selected France Central for the current
+dev/test foundation parameters after subscription SQL capability, resource
+provider, and model capacity checks passed. Those parameters use owner
+`PHONEBUDDY-PLATFORM` and cost center `PHONEBUDDY-NONPROD`. Existing dev hosting
+remains in its West Europe group. Production remains unresolved.
 
 Separate $10 USD monthly budgets `phonebuddy-dev-monthly-10usd` and
 `phonebuddy-test-monthly-10usd` are configured at the MCA billing-account scope.
@@ -54,7 +57,7 @@ is tracked separately in TASK-7.
 
 ## Deployment and recovery prerequisites
 
-The test parameter file is configured for West Europe, the approved subscription,
+The dev and test parameter files are configured for France Central, the approved subscription,
 owner and nonproduction cost center. Production still contains unresolved inputs
 and is not deployment-ready. Never put secrets in parameter files or outputs.
 The foundation output exposes only its region-qualified resource-group name.
@@ -73,8 +76,10 @@ budget or geography. It is not automatically enforced by Azure or CI: the future
 trusted deployment pipeline must invoke it and fail closed. For each approved
 environment, validate and review what-if, deploy and repeat the exact deployment
 to demonstrate convergence, then record both runs and resource state. The
-original Sweden Central dev group and the new West Europe dev/test groups have
-all been deployed and verified with repeat what-if checks; production has not.
+original Sweden Central dev group has a successful repeated deployment and
+no-change what-if. West Europe data deployments were partial; the current France
+Central parameter values still need their own what-if and deployment evidence.
+Production has not been deployed.
 
 Resource groups use fixed names per environment and region. Distinct subscriptions or
 resource groups alone are not authorization, data, network or capacity isolation;
@@ -120,3 +125,80 @@ assignment permissions, and the job may fail until the owner reviews an
 appropriate permission design. Do not grant privileges merely to make the job
 green. TASK-58's post-merge follow-up must record the run, permission scope and
 hosted PR/fork failure-boundary evidence; no live result is claimed here.
+
+## Data, messaging and AI foundation
+
+`infra/main.bicep` also deploys `modules/data-platform.bicep` into that
+environment's foundation group. It provisions an Entra-only SQL serverless
+database, private blob container with versioning and soft-delete, keyless
+Service Bus queues, Speech, an Azure AI Foundry project and a pinned
+`GlobalStandard` model deployment. A user-assigned workload identity receives
+only the Blob Data Contributor, Service Bus sender/receiver, Speech User and
+Cognitive Services OpenAI User roles required by the application. Resource
+names and outputs contain identifiers and endpoints only; no credentials are
+emitted.
+
+Retention is environment-specific: SQL point-in-time recovery and blob/container
+soft-delete use 7 days for dev, 14 for test and 35 for prod. Blob versions are
+enabled. SQL backup redundancy is locally redundant in dev/test and zone
+redundant in prod. Service Bus message TTL is 1, 7 and 30 days respectively;
+the separate `foundation-smoke` queue has a one-day TTL and a delivery limit of
+three for nonproduction probes. Production uses zone-redundant storage and
+Premium Service Bus; dev/test use LRS storage and Standard Service Bus.
+
+The checked-in parameter files leave the SQL administrator unresolved. Supply
+the deploying Entra user's identifiers in process environment variables so
+they do not enter source control or shell history, then run the readiness check:
+
+```sh
+export PHONEBUDDY_SQL_ADMIN_OBJECT_ID="$(az ad signed-in-user show --query id -o tsv)"
+export PHONEBUDDY_SQL_ADMIN_LOGIN="$(az ad signed-in-user show --query displayName -o tsv)"
+python3 -B scripts/check_bicep.py --deployment-ready dev
+```
+
+Use the signed-in Entra user's display name and object ID as the SQL
+administrator; Azure accepts the display name or UPN for this administrator.
+Pass these variables as `sqlAdminObjectId` and `sqlAdminLogin` parameter
+overrides when creating the deployment. Production inputs remain unresolved for
+later setup. Check the
+exact model/version, Generally Available inference lifecycle, `GlobalStandard`
+SKU, selected resource-region model catalog, available quota and requested deployment units
+against Azure before preview/deploy:
+
+```sh
+python3 -B scripts/check_bicep.py --foundry-preflight dev --subscription-id <subscription-id>
+```
+
+The account and quota check use the selected resource geography. The approved
+`GlobalStandard` SKU can process prompts and responses in any Azure region.
+There is no automatic alternate-SKU or alternate-resource-region fallback.
+Prod remains blocked until its geography, owner, cost center and SQL
+administrator are approved and supplied. The model capacity API check is
+evidence at preflight time, not a reservation; deployment can still fail if
+capacity changes.
+
+After an authorized dev/test deployment and RBAC propagation, run the synthetic
+data-plane probes with the intended Entra identity:
+
+```sh
+python3 -B scripts/azure_foundations_smoke.py --environment dev --subscription-id <subscription-id>
+```
+
+The script writes and deletes one synthetic blob, verifies anonymous denial,
+sends a synthetic Service Bus message and abandons it until the broker moves it
+to the DLQ, then checks Speech synthesis and Foundry inference with both Entra
+and unauthenticated requests. It only targets dev/test and prints statuses, not
+tokens, response bodies or synthetic content. It requires the active identity
+to have the data roles and outbound access to the resource endpoints. Record
+successful output against the exact deployed source revision. The script was
+not run as part of local source validation; no Azure deployment or live data
+plane result is claimed.
+
+Deletion must follow the approved environment owner procedure after checking
+resource locks, SQL PITR window, blob versions/soft-delete, Service Bus DLQ and
+retention, and any legal hold. Soft-delete and SQL backups provide recovery
+windows, not an independent long-term archive or a substitute for a tested
+restore. Keep all access keyless through Entra; do not create keys, SAS URLs,
+secrets in parameter files, or credentials in deployment outputs. No backup
+restore or deletion exercise is claimed until recorded from the authorized
+environment.
