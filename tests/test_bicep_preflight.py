@@ -13,6 +13,7 @@ from scripts.check_bicep import (
     deployment_ready,
     expected_resource_group_names,
     validate_foundation_isolation,
+    validate_media,
     validate_what_if,
     validate_quality_evidence,
 )
@@ -143,6 +144,125 @@ class FoundationIsolationTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'tagged with its environment'):
             validate_foundation_isolation(template)
 
+
+def media_template():
+    ports = (
+        ('Tcp', '443'), ('Udp', '3478'), ('Tcp', '3478'),
+        ('Tcp', '5349'), ('Udp', '5349'), ('Udp', '10000-20000'), ('Tcp', '22'),
+    )
+    return {
+        'parameters': {
+            'deployMedia': {'defaultValue': False},
+            'imageGalleryName': {},
+            'imageGalleryResourceGroup': {},
+            'gatewayImageName': {},
+            'gatewayImageVersion': {},
+            'releaseVersion': {},
+        },
+        'resources': [
+            {'type': 'Microsoft.Network/virtualNetworks', 'properties': {}},
+            {'type': 'Microsoft.Network/networkSecurityGroups', 'properties': {
+                'securityRules': [
+                    {'properties': {'direction': 'Inbound', 'protocol': protocol,
+                                   'destinationPortRange': port,
+                                   'sourceAddressPrefix': ('10.65.0.64/26' if port == '22'
+                                                           else 'Internet')}}
+                    for protocol, port in ports
+                ] + [
+                    {'properties': {'direction': 'Outbound', 'access': access,
+                                   'protocol': protocol, 'destinationPortRange': port,
+                                   'destinationAddressPrefix': destination, 'priority': priority}}
+                    for access, protocol, port, destination, priority in (
+                        ('Allow', 'Udp', '53', 'Internet', 200),
+                        ('Allow', 'Udp', '53', 'AzurePlatformDNS', 205),
+                        ('Allow', 'Udp', '123', 'Internet', 210),
+                        ('Allow', 'Udp', '123', 'AzurePlatformTime', 215),
+                        ('Allow', 'Tcp', '443', 'Internet', 220),
+                        ('Allow', 'Tcp', '5061', 'Internet', 230),
+                        ('Allow', 'Udp', '10000-20000', 'Internet', 240),
+                        ('Deny', '*', '*', 'Internet', 4096),
+                    )
+                ],
+            }},
+            {'type': 'Microsoft.Network/publicIPAddresses', 'properties': {
+                'publicIPAllocationMethod': 'Static', 'publicIPAddressVersion': 'IPv4',
+            }},
+            {'type': 'Microsoft.Network/networkInterfaces', 'properties': {
+                'ipConfigurations': [{'properties': {
+                    'privateIPAllocationMethod': 'Static',
+                    'publicIPAddress': {'id': '/public-ip'},
+                }}],
+            }},
+            {'type': 'Microsoft.Network/bastionHosts', 'properties': {
+                'ipConfigurations': [{'name': 'configuration'}],
+            }},
+            {'type': 'Microsoft.Compute/virtualMachines', 'properties': {
+                'storageProfile': {'imageReference': {
+                    'id': "[resourceId(parameters('imageGalleryResourceGroup'), 'Microsoft.Compute/galleries/images/versions', parameters('imageGalleryName'), parameters('gatewayImageName'), parameters('gatewayImageVersion'))]",
+                }},
+                'osProfile': {'linuxConfiguration': {'disablePasswordAuthentication': True}},
+                'securityProfile': {'securityType': 'TrustedLaunch', 'uefiSettings': {
+                    'secureBootEnabled': True, 'vTpmEnabled': True,
+                }},
+            }},
+        ],
+        'outputs': {'mediaDeploymentEnabled': {'type': 'bool'}},
+    }
+
+
+class MediaTemplateSecurityTests(unittest.TestCase):
+    def test_complete_opt_in_media_template_passes(self):
+        validate_media(media_template())
+
+    def test_media_deployment_must_remain_opt_in(self):
+        template = media_template()
+        template['parameters']['deployMedia']['defaultValue'] = True
+        with self.assertRaisesRegex(ValueError, 'opt-in'):
+            validate_media(template)
+
+    def test_public_ssh_rule_fails(self):
+        template = media_template()
+        ssh = next(rule['properties'] for rule in
+                   template['resources'][1]['properties']['securityRules']
+                   if rule['properties'].get('destinationPortRange') == '22')
+        ssh['sourceAddressPrefix'] = 'Internet'
+        with self.assertRaisesRegex(ValueError, 'private Bastion subnet'):
+            validate_media(template)
+
+    def test_unbounded_rtp_range_fails(self):
+        template = media_template()
+        rtp = next(rule['properties'] for rule in
+                   template['resources'][1]['properties']['securityRules']
+                   if rule['properties'].get('destinationPortRange') == '10000-20000')
+        rtp['destinationPortRange'] = '*'
+        with self.assertRaisesRegex(ValueError, 'bounded RTP'):
+            validate_media(template)
+
+    def test_mutable_image_and_password_authentication_fail(self):
+        template = media_template()
+        template['resources'][5]['properties']['storageProfile']['imageReference'].pop('id')
+        with self.assertRaisesRegex(ValueError, 'versioned Compute Gallery image'):
+            validate_media(template)
+
+        template = media_template()
+        template['resources'][5]['properties']['osProfile']['linuxConfiguration'][
+            'disablePasswordAuthentication'] = False
+        with self.assertRaisesRegex(ValueError, 'password authentication'):
+            validate_media(template)
+
+    def test_missing_bastion_or_unpinned_gallery_input_fails(self):
+        template = media_template()
+        template['resources'] = [
+            resource for resource in template['resources']
+            if resource['type'] != 'Microsoft.Network/bastionHosts'
+        ]
+        with self.assertRaisesRegex(ValueError, 'Bastion'):
+            validate_media(template)
+
+        template = media_template()
+        template['parameters']['gatewayImageVersion']['defaultValue'] = 'latest'
+        with self.assertRaisesRegex(ValueError, 'explicitly selected version'):
+            validate_media(template)
 
 class WhatIfEvidenceTests(unittest.TestCase):
     def test_complete_results_are_accepted(self):
