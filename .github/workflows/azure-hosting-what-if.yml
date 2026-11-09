@@ -46,7 +46,7 @@ jobs:
         run: |
           set -euo pipefail
           az deployment group what-if \
-            --resource-group rg-pb-dev-westeurope-foundation \
+            --resource-group rg-pb-dev-belgiumcentral-foundation \
             --template-file "$RUNNER_TEMP/hosting.json" \
             --parameters environment=dev owner=PHONEBUDDY-PLATFORM costCenter=PHONEBUDDY-NONPROD deployWorkload=false imageDigest=0000000000000000000000000000000000000000000000000000000000000000 releaseVersion=preview \
             --result-format FullResourcePayloads --no-pretty-print --output json > "$RUNNER_TEMP/hosting-what-if.json"

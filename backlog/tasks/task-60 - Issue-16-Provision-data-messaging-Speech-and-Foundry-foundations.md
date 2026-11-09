@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-02T16:36:00Z'
-updated_date: '2026-11-05T19:09:00Z'
+updated_date: '2026-11-09T15:12:00Z'
 labels:
   - infrastructure
   - cicd
@@ -80,6 +80,8 @@ Spec: Preserve the issue's approved acceptance. Do not broaden scope or weaken r
 5. Run the required repository and Bicep checks, then gather authorized current-source Azure evidence where available; keep acceptance unchecked while any required external gate is unverified.
 
 6. Use the owner-authorized alternate EU location for dev/test; verify subscription SQL capabilities, provider location support, and exact Foundry GlobalStandard catalog/quota before changing parameters or deploying; keep production unresolved.
+
+7. Integrate the latest Belgium Central foundation branch into PR #84, preserve its workload definitions, validate the merged tree, and keep the PR draft while live data-plane and recovery gates remain outstanding.
 <!-- SECTION:PLAN:END -->
 
 ## Implementation Notes
@@ -118,4 +120,6 @@ France Central validation 2026-11-05: Microsoft.Sql subscription capabilities re
 Independent read-only review of the France Central region change, parameter-driven preflight and smoke harness found no actionable issues. Reviewer confirmed the smoke harness follows the configured region and no longer uses SQL as the resource-group locator for Speech/Foundry. Live deployment, data-plane probes, and backup/restore/deletion remain external acceptance gates.
 
 France Central dev deployment 2026-11-05: Azure accepted the region and provisioned non-SQL resources, then SQL administrator provisioning failed with InvalidParameterValue for the Login property. The runtime UPN is rejected by this subscription API call. Microsoft guidance permits either the Entra display name or UPN for a SQL Entra administrator; update the local procedure to supply the signed-in displayName and retry. No deletions were performed.
+
+2026-11-09 mergeability update: integrated main after TASK-78 moved dev/test to Belgium Central in the new subscription. Resolved region and runbook conflicts in favor of the current target. Focused Bicep preflight tests (34) and pinned Bicep 0.34.44 baseline pass. Live workload deployment, data-plane probes, and recovery evidence remain pending; no Azure deployment was attempted in this mergeability update.
 <!-- SECTION:NOTES:END -->

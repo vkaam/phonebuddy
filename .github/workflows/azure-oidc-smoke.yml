@@ -32,13 +32,25 @@ jobs:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-      - name: Verify shared identity access
+      - name: Verify environment identity isolation
         env:
           TARGET_ENVIRONMENT: ${{ inputs.environment }}
         shell: bash
         run: |
           set -euo pipefail
           for environment in dev test; do
-            az group show --name "rg-pb-${environment}-westeurope-foundation" --query name --output tsv >/dev/null
+            resource_group="rg-pb-${environment}-belgiumcentral-foundation"
+            if [[ "$environment" == "$TARGET_ENVIRONMENT" ]]; then
+              az group show --name "$resource_group" --query name --output tsv >/dev/null
+            else
+              if az group show --name "$resource_group" --query name --output tsv >/dev/null 2>"$RUNNER_TEMP/other-group-error"; then
+                echo "The ${TARGET_ENVIRONMENT} identity can read the other environment."
+                exit 1
+              fi
+              if ! grep -q AuthorizationFailed "$RUNNER_TEMP/other-group-error"; then
+                echo "The other group check failed for a reason other than denied access."
+                exit 1
+              fi
+            fi
           done
-          echo "The ${TARGET_ENVIRONMENT} GitHub environment authenticated and can read both approved foundation groups."
+          echo "The ${TARGET_ENVIRONMENT} identity can read only its own approved foundation group."

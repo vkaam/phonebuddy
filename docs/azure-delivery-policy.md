@@ -1,20 +1,24 @@
 # Azure environments and automatic delivery policy
 
-This is the implementation contract for TASK-4, not evidence that Azure resources,
-GitHub protections, deployment jobs, or alerts exist. No environment is enabled
-for deployment until its owner supplies the inputs below and the gates are built
-and exercised. The values and thresholds here are initial pilot defaults to be
-validated against real traffic and revised through a reviewed PR.
+This policy began as the implementation contract for TASK-4. The dev and test
+foundation groups, scoped identities, and budget alerts below were read back in
+the new subscription on 2026-11-09. GitHub secret values and trusted OIDC runs
+still require live verification. Application deployment remains gated by the
+separate delivery checks. Values and thresholds should be reviewed against real
+traffic through a PR.
 
 ## Environment register
 
 `dev` is the pilot development environment; `test` validates promotion separately;
-`prod` is the production environment. No environment is currently provisioned.
+`prod` is the production environment. Earlier nonproduction resources exist in
+Sweden Central, West Europe and France Central; the new dev/test target is the
+separate nonproduction subscription and tenant in Belgium Central. Existing
+resources remain until separately reviewed for migration or cleanup.
 
 | Environment | Subscription and geography | Naming and ownership | Budget and outstanding inputs |
 | --- | --- | --- | --- |
-| dev (pilot development) | Subscription ID and tenant unresolved; choose approved EU geography after service availability and quota checks. | Proposed prefix `pb-dev`, resource groups `rg-pb-dev-<region>-<purpose>`; pilot and technical owners not assigned. | Amount, currency, alert recipients and forecast threshold unresolved. |
-| test | Subscription ID and tenant unresolved; same approved processing boundary as production, with service availability and quotas verified. | Proposed prefix `pb-test`, resource groups `rg-pb-test-<region>-<purpose>`; test and technical owners not assigned. | Amount, currency, alert recipients and forecast threshold unresolved. |
+| dev (pilot development) | Owner-designated new nonproduction subscription and tenant; Belgium Central (`belgiumcentral`). | `rg-pb-dev-belgiumcentral-foundation`; distinct dev deployment identity; owner tag `PHONEBUDDY-PLATFORM`, cost center `PHONEBUDDY-NONPROD`. | $10 monthly resource-group budget with 50/80/100% actual and 100% forecast alerts to the owner. |
+| test | Same new nonproduction subscription and tenant; Belgium Central (`belgiumcentral`). | `rg-pb-test-belgiumcentral-foundation`; distinct test deployment identity; owner tag `PHONEBUDDY-PLATFORM`, cost center `PHONEBUDDY-NONPROD`. | Separate $10 monthly resource-group budget with the same alert routing. |
 | prod | Dedicated subscription preferred; subscription ID and tenant unresolved. Approved EU geography and actual Speech/Foundry processing boundary require confirmation. | Proposed prefix `pb-prod`, resource groups `rg-pb-prod-<region>-<purpose>`; service, incident and budget owners not assigned. | Amount, currency, alert recipients and forecast threshold unresolved. |
 
 Use distinct resource groups, data, secrets, workload identities, deployment
