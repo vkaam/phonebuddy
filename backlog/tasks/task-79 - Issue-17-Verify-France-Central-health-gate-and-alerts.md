@@ -1,11 +1,11 @@
 ---
 id: TASK-79
 title: Issue 17 - Verify France Central health gate and alerts
-status: To Do
+status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-09T19:19:00Z'
-updated_date: '2026-11-09T19:19:00Z'
+updated_date: '2026-11-09T19:20:00Z'
 labels:
   - infrastructure
   - cicd
