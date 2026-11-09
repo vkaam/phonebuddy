@@ -76,8 +76,12 @@ def check_blob(one, run_id):
         'Content-Type': 'text/plain',
     }
     request(url, 'PUT', headers, b'Phonebuddy synthetic foundation smoke data')
-    request(url, 'GET', expected=(401, 403, 404))
-    request(url, 'DELETE', headers)
+    try:
+        status, _, content = request(url, 'GET', expected=(401, 403, 404, 409))
+        if status == 409 and b'<Code>PublicAccessNotPermitted</Code>' not in content:
+            raise RuntimeError('Anonymous Blob request returned an unexpected conflict')
+    finally:
+        request(url, 'DELETE', headers)
 
 
 def service_bus(one, run_id):
@@ -94,28 +98,52 @@ def service_bus(one, run_id):
     request(f'{base}/messages', 'POST', {'Content-Type': 'text/plain'},
             b'unauthorized synthetic probe', expected=(401, 403))
 
-    # Abandon each peek-locked delivery. The queue's maxDeliveryCount moves it to DLQ.
-    for _ in range(5):
+    # Unlock each peek-locked delivery. The broker dead-letters after the
+    # queue's maxDeliveryCount; wait for the asynchronous transition.
+    deadline = time.monotonic() + 90
+    deliveries = 0
+    while time.monotonic() < deadline and deliveries < 3:
         status, headers, _ = request(f'{base}/messages/head?timeout=10', 'POST', bearer,
                                      expected=(200, 201, 204, 404))
         location = headers.get('Location')
-        if status == 404 or not location:
-            break
+        if not location:
+            time.sleep(1)
+            continue
+        broker = json.loads(headers.get('BrokerProperties', '{}'))
+        if broker.get('MessageId') != message_id:
+            raise RuntimeError('Smoke queue returned a different message')
+        deliveries += 1
         locked_url = urllib.parse.urljoin(base + '/', location)
-        parsed = urllib.parse.urlsplit(locked_url)
-        if parsed.hostname != f'{namespace}.servicebus.windows.net':
+        if urllib.parse.urlsplit(locked_url).hostname != f'{namespace}.servicebus.windows.net':
             raise RuntimeError('Service Bus lock URL escaped the expected namespace')
-        request(locked_url, 'DELETE', bearer, expected=(200, 202, 204))
+        # PUT unlocks (abandons) the message; DELETE would complete it.
+        request(locked_url, 'PUT', bearer, b'', expected=(200, 202, 204))
         time.sleep(1)
+    if deliveries < 3:
+        raise RuntimeError('Synthetic queue message did not reach maximum delivery count')
 
     dlq = f'{base}/$deadletterqueue/messages/head?timeout=10'
-    status, headers, _ = request(dlq, 'POST', bearer, expected=(200, 201, 204, 404))
-    if status == 404 or not headers.get('Location'):
-        raise RuntimeError('Synthetic queue message did not reach the dead-letter queue')
-    locked_url = urllib.parse.urljoin(base + '/', headers['Location'])
-    if urllib.parse.urlsplit(locked_url).hostname != f'{namespace}.servicebus.windows.net':
-        raise RuntimeError('Dead-letter lock URL escaped the expected namespace')
-    request(locked_url, 'DELETE', bearer, expected=(200, 202, 204))
+    deadline = time.monotonic() + 90
+    while time.monotonic() < deadline:
+        status, headers, _ = request(dlq, 'POST', bearer, expected=(200, 201, 204, 404))
+        location = headers.get('Location')
+        if not location:
+            time.sleep(1)
+            continue
+        broker = json.loads(headers.get('BrokerProperties', '{}'))
+        if broker.get('MessageId') != message_id:
+            raise RuntimeError('Dead-letter queue returned a different message')
+        reason = broker.get('DeadLetterReason') or headers.get('DeadLetterReason')
+        if isinstance(reason, str) and reason.startswith('"'):
+            reason = json.loads(reason)
+        if reason and reason != 'MaxDeliveryCountExceeded':
+            raise RuntimeError(f'Dead-letter queue returned an unexpected reason: {reason!r}')
+        locked_url = urllib.parse.urljoin(base + '/', location)
+        if urllib.parse.urlsplit(locked_url).hostname != f'{namespace}.servicebus.windows.net':
+            raise RuntimeError('Dead-letter lock URL escaped the expected namespace')
+        request(locked_url, 'DELETE', bearer, expected=(200, 202, 204))
+        return
+    raise RuntimeError('Synthetic queue message did not reach the dead-letter queue')
 
 
 def speech(one, resource_group):
@@ -124,13 +152,13 @@ def speech(one, resource_group):
                            if item.get('kind') == 'SpeechServices'), None)
     if not speech_account:
         raise RuntimeError('Speech account was not found')
-    endpoint = speech_account.get('properties', {}).get('endpoint')
+    endpoint = (speech_account.get('properties') or {}).get('endpoint')
     if not endpoint:
         endpoint = f"https://{speech_account['name']}.cognitiveservices.azure.com/"
-    url = urllib.parse.urljoin(endpoint.rstrip('/') + '/', 'cognitiveservices/v1')
+    url = urllib.parse.urljoin(endpoint.rstrip('/') + '/', 'tts/cognitiveservices/v1')
     body = (b'<speak version="1.0" xml:lang="en-US"><voice name="en-US-JennyNeural">'
             b'Phonebuddy synthetic infrastructure smoke test.</voice></speak>')
-    headers = {'Authorization': f"Bearer {token('https://cognitiveservices.azure.com')}",
+    headers = {'Authorization': f"Bearer aad#{speech_account['id']}#{token('https://cognitiveservices.azure.com')}",
                'Content-Type': 'application/ssml+xml',
                'X-Microsoft-OutputFormat': 'riff-16khz-16bit-mono-pcm'}
     request(url, 'POST', headers, body)
@@ -145,19 +173,19 @@ def foundry(one, resource_group):
                     and item.get('kind') == 'AIServices'), None)
     if not account:
         raise RuntimeError('Foundry account was not found')
-    endpoint = account.get('properties', {}).get('endpoint')
+    details = az_json('cognitiveservices', 'account', 'show', '--name', account['name'],
+                      '--resource-group', resource_group)
+    endpoint = (details.get('properties') or {}).get('endpoint')
     if not endpoint:
         raise RuntimeError('Foundry account endpoint is missing')
-    deployment = az_json('resource', 'list', '--resource-group', account['resourceGroup'])
-    deployment = next((item for item in deployment
-                       if item.get('type', '').lower() ==
-                       'microsoft.cognitiveservices/accounts/deployments'), None)
-    if not deployment:
-        raise RuntimeError('Foundry model deployment was not found')
-    name = deployment['name'].split('/')[-1]
+    deployments = az_json('cognitiveservices', 'account', 'deployment', 'list',
+                          '--name', account['name'], '--resource-group', resource_group)
+    if len(deployments) != 1:
+        raise RuntimeError('Expected exactly one Foundry model deployment')
+    name = deployments[0]['name']
     url = urllib.parse.urljoin(endpoint.rstrip('/') + '/', 'openai/v1/chat/completions')
     body = json.dumps({'model': name, 'messages': [{'role': 'user', 'content': 'Reply OK'}],
-                       'max_completion_tokens': 2}).encode()
+                       'max_completion_tokens': 100}).encode()
     headers = {'Authorization': f"Bearer {token('https://cognitiveservices.azure.com')}",
                'Content-Type': 'application/json'}
     request(url, 'POST', headers, body)

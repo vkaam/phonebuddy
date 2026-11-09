@@ -2,8 +2,8 @@
 
 This policy began as the implementation contract for TASK-4. The dev and test
 foundation groups, scoped identities, and budget alerts below were read back in
-the new subscription on 2026-11-09. GitHub secret values and trusted OIDC runs
-still require live verification. Application deployment remains gated by the
+the new subscription on 2026-11-09. Trusted dev/test OIDC runs passed on 2026-11-09; encrypted GitHub secret
+values cannot be read back directly. Application deployment remains gated by the
 separate delivery checks. Values and thresholds should be reviewed against real
 traffic through a PR.
 
@@ -20,6 +20,17 @@ resources remain until separately reviewed for migration or cleanup.
 | dev (pilot development) | Owner-designated new nonproduction subscription and tenant; Belgium Central (`belgiumcentral`). | `rg-pb-dev-belgiumcentral-foundation`; distinct dev deployment identity; owner tag `PHONEBUDDY-PLATFORM`, cost center `PHONEBUDDY-NONPROD`. | $10 monthly resource-group budget with 50/80/100% actual and 100% forecast alerts to the owner. |
 | test | Same new nonproduction subscription and tenant; Belgium Central (`belgiumcentral`). | `rg-pb-test-belgiumcentral-foundation`; distinct test deployment identity; owner tag `PHONEBUDDY-PLATFORM`, cost center `PHONEBUDDY-NONPROD`. | Separate $10 monthly resource-group budget with the same alert routing. |
 | prod | Dedicated subscription preferred; subscription ID and tenant unresolved. Approved EU geography and actual Speech/Foundry processing boundary require confirmation. | Proposed prefix `pb-prod`, resource groups `rg-pb-prod-<region>-<purpose>`; service, incident and budget owners not assigned. | Amount, currency, alert recipients and forecast threshold unresolved. |
+
+The owner selected France Central on 2026-11-09 for the entire TASK-60 dev/test
+workload in this new subscription: SQL, Blob Storage, Service Bus, Speech and
+Foundry. Its parameter files create separate
+`rg-pb-dev-francecentral-foundation` and
+`rg-pb-test-francecentral-foundation` groups. Belgium Central foundation groups
+remain unchanged. The Belgium group budgets do not cover France group spending. Separate
+France-group monthly €10 budgets now send 50/80/100% actual and 100% forecast
+alerts to the owner; they are alerts, not spending caps.
+This explicit location decision follows the Cognitive Services and Foundry
+preflight rejection of Belgium Central and does not permit automatic fallback.
 
 Use distinct resource groups, data, secrets, workload identities, deployment
 identities and access assignments for each environment, even if subscriptions

@@ -164,8 +164,6 @@ def validate_data_platform(template):
         by_type.setdefault(resource.get('type'), []).append(resource)
     required = {
         'Microsoft.Sql/servers',
-        'Microsoft.Sql/servers/administrators',
-        'Microsoft.Sql/servers/azureADOnlyAuthentications',
         'Microsoft.Sql/servers/databases',
         'Microsoft.Sql/servers/databases/backupShortTermRetentionPolicies',
         'Microsoft.Storage/storageAccounts',
@@ -181,9 +179,16 @@ def validate_data_platform(template):
     }
     if not required.issubset(by_type):
         raise ValueError('Data platform template is missing required Azure resources')
-    sql_auth = by_type['Microsoft.Sql/servers/azureADOnlyAuthentications'][0]['properties']
-    if sql_auth.get('azureADOnlyAuthentication') is not True:
-        raise ValueError('SQL server must require Microsoft Entra authentication')
+    sql_server = by_type['Microsoft.Sql/servers'][0]['properties']
+    sql_auth = sql_server.get('administrators', {})
+    if (sql_auth.get('administratorType') != 'ActiveDirectory'
+            or sql_auth.get('principalType') != 'User'
+            or sql_auth.get('azureADOnlyAuthentication') is not True
+            or not sql_auth.get('login') or not sql_auth.get('sid')
+            or not sql_auth.get('tenantId')
+            or 'administratorLogin' in sql_server
+            or 'administratorLoginPassword' in sql_server):
+        raise ValueError('SQL server must be created with an Entra-only administrator')
     storage = by_type['Microsoft.Storage/storageAccounts'][0]['properties']
     if (storage.get('allowBlobPublicAccess') is not False
             or storage.get('allowSharedKeyAccess') is not False

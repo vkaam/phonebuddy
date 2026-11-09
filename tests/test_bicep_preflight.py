@@ -220,9 +220,12 @@ class FoundryAvailabilityTests(unittest.TestCase):
 
 def data_platform_template():
     return {'resources': [
-        {'type': 'Microsoft.Sql/servers'},
-        {'type': 'Microsoft.Sql/servers/administrators',
-         'properties': {'administratorType': 'ActiveDirectory'}},
+        {'type': 'Microsoft.Sql/servers', 'properties': {
+            'administrators': {'administratorType': 'ActiveDirectory',
+                               'principalType': 'User',
+                               'azureADOnlyAuthentication': True,
+                               'login': 'admin', 'sid': 'object-id',
+                               'tenantId': 'tenant-id'}}},
         {'type': 'Microsoft.Sql/servers/databases'},
         {'type': 'Microsoft.Sql/servers/databases/backupShortTermRetentionPolicies'},
         {'type': 'Microsoft.Storage/storageAccounts', 'properties': {
@@ -247,8 +250,6 @@ def data_platform_template():
          'properties': {'model': {'name': 'gpt-5-mini', 'version': '2025-08-07'},
                         'versionUpgradeOption': 'NoAutoUpgrade'}},
         {'type': 'Microsoft.Authorization/roleAssignments'},
-        {'type': 'Microsoft.Sql/servers/azureADOnlyAuthentications',
-         'properties': {'azureADOnlyAuthentication': True}},
         {'type': 'Microsoft.ServiceBus/namespaces/queues', 'properties': {
             'deadLetteringOnMessageExpiration': True, 'maxDeliveryCount': 3}},
     ]}
@@ -258,18 +259,29 @@ class DataPlatformTemplateTests(unittest.TestCase):
     def test_required_secure_data_platform_resources_pass(self):
         self.assertTrue(validate_data_platform(data_platform_template()))
 
+    def test_sql_server_requires_inline_entra_only_admin(self):
+        for change in (
+            lambda props: props.pop('administrators'),
+            lambda props: props['administrators'].__setitem__('azureADOnlyAuthentication', False),
+            lambda props: props.__setitem__('administratorLogin', 'sqladmin'),
+        ):
+            template = data_platform_template()
+            change(template['resources'][0]['properties'])
+            with self.assertRaisesRegex(ValueError, 'Entra-only administrator'):
+                validate_data_platform(template)
+
     def test_foundry_model_waits_for_project_resource(self):
         template = data_platform_template()
-        template['resources'][13].pop('dependsOn')
+        template['resources'][12].pop('dependsOn')
         with self.assertRaisesRegex(ValueError, 'must wait for its project'):
             validate_data_platform(template)
 
     def test_storage_keys_public_blobs_and_nonregional_fallback_fail(self):
         for mutate, message in (
-            (lambda t: t['resources'][4]['properties'].__setitem__('allowSharedKeyAccess', True), 'Shared Key'),
-            (lambda t: t['resources'][8]['properties'].__setitem__('deadLetteringOnMessageExpiration', False), 'dead-letter'),
+            (lambda t: t['resources'][3]['properties'].__setitem__('allowSharedKeyAccess', True), 'Shared Key'),
+            (lambda t: t['resources'][7]['properties'].__setitem__('deadLetteringOnMessageExpiration', False), 'dead-letter'),
             (lambda t: t['resources'][-1]['properties'].__setitem__('maxDeliveryCount', 0), 'dead-letter'),
-            (lambda t: t['resources'][13]['properties'].__setitem__('spilloverDeploymentName', 'fallback'), 'model version'),
+            (lambda t: t['resources'][12]['properties'].__setitem__('spilloverDeploymentName', 'fallback'), 'model version'),
         ):
             template = data_platform_template()
             mutate(template)

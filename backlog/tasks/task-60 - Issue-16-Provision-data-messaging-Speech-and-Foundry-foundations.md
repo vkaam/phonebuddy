@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-02T16:36:00Z'
-updated_date: '2026-11-09T17:24:00Z'
+updated_date: '2026-11-09T19:03:00Z'
 labels:
   - infrastructure
   - cicd
@@ -54,20 +54,21 @@ ordinal: 57000
 Need: Complete the human-approved Azure outcome described by this issue as one bounded execution slice.
 
 Issue: https://github.com/vkaam/phonebuddy/issues/16
-Approved revision: 2026-11-01T09:24:52Z; body SHA-256 3e38abfd66622238c1dbb33b2da50562ba17ec079d6c80dc047082bf79ef565d.
+Approved revision: 2026-11-09T17:25:18Z; body SHA-256 3e38abfd66622238c1dbb33b2da50562ba17ec079d6c80dc047082bf79ef565d.
 Approval evidence: The human user directly authorized reconciliation in Codex on 2026-11-02 with “fix this”. This authorizes triage into a bounded native task; it does not authorize deployment, merge or issue closure.
 Branch: agent/gh-16-1-product-service-foundations
 Scope: infra/**; scripts/**; tests/**; docs/azure-delivery-policy.md; docs/quality-and-delivery.md; backlog/tasks/task-60 - Issue-16-Provision-data-messaging-Speech-and-Foundry-foundations.md
 Verify: From repository root run python3 -B scripts/check.py and python3 -B scripts/check_bicep.py. In authorized test environments, run synthetic authorized/denied data-plane, queue dead-letter, Speech auth and Foundry inference checks; record quota, model, geography, retention and backup evidence. No production data is used.
 Spec: Preserve the issue's approved acceptance. Do not broaden scope or weaken review. External Azure and hosted checks are explicit acceptance gates and must be evidenced on the current source.
+Owner authorization: On 2026-11-09 the owner selected whole dev/test France Central workload deployment, authorized scoped temporary data-plane roles for synthetic probes with removal afterward, and asked to make PR #84 mergeable. The approved issue body digest is unchanged.
 <!-- SECTION:DESCRIPTION:END -->
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 Bicep provisions SQL, blob storage, Service Bus, Speech and Foundry project/model resources with environment-specific retention and capacity.
-- [ ] #2 Quota, model lifecycle and processing geography are validated; unavailable configurations fail without cross-geography fallback.
-- [ ] #3 Synthetic checks prove authorized data-plane access and denial of unauthorized access, queue dead-letter behavior, Speech authentication and Foundry inference.
-- [ ] #4 Backup, deletion and secret-handling requirements are documented and validated where applicable.
+- [x] #1 Bicep provisions SQL, blob storage, Service Bus, Speech and Foundry project/model resources with environment-specific retention and capacity.
+- [x] #2 Quota, model lifecycle and processing geography are validated; unavailable configurations fail without cross-geography fallback.
+- [x] #3 Synthetic checks prove authorized data-plane access and denial of unauthorized access, queue dead-letter behavior, Speech authentication and Foundry inference.
+- [x] #4 Backup, deletion and secret-handling requirements are documented and validated where applicable.
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -82,6 +83,8 @@ Spec: Preserve the issue's approved acceptance. Do not broaden scope or weaken r
 6. Use the owner-authorized alternate EU location for dev/test; verify subscription SQL capabilities, provider location support, and exact Foundry GlobalStandard catalog/quota before changing parameters or deploying; keep production unresolved.
 
 7. Integrate the latest Belgium Central foundation branch into PR #84, preserve its workload definitions, validate the merged tree, and keep the PR draft while live data-plane and recovery gates remain outstanding.
+
+8. Apply the owner-approved 2026-11-09 France Central location amendment for the entire dev/test workload in the new subscription; retain Belgium foundation resources, verify France SQL/provider/model capacity, perform exact-target what-if and live probes before proposing completion.
 <!-- SECTION:PLAN:END -->
 
 ## Implementation Notes
@@ -124,4 +127,10 @@ France Central dev deployment 2026-11-05: Azure accepted the region and provisio
 2026-11-09 mergeability update: integrated main after TASK-78 moved dev/test to Belgium Central in the new subscription. Resolved region and runbook conflicts in favor of the current target. Focused Bicep preflight tests (34) and pinned Bicep 0.34.44 baseline pass. Live workload deployment, data-plane probes, and recovery evidence remain pending; no Azure deployment was attempted in this mergeability update.
 
 2026-11-09 new-subscription preflight: the signed-in account is in the approved new subscription/tenant and the dev/test Belgium Central groups contain no workload resources. The required Foundry preflight for both environments fails closed: Microsoft.CognitiveServices locations/models rejects belgiumcentral with NoRegisteredProviderFound; provider account locations also omit Belgium Central. No deployment was attempted. Read-only France Central preflight in the new subscription confirms gpt-5-mini 2025-08-07 GlobalStandard is GenerallyAvailable with 500 units available for a 20-unit request. Owner decision on an explicit Speech/Foundry location amendment is pending; TASK-60 acceptance remains unchecked.
+
+Scope amendment approval: owner explicitly selected Move the whole dev/test workload to France Central in Codex on 2026-11-09; reported on https://github.com/vkaam/phonebuddy/issues/16#issuecomment-6746714927. This supersedes Belgium Central for TASK-60 workload deployments only; the approved acceptance and checks remain unchanged.
+
+2026-11-09 new-subscription France Central execution: dev deployment phonebuddy-task60-dev-sqlfix-20261109 and test deployment phonebuddy-task60-test-france-20261109 both Succeeded. SQL server creation required inline Entra-only administrator properties; the child-admin sequence failed with InvalidParameterValue Login. The successful deployment readback showed each SQL database online or auto-paused on GP_S_Gen5 1 vCore, Local backup redundancy, Entra-only admin in the new tenant, dev/test PITR 7/14 days; Blob versioning and blob/container soft delete 7/14 days; Service Bus smoke queue TTL P1D, maxDeliveryCount 3, dead-lettering true; and gpt-5-mini 2025-08-07 GlobalStandard chat deployment Succeeded at 10/20 units. France-group €10 monthly budgets with owner email and actual 50/80/100% plus forecast 100% alerts were read back. Repeat what-if after deployment: 20 Deploy and one Azure-managed master DB Ignore per environment, zero Modify/Delete. Synthetic authorized/denied Blob, Service Bus dead-letter MaxDeliveryCountExceeded, Speech synthesis and Foundry inference checks all passed for dev and test using the PR proposed source. The signed-in tester received five temporary resource-scoped data roles per environment; all ten were deleted and a fresh assignment list confirmed zero remaining. Synthetic blobs and queue messages were deleted/consumed. Production was not touched. Bicep baseline and 35 focused tests passed; full hosted Quality is pending on the pushed PR head.
+
+Recovery evidence 2026-11-09: dev SQL phonebuddy database exposed earliestRestoreDate 2026-11-09T18:00:02Z and Local backup redundancy. A controlled restore to temporary phonebuddy-restore-smoke at 18:30Z reached Online on GP_S_Gen5. The temporary database was deleted; post-delete list showed only original phonebuddy (Online) and master. Test 14-day PITR and both environments Blob versioning/7-14 day soft delete were read back. The restore proves dev SQL PITR service operation for an empty foundation database, not application row recovery. Backup, deletion and secret-handling limits are documented in infra/README.md. Independent agent read-only review found no code defect; requested durable live evidence and this recovery result before finalization.
 <!-- SECTION:NOTES:END -->

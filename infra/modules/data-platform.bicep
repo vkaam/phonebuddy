@@ -58,28 +58,14 @@ resource sqlServer 'Microsoft.Sql/servers@2023-08-01' = {
   properties: {
     minimalTlsVersion: '1.2'
     publicNetworkAccess: 'Enabled'
-  }
-}
-
-resource sqlAdministrator 'Microsoft.Sql/servers/administrators@2023-08-01' = {
-  parent: sqlServer
-  name: 'ActiveDirectory'
-  properties: {
-    administratorType: 'ActiveDirectory'
-    login: sqlAdminLogin
-    sid: sqlAdminObjectId
-    tenantId: tenant().tenantId
-  }
-}
-
-resource sqlEntraOnlyAuthentication 'Microsoft.Sql/servers/azureADOnlyAuthentications@2023-08-01' = {
-  parent: sqlServer
-  name: 'Default'
-  dependsOn: [
-    sqlAdministrator
-  ]
-  properties: {
-    azureADOnlyAuthentication: true
+    administrators: {
+      administratorType: 'ActiveDirectory'
+      principalType: 'User'
+      login: sqlAdminLogin
+      sid: sqlAdminObjectId
+      tenantId: tenant().tenantId
+      azureADOnlyAuthentication: true
+    }
   }
 }
 
