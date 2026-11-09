@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-09T19:19:00Z'
-updated_date: '2026-11-09T19:50:00Z'
+updated_date: '2026-11-09T20:00:00Z'
 labels:
   - infrastructure
   - cicd
@@ -64,4 +64,8 @@ Spec: Preserve issue #17 approved acceptance and TASK-61 code scope. This is the
 Triage amendment 2026-11-09: France Central provider metadata omits Microsoft.Web/staticSites while it supports the Container Apps, ACR, Key Vault, workspace and Insights services needed for this health pilot. Add infra/README.md and the existing manual OIDC/what-if workflows plus their boundary tests to the explicit file scope so the target can be aligned without a cross-region fallback; issue #17 acceptance and required checks remain unchanged. The owner was asked separately for action-time authorization before moving the dev deployment identity role.
 
 2026-11-09 France Central preflight: the new subscription dev foundation group contains TASK-60 data resources but no pilot hosting app; its Belgium dev group is empty. Azure provider metadata lists France Central for Container Apps managed environments, ACR, Key Vault, Log Analytics and Application Insights, but not Static Web Apps. The hosting template now keeps Static Web Apps default-on for supported regions and requires an explicit false opt-out for this France health pilot. Read-only ARM What-If for dev bootstrap with deployWorkload=false and deployStaticSite=false succeeded: 8 Create, 9 Ignore for exact existing TASK-60 data resources, zero Modify/Delete. The checker now admits only narrowly named France data-foundation ignores and rejects unexpected ignores; the live What-If JSON passed it. Pinned Bicep baseline, actionlint on affected workflows and 17 focused tests passed (the HTTP tests needed loopback socket permission). No hosting resource has been deployed yet. The dev OIDC app currently has Contributor only on the Belgium dev group; owner decision on moving that scope is pending.
+
+Live France Central dev bootstrap deployment phonebuddy-task79-health-bootstrap-20261109 Succeeded from the reviewed template with deployWorkload=false and deployStaticSite=false. Readback confirms the Container Apps environment, 30-day Log Analytics workspace, Application Insights, Basic ACR and RBAC Key Vault all have location francecentral; the registry pull identity has AcrPull on that registry. Existing TASK-60 data resources were not modified or deleted. PR #90 head 3b0cea9 passed hosted Quality run 42687365738 and advisory Risk run 42687405995. The full local scripts/check.py gate passed (report /private/var/folders/zs/9bq4j3rx3wng_vzz52w8hrf80000gn/T/phonebuddy-quality-u08mg3ij/report.json). The image build is blocked because the local OrbStack Docker API stopped responding; owner was asked before a restart that could affect other local containers. No app or alert drill has run yet.
+
+Image build fallback check: Azure ACR Tasks in the new subscription returned TasksOperationsNotAllowed for pbdev3dg66adbcqbhw, matching the older subscription policy. This did not create an image. OrbStack Docker _ping remained unresponsive for more than four minutes; the stalled build was stopped without creating or pushing an image. Owner approval for an OrbStack restart remains pending.
 <!-- SECTION:NOTES:END -->
