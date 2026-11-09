@@ -31,6 +31,12 @@ France-group monthly €10 budgets now send 50/80/100% actual and 100% forecast
 alerts to the owner; they are alerts, not spending caps.
 This explicit location decision follows the Cognitive Services and Foundry
 preflight rejection of Belgium Central and does not permit automatic fallback.
+The TASK-79 health pilot also targets the France Central dev group. Static Web
+Apps is unavailable there for this subscription, so its hosting deployment
+explicitly omits that unused resource; the synthetic Container App and its
+monitoring resources stay in France Central. [Static Web Apps assets are globally
+distributed](https://learn.microsoft.com/en-us/azure/static-web-apps/faq), so any later web-front-end residency decision
+requires separate review.
 
 Use distinct resource groups, data, secrets, workload identities, deployment
 identities and access assignments for each environment, even if subscriptions

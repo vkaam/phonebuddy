@@ -132,7 +132,9 @@ credentialed job runs only for that manual request on this repository's `main`,
 after the latest Quality check for the exact commit passes; pull requests cannot
 enter it. It uses the `dev`
 environment and previews `infra/hosting.bicep` against
-`rg-pb-dev-belgiumcentral-foundation` with the release workload disabled. It does not
+`rg-pb-dev-francecentral-foundation` with the release workload and Static Web App
+disabled. Azure does not list France Central for Static Web Apps in this
+subscription; the health pilot uses the France Central Container App instead. It does not
 deploy resources or preview the subscription-scoped foundation template. The
 job prints change counts without resource identifiers or property values; it does
 not provide sufficient detail to approve deployment. Review a detailed preview

@@ -6,6 +6,26 @@ from scripts.check_bicep import validate_what_if
 
 
 class BicepWhatIfValidationTests(unittest.TestCase):
+    def test_existing_france_data_foundations_are_known_hosting_preview_ignores(self):
+        prefix = ('/subscriptions/43c19721-4a1d-49ed-954b-5e8a29b346b1/'
+                  'resourceGroups/rg-pb-dev-francecentral-foundation/providers/')
+        allowed = [
+            'Microsoft.CognitiveServices/accounts/cs-pb-dev-3dg66adbcqbhw-foundry',
+            'Microsoft.CognitiveServices/accounts/cs-pb-dev-3dg66adbcqbhw-foundry/projects/phonebuddy-dev',
+            'Microsoft.ManagedIdentity/userAssignedIdentities/id-pb-dev-data',
+            'Microsoft.Sql/servers/sql-pb-dev-3dg66adbcqbhw/databases/phonebuddy',
+            'Microsoft.Storage/storageAccounts/pbdev3dg66adbcqbhw',
+        ]
+        result = {'status': 'Succeeded', 'changes': [
+            {'changeType': 'Ignore', 'resourceId': prefix + resource}
+            for resource in allowed
+        ]}
+        self.assertEqual(validate_what_if(result), result['changes'])
+        result['changes'].append({'changeType': 'Ignore', 'resourceId':
+                                  prefix + 'Microsoft.Storage/storageAccounts/unreviewed'})
+        with self.assertRaisesRegex(ValueError, 'Unexpected ignored resource'):
+            validate_what_if(result)
+
     def test_smart_detection_and_known_conditional_workload_resources_may_be_ignored(self):
         safe_result = {
             'status': 'Succeeded',
@@ -50,6 +70,8 @@ class BicepCiBoundaryTests(unittest.TestCase):
         self.assertIn('persist-credentials: false', trusted)
         self.assertIn('--quality-evidence', trusted)
         self.assertIn('az deployment group what-if', trusted)
+        self.assertIn('rg-pb-dev-francecentral-foundation', trusted)
+        self.assertIn('deployStaticSite=false', trusted)
         self.assertNotIn('az deployment group create', trusted)
 
     def test_health_gate_is_manual_main_only_and_runs_before_annotation(self):
@@ -63,6 +85,7 @@ class BicepCiBoundaryTests(unittest.TestCase):
         self.assertIn('id-token: write', workflow)
         self.assertIn('persist-credentials: false', workflow)
         self.assertIn('scripts/health_gate.py', workflow)
+        self.assertIn('rg-pb-${TARGET_ENVIRONMENT}-francecentral-foundation', workflow)
         self.assertIn('scripts/release_annotation.py', workflow)
         self.assertIn('--workspace-id', workflow)
         self.assertIn('--app-name', workflow)

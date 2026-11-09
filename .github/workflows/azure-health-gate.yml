@@ -43,7 +43,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          resource_group="rg-pb-${TARGET_ENVIRONMENT}-belgiumcentral-foundation"
+          resource_group="rg-pb-${TARGET_ENVIRONMENT}-francecentral-foundation"
           app_name="ca-pb-${TARGET_ENVIRONMENT}-release-test"
           app_url=$(az resource show --resource-group "$resource_group" --name "$app_name" --resource-type Microsoft.App/containerApps --query 'properties.configuration.ingress.fqdn' --output tsv)
           insights_id=$(az resource list --resource-group "$resource_group" --resource-type Microsoft.Insights/components --query "[?starts_with(name, 'appi-pb-${TARGET_ENVIRONMENT}-')].id | [0]" --output tsv)

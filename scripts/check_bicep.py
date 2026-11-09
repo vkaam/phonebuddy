@@ -361,6 +361,10 @@ def validate_hosting(template):
         raise ValueError('Workload image must use the provisioned registry and digest')
     if parameters['deployWorkload'].get('defaultValue') is not False:
         raise ValueError('Workload deployment must be opt-in')
+    if (parameters.get('deployStaticSite', {}).get('defaultValue') is not True
+            or resources['Microsoft.Web/staticSites'].get('condition')
+            != "[parameters('deployStaticSite')]"):
+        raise ValueError('Static Web App must remain default-on with an explicit opt-out')
     workspace = resources['Microsoft.OperationalInsights/workspaces']['properties']
     if workspace.get('retentionInDays') != 30:
         raise ValueError('Health telemetry retention must be explicitly bounded to 30 days')
@@ -434,11 +438,12 @@ def validate_what_if(result):
         '/providers/microsoft.insights/actiongroups/application insights smart detection'
     )
     if any(not (change['resourceId'].lower().endswith(expected_ignored_id_suffix)
-               or is_conditional_workload_ignore(change['resourceId']))
+               or is_conditional_workload_ignore(change['resourceId'])
+               or is_france_data_foundation_ignore(change['resourceId']))
            for change in ignored):
         raise ValueError(
             'Unexpected ignored resource; only Azure-managed Smart Detection and known '
-            'conditional dev/test release-test resources may be ignored'
+            'conditional dev/test or France Central data-foundation resources may be ignored'
         )
     return changes
 
@@ -468,6 +473,42 @@ def is_conditional_workload_ignore(resource_id):
             f'alert-pb-{environment}-missing-health-telemetry',
             f'alert-pb-{environment}-unhealthy-health-response',
         }
+    return False
+
+
+def is_france_data_foundation_ignore(resource_id):
+    """Allow the separate data template's exact resource families in a France hosting preview."""
+    parts = resource_id.strip('/').lower().split('/')
+    if (len(parts) < 8 or parts[0] != 'subscriptions'
+            or parts[2] != 'resourcegroups' or parts[4] != 'providers'
+            or not re.fullmatch(r'[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}', parts[1])):
+        return False
+    group = re.fullmatch(r'rg-pb-(dev|test)-francecentral-foundation', parts[3])
+    if not group:
+        return False
+    environment = group[1]
+    suffix = r'[a-z0-9]{13}'
+    provider = parts[5]
+    tail = parts[6:]
+    if provider == 'microsoft.cognitiveservices':
+        if len(tail) == 2 and tail[0] == 'accounts':
+            return bool(re.fullmatch(rf'cs-pb-{environment}-{suffix}-(foundry|speech)', tail[1]))
+        return (len(tail) == 4 and tail[0] == 'accounts'
+                and bool(re.fullmatch(rf'cs-pb-{environment}-{suffix}-foundry', tail[1]))
+                and tail[2] == 'projects' and tail[3] == f'phonebuddy-{environment}')
+    if provider == 'microsoft.managedidentity':
+        return tail == ['userassignedidentities', f'id-pb-{environment}-data']
+    if provider == 'microsoft.servicebus':
+        return (len(tail) == 2 and tail[0] == 'namespaces'
+                and bool(re.fullmatch(rf'sbpb{environment}{suffix}', tail[1])))
+    if provider == 'microsoft.sql':
+        server = (len(tail) in (2, 4) and tail[0] == 'servers'
+                  and bool(re.fullmatch(rf'sql-pb-{environment}-{suffix}', tail[1])))
+        return bool(server and (len(tail) == 2 or tail[2:] in
+                                (['databases', 'master'], ['databases', 'phonebuddy'])))
+    if provider == 'microsoft.storage':
+        return (len(tail) == 2 and tail[0] == 'storageaccounts'
+                and bool(re.fullmatch(rf'pb{environment}{suffix}', tail[1])))
     return False
 
 

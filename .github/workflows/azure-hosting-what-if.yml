@@ -46,8 +46,8 @@ jobs:
         run: |
           set -euo pipefail
           az deployment group what-if \
-            --resource-group rg-pb-dev-belgiumcentral-foundation \
+            --resource-group rg-pb-dev-francecentral-foundation \
             --template-file "$RUNNER_TEMP/hosting.json" \
-            --parameters environment=dev owner=PHONEBUDDY-PLATFORM costCenter=PHONEBUDDY-NONPROD deployWorkload=false imageDigest=0000000000000000000000000000000000000000000000000000000000000000 releaseVersion=preview \
+            --parameters environment=dev owner=PHONEBUDDY-PLATFORM costCenter=PHONEBUDDY-NONPROD deployWorkload=false deployStaticSite=false imageDigest=0000000000000000000000000000000000000000000000000000000000000000 releaseVersion=preview \
             --result-format FullResourcePayloads --no-pretty-print --output json > "$RUNNER_TEMP/hosting-what-if.json"
           python3 -B scripts/check_bicep.py --what-if-result "$RUNNER_TEMP/hosting-what-if.json"
