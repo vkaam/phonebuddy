@@ -1,11 +1,11 @@
 ---
 id: TASK-78
 title: Issue 88 - Move dev and test foundations to Belgium Central
-status: In Progress
+status: Done
 assignee:
   - '@codex'
 created_date: '2026-11-08T21:15:00Z'
-updated_date: '2026-11-09T07:03:00Z'
+updated_date: '2026-11-09T07:08:00Z'
 labels:
   - infrastructure
   - cicd
@@ -45,7 +45,7 @@ ordinal: 71000
 Need: Phonebuddy dev and test have moved to a new Azure subscription and tenant and now use separate Entra applications, but the repository and Azure foundation still target the former West Europe/shared-identity setup. The owner requested the missing setup on 2026-11-08.
 
 Issue: https://github.com/vkaam/phonebuddy/issues/88
-Approved revision: 2026-11-09T07:02:43Z; body SHA-256 09782a9c3d8895bafefa9eec451c93671ea477b60473a40264380716a7680834.
+Approved revision: 2026-11-09T07:08:20Z; body SHA-256 09782a9c3d8895bafefa9eec451c93671ea477b60473a40264380716a7680834.
 Approval evidence: Direct owner request in this Codex conversation on 2026-11-08 to provide the missing setup after the live audit.
 Branch: agent/gh-88-1-belgium-foundations
 Scope: infra/environments/dev.bicepparam; infra/environments/test.bicepparam; scripts/bootstrap_github_oidc.py; tests/test_azure_oidc_bootstrap.py; .github/workflows/azure-oidc-smoke.yml; .github/workflows/azure-hosting-what-if.yml; .github/workflows/azure-health-gate.yml; infra/github-oidc.md; infra/README.md; docs/azure-delivery-policy.md; backlog/tasks/task-78 - Issue-88-Move-dev-and-test-foundations-to-Belgium-Central.md.
@@ -55,10 +55,10 @@ Verify: python3 -B -m unittest discover -s tests -p test_azure_oidc_bootstrap.py
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 Dev and test Belgium Central foundation groups exist in the new subscription with expected tags, and prior groups/resources remain intact.
-- [ ] #2 Each existing app has only its matching GitHub federation and Contributor at its own new foundation group, with no cross-environment role assignment in the new subscription.
-- [ ] #3 Repository parameters, workflows, bootstrap, tests, and runbooks target Belgium Central and distinct identities; local and required PR checks pass.
-- [ ] #4 Provider and SQL edition checks, budget coverage or explicit billing-scope blocker, and GitHub environment/OIDC verification or explicit access blocker are recorded with evidence.
+- [x] #1 Dev and test Belgium Central foundation groups exist in the new subscription with expected tags, and prior groups/resources remain intact.
+- [x] #2 Each existing app has only its matching GitHub federation and Contributor at its own new foundation group, with no cross-environment role assignment in the new subscription.
+- [x] #3 Repository parameters, workflows, bootstrap, tests, and runbooks target Belgium Central and distinct identities; local and required PR checks pass.
+- [x] #4 Provider and SQL edition checks, budget coverage or explicit billing-scope blocker, and GitHub environment/OIDC verification or explicit access blocker are recorded with evidence.
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -79,4 +79,12 @@ Verify: python3 -B -m unittest discover -s tests -p test_azure_oidc_bootstrap.py
 2026-11-09 GitHub variable follow-up: With owner action-time confirmation, both dev and test PHONEBUDDY_SQL_ADMIN_OBJECT_ID values were updated from the prior-tenant object ID to the signed-in user object ID in the new tenant. Each saved value was read back in GitHub; the identifier itself is intentionally omitted from repository records. This is configuration only: no SQL server or database exists in these new groups.
 
 2026-11-09 publication: Draft PR https://github.com/vkaam/phonebuddy/pull/89 opened from the approved branch against current main. Local git push failed 403 because the configured CLI credential is for a different account; the connected GitHub app published the identical local tree and remote readback verified matching tree and main ancestry. Issue #88 was updated with PR and access evidence and is still open. Required PR checks, final task acceptance, merge, and trusted post-merge dev/test OIDC smoke remain pending.
+
+2026-11-09 finalization evidence: Old subscription readback still lists Sweden Central dev, West Europe dev/test, and France Central dev/test foundation groups. PR #89 current head 359d6c0 has required Quality=success and advisory Risk report=success; repository ruleset Standard main requires strict Quality from GitHub Actions, zero approving reviews, and resolved review threads; PR discussion has no comments or threads and is now ready for review. Local required checks passed as previously recorded. Pre-merge GitHub/OIDC access blocker: environment deployment rules permit only main, so the updated workflow cannot obtain a trusted dev/test environment OIDC token from its feature branch. GitHub encrypts the existing secret values, preventing direct readback. The owner reports the new values were set; each must be exercised by the updated main-only smoke workflow immediately after merge. This explicit access boundary is the TASK-78 AC4 pre-merge alternative, not a claim that OIDC has passed.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Configured and verified separate Belgium Central dev/test foundation groups, provider registration, one matching GitHub federation and own-group Contributor assignment per existing app, and separate $10 monthly resource-group budget alerts. Updated repository parameters, bootstrap guard, trusted workflows, tests, and runbooks; aligned GitHub location and approved SQL admin variables. Old subscription groups remain. Local 97-test suite, pinned Bicep dev/test checks, workflow lint, diff check, independent review, and PR #89 Quality/risk checks passed at head 359d6c0. GitHub encrypted secret values cannot be read and main-only environment restrictions prevent pre-merge OIDC smoke; run the updated dev/test smoke workflows after merge to prove authentication and isolation. No SQL or billable application workload was provisioned.
+<!-- SECTION:FINAL_SUMMARY:END -->
