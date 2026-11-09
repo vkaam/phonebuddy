@@ -24,19 +24,22 @@ class AzureOidcBootstrapTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "More than one Azure"):
             bootstrap.ensure_single([{}, {}], "application")
 
-    def test_federation_requires_exactly_both_approved_trusts(self):
+    def test_federation_requires_only_the_matching_environment_trust(self):
         trusted = [{"issuer": bootstrap.ISSUER,
                     "subject": f"repo:vkaam@25612385/phonebuddy@1437973251:environment:{env}",
                     "audiences": [bootstrap.AUDIENCE]} for env in ("dev", "test")]
-        bootstrap.validate_federated_credentials(trusted)
-        for invalid in (trusted[:1], trusted + [trusted[0]],
-                        [trusted[0], {**trusted[1], "subject": "repo:other/project:environment:test"}]):
-            with self.subTest(invalid=invalid), self.assertRaisesRegex(RuntimeError, "exactly the approved"):
-                bootstrap.validate_federated_credentials(invalid)
+        for env, own, other in (("dev", trusted[0], trusted[1]),
+                                ("test", trusted[1], trusted[0])):
+            bootstrap.validate_federated_credentials([own], env)
+            for invalid in ([], [other], [own, other],
+                            [{**own, "issuer": "https://wrong.example"}],
+                            [{**own, "audiences": ["wrong"]}]):
+                with self.subTest(env=env, invalid=invalid), self.assertRaisesRegex(RuntimeError, "exactly the approved"):
+                    bootstrap.validate_federated_credentials(invalid, env)
 
-    def test_apply_requires_explicit_shared_app_before_azure_changes(self):
+    def test_apply_requires_explicit_environment_app_before_azure_changes(self):
         with patch.object(bootstrap, "az") as az:
-            with self.assertRaisesRegex(RuntimeError, "explicit shared application ID"):
+            with self.assertRaisesRegex(RuntimeError, "explicit environment application ID"):
                 bootstrap.bootstrap("dev", "subscription-id", apply=True)
         az.assert_not_called()
 
@@ -44,7 +47,19 @@ class AzureOidcBootstrapTests(unittest.TestCase):
         responses = [None, [{"id": "/group"}], {"id": "app-object"},
                      {"id": "principal-object"}, [{"subject": "unexpected"}]]
         with patch.object(bootstrap, "az", side_effect=responses) as az:
-            with self.assertRaisesRegex(RuntimeError, "approved dev and test"):
+            with self.assertRaisesRegex(RuntimeError, "approved dev"):
+                bootstrap.bootstrap("dev", "subscription-id", apply=True, app_id="app-id")
+        self.assertFalse(any(call.args[:3] == ("role", "assignment", "create") for call in az.call_args_list))
+
+    def test_cross_environment_role_blocks_role_assignment(self):
+        trust = {"issuer": bootstrap.ISSUER,
+                 "subject": "repo:vkaam@25612385/phonebuddy@1437973251:environment:dev",
+                 "audiences": [bootstrap.AUDIENCE]}
+        responses = [None, [{"id": "/own-group"}], {"id": "app-object"},
+                     {"id": "principal-object"}, [trust],
+                     [{"scope": "/other-group", "roleDefinitionName": "Contributor"}]]
+        with patch.object(bootstrap, "az", side_effect=responses) as az:
+            with self.assertRaisesRegex(RuntimeError, "outside its own foundation group"):
                 bootstrap.bootstrap("dev", "subscription-id", apply=True, app_id="app-id")
         self.assertFalse(any(call.args[:3] == ("role", "assignment", "create") for call in az.call_args_list))
 
