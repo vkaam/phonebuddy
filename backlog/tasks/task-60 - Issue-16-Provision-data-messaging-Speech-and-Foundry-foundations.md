@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-02T16:36:00Z'
-updated_date: '2026-11-09T15:12:00Z'
+updated_date: '2026-11-09T17:24:00Z'
 labels:
   - infrastructure
   - cicd
@@ -122,4 +122,6 @@ Independent read-only review of the France Central region change, parameter-driv
 France Central dev deployment 2026-11-05: Azure accepted the region and provisioned non-SQL resources, then SQL administrator provisioning failed with InvalidParameterValue for the Login property. The runtime UPN is rejected by this subscription API call. Microsoft guidance permits either the Entra display name or UPN for a SQL Entra administrator; update the local procedure to supply the signed-in displayName and retry. No deletions were performed.
 
 2026-11-09 mergeability update: integrated main after TASK-78 moved dev/test to Belgium Central in the new subscription. Resolved region and runbook conflicts in favor of the current target. Focused Bicep preflight tests (34) and pinned Bicep 0.34.44 baseline pass. Live workload deployment, data-plane probes, and recovery evidence remain pending; no Azure deployment was attempted in this mergeability update.
+
+2026-11-09 new-subscription preflight: the signed-in account is in the approved new subscription/tenant and the dev/test Belgium Central groups contain no workload resources. The required Foundry preflight for both environments fails closed: Microsoft.CognitiveServices locations/models rejects belgiumcentral with NoRegisteredProviderFound; provider account locations also omit Belgium Central. No deployment was attempted. Read-only France Central preflight in the new subscription confirms gpt-5-mini 2025-08-07 GlobalStandard is GenerallyAvailable with 500 units available for a 20-unit request. Owner decision on an explicit Speech/Foundry location amendment is pending; TASK-60 acceptance remains unchecked.
 <!-- SECTION:NOTES:END -->
