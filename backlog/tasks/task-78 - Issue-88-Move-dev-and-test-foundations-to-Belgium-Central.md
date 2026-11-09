@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-08T21:15:00Z'
-updated_date: '2026-11-09T06:55:00Z'
+updated_date: '2026-11-09T07:03:00Z'
 labels:
   - infrastructure
   - cicd
@@ -19,6 +19,7 @@ references:
   - scripts/bootstrap_github_oidc.py
   - .github/workflows/azure-oidc-smoke.yml
   - infra/github-oidc.md
+  - https://github.com/vkaam/phonebuddy/pull/89
 modified_files:
   - >-
     backlog/tasks/task-78 -
@@ -44,7 +45,7 @@ ordinal: 71000
 Need: Phonebuddy dev and test have moved to a new Azure subscription and tenant and now use separate Entra applications, but the repository and Azure foundation still target the former West Europe/shared-identity setup. The owner requested the missing setup on 2026-11-08.
 
 Issue: https://github.com/vkaam/phonebuddy/issues/88
-Approved revision: 2026-11-09T06:51:31Z; body SHA-256 09782a9c3d8895bafefa9eec451c93671ea477b60473a40264380716a7680834.
+Approved revision: 2026-11-09T07:02:43Z; body SHA-256 09782a9c3d8895bafefa9eec451c93671ea477b60473a40264380716a7680834.
 Approval evidence: Direct owner request in this Codex conversation on 2026-11-08 to provide the missing setup after the live audit.
 Branch: agent/gh-88-1-belgium-foundations
 Scope: infra/environments/dev.bicepparam; infra/environments/test.bicepparam; scripts/bootstrap_github_oidc.py; tests/test_azure_oidc_bootstrap.py; .github/workflows/azure-oidc-smoke.yml; .github/workflows/azure-hosting-what-if.yml; .github/workflows/azure-health-gate.yml; infra/github-oidc.md; infra/README.md; docs/azure-delivery-policy.md; backlog/tasks/task-78 - Issue-88-Move-dev-and-test-foundations-to-Belgium-Central.md.
@@ -76,4 +77,6 @@ Verify: python3 -B -m unittest discover -s tests -p test_azure_oidc_bootstrap.py
 2026-11-09 independent review: a separate agent reviewed the scoped diff and independently read back both Azure groups, matching tags, one matching federation per app, and one own-group Contributor assignment per app. It found no blocking code defect. Its two documentation findings were corrected in docs/azure-delivery-policy.md and infra/README.md. GitHub dev PHONEBUDDY_COST_CENTER was corrected from PHONEBUDDY-TEST to PHONEBUDDY-NONPROD and read back. Issue #88 received a progress/evidence comment; the approved issue revision is pinned to its resulting 2026-11-09T06:51:31Z update. Required PR checks and post-merge dev/test OIDC smoke are still pending.
 
 2026-11-09 GitHub variable follow-up: With owner action-time confirmation, both dev and test PHONEBUDDY_SQL_ADMIN_OBJECT_ID values were updated from the prior-tenant object ID to the signed-in user object ID in the new tenant. Each saved value was read back in GitHub; the identifier itself is intentionally omitted from repository records. This is configuration only: no SQL server or database exists in these new groups.
+
+2026-11-09 publication: Draft PR https://github.com/vkaam/phonebuddy/pull/89 opened from the approved branch against current main. Local git push failed 403 because the configured CLI credential is for a different account; the connected GitHub app published the identical local tree and remote readback verified matching tree and main ancestry. Issue #88 was updated with PR and access evidence and is still open. Required PR checks, final task acceptance, merge, and trusted post-merge dev/test OIDC smoke remain pending.
 <!-- SECTION:NOTES:END -->
