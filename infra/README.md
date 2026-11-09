@@ -15,21 +15,36 @@ later deployment gates.
 The original dev foundation group, `rg-pb-dev-foundation`, is in Sweden Central
 and was deployed twice on 2026-11-01; its repeat what-if reported no changes.
 Azure does not allow changing a resource group's location after creation, so this
-group is retained. The approved West Europe dev and test foundations use
+group is retained. The historical West Europe dev and test foundations use
 `rg-pb-dev-westeurope-foundation` and `rg-pb-test-westeurope-foundation` in
 the user-designated subscription; their parameter files use owner
 `PHONEBUDDY-PLATFORM` and cost center `PHONEBUDDY-NONPROD`. These resource groups
 deployed successfully twice on 2026-11-01; the second what-if for each reported
-no changes. They contain no application capacity. Production remains unresolved.
+no changes. The new target is the separate nonproduction subscription with
+`rg-pb-dev-belgiumcentral-foundation` and
+`rg-pb-test-belgiumcentral-foundation`. Dev and test parameters now target
+Belgium Central; neither old group is a deployment target. Both new foundation
+groups deployed in the new subscription on 2026-11-08, and location and
+environment/owner/cost-center tags were read back. The subscription's SQL
+provider is registered and Belgium Central edition listing succeeds; higher
+tiers show Free Trial restrictions, so workload capacity remains to be checked
+by its own task. Production remains unresolved.
 
 Separate $10 USD monthly budgets `phonebuddy-dev-monthly-10usd` and
-`phonebuddy-test-monthly-10usd` are configured at the MCA billing-account scope.
+`phonebuddy-test-monthly-10usd` were configured for the previous subscription at
+the MCA billing-account scope.
 Each filters on its environment tag and `costCenter=PHONEBUDDY-NONPROD`, with
 actual-spend alerts at 50%, 80% and 100%, plus a 100% forecast alert to the
 environment owner. These are alerts, not spending caps. Cost Management does
 not automatically inherit resource-group tags into usage records; future
 billable resources must carry the environment and cost-center tags directly or
-the billing profile must enable tag inheritance.
+the billing profile must enable tag inheritance. The new subscription has
+separate resource-group-scoped $10 monthly budgets, `phonebuddy-dev-monthly-10`
+and `phonebuddy-test-monthly-10`, on the matching Belgium Central foundation
+groups. Each sends actual-spend alerts at 50%, 80% and 100%, plus a 100% forecast
+alert to the owner's GitHub/Azure email. Resource-group scope covers all usage
+charged to each group without relying on tag inheritance. These alerts are not
+spending caps.
 
 ## Local verification
 
@@ -54,9 +69,11 @@ is tracked separately in TASK-7.
 
 ## Deployment and recovery prerequisites
 
-The test parameter file is configured for West Europe, the approved subscription,
-owner and nonproduction cost center. Production still contains unresolved inputs
-and is not deployment-ready. Never put secrets in parameter files or outputs.
+The dev and test parameter files are configured for Belgium Central, with the
+approved owner and nonproduction cost center. The subscription is selected at
+deployment time and is never stored in the parameter files. Production still
+contains unresolved inputs and is not deployment-ready. Never put secrets in
+parameter files or outputs.
 The foundation output exposes only its region-qualified resource-group name.
 The intended target is a subscription deployment using a separately scoped
 federated identity; confirm the selected subscription explicitly, then run the
@@ -73,8 +90,8 @@ budget or geography. It is not automatically enforced by Azure or CI: the future
 trusted deployment pipeline must invoke it and fail closed. For each approved
 environment, validate and review what-if, deploy and repeat the exact deployment
 to demonstrate convergence, then record both runs and resource state. The
-original Sweden Central dev group and the new West Europe dev/test groups have
-all been deployed and verified with repeat what-if checks; production has not.
+original Sweden Central dev group and the historical West Europe dev/test groups
+have been deployed and verified with repeat what-if checks; production has not.
 
 Resource groups use fixed names per environment and region. Distinct subscriptions or
 resource groups alone are not authorization, data, network or capacity isolation;
@@ -91,7 +108,8 @@ For disposable testing use an explicitly designated nonproduction subscription
 and unique test scope, with a named owner, budget and expiry. The fixed
 environment-and-region resource group name makes parallel disposable deployments
 unsafe in the same subscription; choose an isolated subscription before testing.
-The existing Sweden Central dev group is not moved or deleted by this foundation.
+The existing Sweden Central, West Europe and France Central groups are not moved
+or deleted by this foundation.
 Inspect locks, resource contents, retention, backup and ownership before cleanup.
 Never delete production or shared
 resources as part of a test. A deployment rollback does not delete resources
@@ -106,7 +124,7 @@ credentialed job runs only for that manual request on this repository's `main`,
 after the latest Quality check for the exact commit passes; pull requests cannot
 enter it. It uses the `dev`
 environment and previews `infra/hosting.bicep` against
-`rg-pb-dev-westeurope-foundation` with the release workload disabled. It does not
+`rg-pb-dev-belgiumcentral-foundation` with the release workload disabled. It does not
 deploy resources or preview the subscription-scoped foundation template. The
 job prints change counts without resource identifiers or property values; it does
 not provide sufficient detail to approve deployment. Review a detailed preview
@@ -114,9 +132,9 @@ through an appropriately protected channel before deployment. A preview does not
 authorize deployment. Incomplete, ignored or unsupported results fail.
 
 Azure what-if can require the same permissions as deployment, including role
-assignment permissions for the hosting template. The shared identity currently
-has Contributor on dev and test foundation groups; that does not grant role
-assignment permissions, and the job may fail until the owner reviews an
-appropriate permission design. Do not grant privileges merely to make the job
+assignment permissions for the hosting template. Contributor on the new dev
+foundation group does not grant role assignment permissions, so the job may fail
+until the owner reviews an appropriate permission design. The new dev and test
+identities have independent role scopes; do not grant privileges merely to make the job
 green. TASK-58's post-merge follow-up must record the run, permission scope and
 hosted PR/fork failure-boundary evidence; no live result is claimed here.

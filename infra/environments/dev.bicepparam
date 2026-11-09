@@ -1,6 +1,6 @@
 using '../main.bicep'
 
 param environment = 'dev'
-param location = 'westeurope'
+param location = 'belgiumcentral'
 param owner = 'PHONEBUDDY-PLATFORM'
 param costCenter = 'PHONEBUDDY-NONPROD'

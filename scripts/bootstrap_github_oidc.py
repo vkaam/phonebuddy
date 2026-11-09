@@ -1,4 +1,4 @@
-"""Assign scoped Azure access to the reviewed shared GitHub OIDC principal.
+"""Assign scoped Azure access to a reviewed environment GitHub OIDC principal.
 
 This is an explicit bootstrap operation. It is dry-run unless --apply is passed.
 The script never creates a client secret and does not print tenant, subscription,
@@ -13,7 +13,7 @@ import sys
 
 REPOSITORY = "vkaam/phonebuddy"
 ENVIRONMENTS = ("dev", "test")
-REGION = "westeurope"
+REGION = "belgiumcentral"
 ROLE = "Contributor"
 ISSUER = "https://token.actions.githubusercontent.com"
 AUDIENCE = "api://AzureADTokenExchange"
@@ -44,23 +44,22 @@ def ensure_single(items, label):
     return items[0] if items else None
 
 
-def validate_federated_credentials(credentials):
-    """Require exactly the two known GitHub environment trusts before RBAC changes."""
-    subjects = {f"repo:vkaam@25612385/phonebuddy@1437973251:environment:{env}" for env in ENVIRONMENTS}
-    actual = [c.get("subject") for c in credentials]
-    if (len(actual) != 2 or set(actual) != subjects or
+def validate_federated_credentials(credentials, environment):
+    """Require only this environment's repository-ID-qualified trust."""
+    subject = f"repo:vkaam@25612385/phonebuddy@1437973251:environment:{environment}"
+    if (len(credentials) != 1 or credentials[0].get("subject") != subject or
             any(c.get("issuer") != ISSUER or c.get("audiences") != [AUDIENCE] for c in credentials)):
-        raise RuntimeError("Expected exactly the approved dev and test GitHub federation trusts; review the registration before granting access.")
+        raise RuntimeError(f"Expected exactly the approved {environment} GitHub federation trust; review the registration before granting access.")
 
 
 def bootstrap(environment, subscription_id, apply, app_id=None):
     resource_group = f"rg-pb-{environment}-{REGION}-foundation"
     print(f"Environment: {environment}; resource group: {resource_group}; role: {ROLE}")
     if not apply:
-        print("Dry run only. Re-run with --apply and the reviewed shared application ID.")
+        print("Dry run only. Re-run with --apply and the reviewed environment application ID.")
         return
     if not app_id:
-        raise RuntimeError("An explicit shared application ID is required.")
+        raise RuntimeError("An explicit environment application ID is required.")
     az("account", "set", "--subscription", subscription_id)
     groups = az("group", "list", "--query", f"[?name=='{resource_group}']", json_output=True)
     group = ensure_single(groups, f"resource group named {resource_group}")
@@ -69,23 +68,27 @@ def bootstrap(environment, subscription_id, apply, app_id=None):
     app = az("ad", "app", "show", "--id", app_id, json_output=True)
     service_principal = az("ad", "sp", "show", "--id", app_id, json_output=True)
     federated = az("ad", "app", "federated-credential", "list", "--id", app["id"], json_output=True)
-    validate_federated_credentials(federated)
+    validate_federated_credentials(federated, environment)
     scope = group["id"]
     principal_id = service_principal["id"]
-    assignments = az("role", "assignment", "list", "--scope", scope, "--all", "--query", f"[?principalId=='{principal_id}' && roleDefinitionName=='{ROLE}']", json_output=True)
+    assignments = az("role", "assignment", "list", "--assignee", app_id,
+                     "--all", "--include-inherited", json_output=True)
+    if any(a.get("scope", "").lower() != scope.lower() or
+           a.get("roleDefinitionName") != ROLE for a in assignments):
+        raise RuntimeError("The application has access outside its own foundation group or an unexpected role; review RBAC before granting access.")
     if not assignments:
         az("role", "assignment", "create", "--assignee-object-id", principal_id, "--assignee-principal-type", "ServicePrincipal", "--role", ROLE, "--scope", scope, json_output=True)
         print(f"Assigned {ROLE} at the {environment} resource-group scope.")
     else:
         print(f"Verified existing {ROLE} assignment at the {environment} resource-group scope.")
-    print("The shared identity can access both resource groups after both assignments are applied.")
+    print(f"The {environment} identity is scoped to its own foundation group.")
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--environment", choices=ENVIRONMENTS, required=True)
     parser.add_argument("--subscription-id", required=True, help="Approved nonproduction subscription; not logged.")
-    parser.add_argument("--app-id", help="Reviewed shared application ID; not logged.")
+    parser.add_argument("--app-id", help="Reviewed environment application ID; not logged.")
     parser.add_argument("--apply", action="store_true", help="Apply changes. Without this flag, only prints the planned scope.")
     args = parser.parse_args(argv)
     try:
