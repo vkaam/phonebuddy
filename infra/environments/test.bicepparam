@@ -1,6 +1,10 @@
 using '../main.bicep'
 
 param environment = 'test'
-param location = 'belgiumcentral'
+param location = 'francecentral'
 param owner = 'PHONEBUDDY-PLATFORM'
 param costCenter = 'PHONEBUDDY-NONPROD'
+param sqlAdminObjectId = 'UNRESOLVED'
+param sqlAdminLogin = 'UNRESOLVED'
+param foundryModelName = 'gpt-5-mini'
+param foundryModelVersion = '2025-08-07'
