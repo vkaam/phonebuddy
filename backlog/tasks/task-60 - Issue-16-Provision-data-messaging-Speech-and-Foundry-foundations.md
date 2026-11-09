@@ -1,11 +1,11 @@
 ---
 id: TASK-60
 title: Issue 16 - Provision data messaging Speech and Foundry foundations
-status: In Progress
+status: Done
 assignee:
   - '@codex'
 created_date: '2026-11-02T16:36:00Z'
-updated_date: '2026-11-09T19:03:00Z'
+updated_date: '2026-11-09T19:06:00Z'
 labels:
   - infrastructure
   - cicd
@@ -133,4 +133,12 @@ Scope amendment approval: owner explicitly selected Move the whole dev/test work
 2026-11-09 new-subscription France Central execution: dev deployment phonebuddy-task60-dev-sqlfix-20261109 and test deployment phonebuddy-task60-test-france-20261109 both Succeeded. SQL server creation required inline Entra-only administrator properties; the child-admin sequence failed with InvalidParameterValue Login. The successful deployment readback showed each SQL database online or auto-paused on GP_S_Gen5 1 vCore, Local backup redundancy, Entra-only admin in the new tenant, dev/test PITR 7/14 days; Blob versioning and blob/container soft delete 7/14 days; Service Bus smoke queue TTL P1D, maxDeliveryCount 3, dead-lettering true; and gpt-5-mini 2025-08-07 GlobalStandard chat deployment Succeeded at 10/20 units. France-group €10 monthly budgets with owner email and actual 50/80/100% plus forecast 100% alerts were read back. Repeat what-if after deployment: 20 Deploy and one Azure-managed master DB Ignore per environment, zero Modify/Delete. Synthetic authorized/denied Blob, Service Bus dead-letter MaxDeliveryCountExceeded, Speech synthesis and Foundry inference checks all passed for dev and test using the PR proposed source. The signed-in tester received five temporary resource-scoped data roles per environment; all ten were deleted and a fresh assignment list confirmed zero remaining. Synthetic blobs and queue messages were deleted/consumed. Production was not touched. Bicep baseline and 35 focused tests passed; full hosted Quality is pending on the pushed PR head.
 
 Recovery evidence 2026-11-09: dev SQL phonebuddy database exposed earliestRestoreDate 2026-11-09T18:00:02Z and Local backup redundancy. A controlled restore to temporary phonebuddy-restore-smoke at 18:30Z reached Online on GP_S_Gen5. The temporary database was deleted; post-delete list showed only original phonebuddy (Online) and master. Test 14-day PITR and both environments Blob versioning/7-14 day soft delete were read back. The restore proves dev SQL PITR service operation for an empty foundation database, not application row recovery. Backup, deletion and secret-handling limits are documented in infra/README.md. Independent agent read-only review found no code defect; requested durable live evidence and this recovery result before finalization.
+
+PR #84 head 25b8b8440dce6282949afc8236788c13395a3f37: hosted Quality run 42679823223 and advisory Risk run 42679922389 both passed. Independent agent reviewed the final scope after the France Central and smoke changes, ran 35 focused tests plus diff check, and found no blocking code defect. Live TASK-60 consistency returned status pass and claim_verified true. All four task acceptance criteria now have source and Azure evidence; the remaining PR transition is finalization commit, refreshed head checks, and merge.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Provisioned the owner-approved dev/test Phonebuddy workload in France Central in the new subscription. Corrected Azure SQL server creation to set its Entra-only administrator inline. Both deployments succeeded; live readback confirmed SQL, Blob, Service Bus, Speech and pinned Foundry model settings. Four synthetic authorized/denied data-plane checks passed in each environment; all temporary tester roles were removed. A dev SQL point-in-time restore reached Online and the temporary database was deleted. Pinned Bicep baseline, 115 required Python tests, independent review, live consistency validation and hosted PR Quality passed. Production remains deferred; GlobalStandard inference can process outside France Central, and the restore did not test application rows.
+<!-- SECTION:FINAL_SUMMARY:END -->
