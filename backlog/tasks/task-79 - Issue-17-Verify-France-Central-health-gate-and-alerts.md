@@ -5,7 +5,7 @@ status: Done
 assignee:
   - '@codex'
 created_date: '2026-11-09T19:19:00Z'
-updated_date: '2026-11-10T16:19:00Z'
+updated_date: '2026-11-10T16:23:00Z'
 labels:
   - infrastructure
   - cicd
@@ -90,6 +90,8 @@ Controlled unhealthy drill 2026-11-10: one unknown-route request at 14:21 UTC re
 Final healthy France Central dev evidence: hosted app release 3b0cea9 at the reviewed ACR digest returned 100/100 successful /ready and / responses after a 60-second prewarm across ten one-minute samples and 600 seconds of observation. The saved 2026-11-10 14:48:38 UTC gate report passed with error_rate=0, p95_latency_ms=232.339, no failure reasons, and Log Analytics telemetry_event_count=117 with unhealthy_event_count=0. The earlier failed 100-sample gate reported dependency_outage separately from unhealthy_response, and the bounded missing-version workspace probe returned missing_telemetry. The deliberate 14:21 UTC 404 was ingested and a new unhealthy-response alert Fired at 14:30:12, Resolved at 14:46:10 UTC. The existing missing-telemetry alert Resolved at 14:43:23 during resumed health traffic; after synthetic traffic stopped and the app scaled to zero, a new missing-telemetry instance Fired at 15:07:23 UTC. Thus both alert conditions fired in the live workspace without logging request data. Independent final acceptance review requested; final-head checks and PR merge remain.
 
 Finalization 2026-11-10: Independent agent validated TASK-79 AC1-3 and TASK-61 AC1-4 against deployment, gate and alert artifacts and found no blocking finding. TASK-61 proposed Done record and issue #17 progress comments now reconcile merged code PR #82 with the France Central live evidence; issue stays open until PR #90 merges. Full final local scripts/check.py passed (report /private/var/folders/zs/9bq4j3rx3wng_vzz52w8hrf80000gn/T/phonebuddy-quality-zjf4wxd7/report.json), pinned Bicep baseline passed, changed-workflow actionlint passed, and git diff --check passed. The trusted main-only health workflow release annotation is a post-merge operational verification, not a pre-merge code grant.
+
+A manual workflow_dispatch of CI on final head d73621a failed only at Backlog consistency because that event sets BACKLOG_BASE to the branch head and BACKLOG_BRANCH to main; the repository quality/unit checks preceding it passed. This is an event-context mismatch, not accepted as a PR Quality check. A fresh pull_request synchronize run is required on the next final head.
 <!-- SECTION:NOTES:END -->
 
 ## Final Summary
