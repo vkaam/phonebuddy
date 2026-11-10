@@ -17,6 +17,8 @@ class AzureOidcBootstrapTests(unittest.TestCase):
 
     def test_only_approved_nonproduction_environments_are_available(self):
         self.assertEqual(bootstrap.ENVIRONMENTS, ("dev", "test"))
+        self.assertEqual(bootstrap.REGIONS,
+                         {"dev": "francecentral", "test": "belgiumcentral"})
         self.assertEqual(bootstrap.ROLE, "Contributor")
         self.assertEqual(bootstrap.ISSUER, "https://token.actions.githubusercontent.com")
 

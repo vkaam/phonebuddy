@@ -39,7 +39,12 @@ jobs:
         run: |
           set -euo pipefail
           for environment in dev test; do
-            resource_group="rg-pb-${environment}-belgiumcentral-foundation"
+            if [[ "$environment" == dev ]]; then
+              region=francecentral
+            else
+              region=belgiumcentral
+            fi
+            resource_group="rg-pb-${environment}-${region}-foundation"
             if [[ "$environment" == "$TARGET_ENVIRONMENT" ]]; then
               az group show --name "$resource_group" --query name --output tsv >/dev/null
             else

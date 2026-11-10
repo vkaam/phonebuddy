@@ -13,7 +13,7 @@ import sys
 
 REPOSITORY = "vkaam/phonebuddy"
 ENVIRONMENTS = ("dev", "test")
-REGION = "belgiumcentral"
+REGIONS = {"dev": "francecentral", "test": "belgiumcentral"}
 ROLE = "Contributor"
 ISSUER = "https://token.actions.githubusercontent.com"
 AUDIENCE = "api://AzureADTokenExchange"
@@ -53,7 +53,7 @@ def validate_federated_credentials(credentials, environment):
 
 
 def bootstrap(environment, subscription_id, apply, app_id=None):
-    resource_group = f"rg-pb-{environment}-{REGION}-foundation"
+    resource_group = f"rg-pb-{environment}-{REGIONS[environment]}-foundation"
     print(f"Environment: {environment}; resource group: {resource_group}; role: {ROLE}")
     if not apply:
         print("Dry run only. Re-run with --apply and the reviewed environment application ID.")
