@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-10T20:46:00Z'
-updated_date: '2026-11-10T21:06:00Z'
+updated_date: '2026-11-10T21:19:00Z'
 labels: []
 dependencies: []
 references:
@@ -30,26 +30,25 @@ Issue: https://github.com/vkaam/phonebuddy/issues/92
 
 Approved requirements revision: 2026-11-10T17:28:23Z; SHA-256 of UTF-8 issue body d50d4126742aaba1b05f78c0973f9a3a3eddc2aa55851b8a69ff709e6fc31c5c
 Approver: Human requester in the current conversation, treated as the authorized issue owner for this interactive triage.
-Approval evidence: Direct human instruction in this conversation on 2026-11-10 to fix issue #92; this approves the issue's proposed acceptance criteria as the scope for this execution slice.
+Approval evidence: Direct human instruction on 2026-11-10 to fix issue #92. Execution-scope amendment: the requester clarified that the trusted gate result can only be checked after merge. This task covers the bounded diagnostic code change in one PR; the post-merge gate result remains issue-level evidence, and any failure is handled as linked follow-up work. This does not weaken or rewrite issue-level acceptance.
 
 Branch: agent/gh-92-1-trusted-dev-health-gate
 Scope: .github/workflows/azure-health-gate.yml; scripts/health_gate.py; tests/test_health_gate.py; tests/test_bicep_ci_boundary.py; this task's own CLI-managed record
-Verify: From repository root run python3 -B -m unittest discover -s tests -p 'test_health_gate.py'; python3 -B scripts/quality.py; then run the trusted post-merge dev workflow on main and retain evidence of 100 successful requests, at least 100 version-matched workspace events under the dev GitHub app identity, and a verified source-bound Application Insights annotation. The PR Quality check must also pass.
-Spec: Diagnose the hosted Log Analytics query failure with a bounded redacted diagnostic, fix the query path so the trusted dev gate succeeds, and preserve fail-closed handling for missing telemetry, unhealthy events, and dependency errors. Do not expose tokens, query contents, call data, or secrets. Any Azure permission change remains narrowly scoped to the dev workspace and requires explicit owner approval before granting it. Azure RBAC changes are external to this repository task and require a separately approved owner operation.
+Verify: From repository root run python3 -B -m unittest discover -s tests -p 'test_health_gate.py'; python3 -B scripts/quality.py; verify the required hosted Quality check passes on the final PR head. After merge, observe the trusted main-only dev workflow and retain its run evidence for 100 successful requests, at least 100 version-matched workspace events under the dev GitHub app identity, and a verified source-bound Application Insights annotation. If that post-merge run fails, record it as new linked follow-up work. No Azure permission change is included; any grant requires explicit owner approval at the dev workspace.
+Spec: Add a bounded redacted diagnostic for hosted Log Analytics query failures while preserving fail-closed behavior. Reports may include only fixed categories and a bounded exit code, never raw stderr, query content, resource IDs, call data, tokens, or secrets. The successful trusted gate and annotation remain post-merge observations, not pre-merge task criteria.
 <!-- SECTION:DESCRIPTION:END -->
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 Hosted query failures produce bounded redacted diagnostics without exposing tokens, query contents, call data, or secrets.
-- [ ] #2 The trusted main-only dev gate records 100 successful readiness requests and at least 100 version-matched workspace events under the dev GitHub app identity.
-- [ ] #3 Missing telemetry, unhealthy events, and dependency errors continue to fail closed; successful runs create and verify a source-bound Application Insights release annotation.
-- [ ] #4 Focused local tests and Quality pass, and a trusted post-merge dev run passes with its evidence recorded.
+- [x] #1 Hosted query failures produce bounded redacted diagnostics containing only a fixed category and bounded exit code; raw CLI output, query contents, resource IDs, call data, and secrets are never emitted.
+- [x] #2 Query failures remain fail-closed as dependency_outage, and missing telemetry and unhealthy events continue to fail closed.
+- [ ] #3 Focused health-gate tests, repository Quality, and the required hosted Quality check on the final PR head pass.
 <!-- AC:END -->
 
 ## Implementation Plan
 
 <!-- SECTION:PLAN:BEGIN -->
-1. Reproduce and isolate the Log Analytics CLI failure while inspecting only bounded diagnostic metadata. 2. Adjust the query execution path and emit a safe redacted diagnostic without changing fail-closed decisions. 3. Add focused tests for success, query failure, redaction, missing telemetry, unhealthy events, and workflow annotation gating. 4. Run focused tests and Quality, then publish a PR and record the trusted post-merge dev run as an external acceptance gate.
+1. Add fixed-category, bounded exit-code diagnostics for Log Analytics CLI failures without echoing command output. 2. Preserve dependency_outage and existing missing-telemetry and unhealthy-event fail-closed behavior. 3. Validate redaction and timeout handling in focused tests, run repository Quality, then verify required hosted PR checks. 4. After merge, observe the trusted main-only gate at issue level and open linked follow-up work if it fails.
 <!-- SECTION:PLAN:END -->
 
 ## Implementation Notes
@@ -60,4 +59,6 @@ Focused verification passed: python3 -B -m unittest discover -s tests -p test_he
 Published draft PR #93: https://github.com/vkaam/phonebuddy/pull/93 at head 326827133ddb88ab670e5078ce39fec626689147. Hosted Quality and advisory Risk checks completed successfully on that exact head. The PR remains draft and TASK-81 remains In Progress pending the trusted post-merge main-only dev gate; no Azure permission change or release annotation was performed.
 
 Independent read-only review on 2026-11-10 found no code-level defect in the diagnostic patch: the report emits only fixed labels and an exit code, and query failures remain fail-closed. Reviewer confirmed acceptance remains incomplete because no trusted hosted diagnostic or successful post-merge gate is evidenced and the query command is unchanged. Current PR head a56534c8ed749988052ff79beda239f1f532f868 has passing hosted Quality and advisory Risk checks. Keep PR #93 draft and TASK-81 In Progress pending hosted evidence and any required owner-approved workspace permission.
+
+Triage amendment on 2026-11-10: requester clarified the trusted result is only observable after merge. Reframed TASK-81 as the single-PR diagnostic implementation. Post-merge gate success remains issue-level evidence; a failure becomes linked follow-up work under current repository instructions. Independent review found no pre-merge code defect.
 <!-- SECTION:NOTES:END -->
