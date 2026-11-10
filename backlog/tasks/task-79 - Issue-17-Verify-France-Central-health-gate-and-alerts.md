@@ -1,11 +1,11 @@
 ---
 id: TASK-79
 title: Issue 17 - Verify France Central health gate and alerts
-status: In Progress
+status: Done
 assignee:
   - '@codex'
 created_date: '2026-11-09T19:19:00Z'
-updated_date: '2026-11-10T05:04:00Z'
+updated_date: '2026-11-10T16:19:00Z'
 labels:
   - infrastructure
   - cicd
@@ -31,6 +31,9 @@ modified_files:
   - tests/test_azure_oidc_bootstrap.py
   - tests/test_oidc_smoke_workflow.py
   - infra/github-oidc.md
+  - >-
+    backlog/tasks/task-61 -
+    Issue-17-Add-deployment-health-gates-and-observability.md
 priority: high
 type: task
 ordinal: 72000
@@ -51,10 +54,10 @@ Spec: Preserve issue #17 approved acceptance and TASK-61 code scope. This is the
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 France Central dev hosting, telemetry and alert resources deploy from reviewed Bicep with no secret or call-content logging.
-- [ ] #2 Healthy versioned readiness and 10-minute observation pass after warm-up with sufficient workspace telemetry.
-- [ ] #3 Injected unhealthy responses and missing telemetry fail closed and produce alert/failure evidence; dependency outages are distinguishable.
-- [ ] #4 TASK-61 and issue #17 are reconciled to the merged code and live verification evidence without weakening the original issue acceptance.
+- [x] #1 France Central dev hosting, telemetry and alert resources deploy from reviewed Bicep with no secret or call-content logging.
+- [x] #2 Healthy versioned readiness and 10-minute observation pass after warm-up with sufficient workspace telemetry.
+- [x] #3 Injected unhealthy responses and missing telemetry fail closed and produce alert/failure evidence; dependency outages are distinguishable.
+- [x] #4 TASK-61 and issue #17 are reconciled to the merged code and live verification evidence without weakening the original issue acceptance.
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -77,4 +80,20 @@ Image build fallback check: Azure ACR Tasks in the new subscription returned Tas
 Owner approval 2026-11-09: move the dev GitHub OIDC app Contributor role from Belgium Central to only its matching France Central dev group; the app federation remained the single repository-ID-qualified dev environment trust. Live Azure readback after the move showed exactly one Contributor assignment, on rg-pb-dev-francecentral-foundation, and none on Belgium. Triage scope amendment adds the bootstrap script, its boundary test and OIDC runbook so future use matches this approved role move. The owner also authorized restarting OrbStack; graceful stop/start restored Docker, enabling an amd64 release-test image build and push to the new France Central ACR. Digest b4dcf33532ed92671592272e39bfc1647553d702d8f7fffcfaf59f9f3c8f39c5 includes a linux/amd64 manifest.
 
 2026-11-10 France Central dev workload deployment phonebuddy-task79-health-app-20261110 Succeeded from reviewed Bicep with deployWorkload=true and deployStaticSite=false. Preview showed five Creates (Container App, app diagnostics, three scheduled-query alerts), no Delete, with ARM representation noise on existing hosting resources and exact TASK-60 data-resource ignores. The app is ready in France Central at version 3b0cea9 from ACR digest b4dcf33532ed92671592272e39bfc1647553d702d8f7fffcfaf59f9f3c8f39c5. /ready and / returned HTTP 200 with ready=true and matching version. Alert config readback shows enabled five-minute missing-telemetry rule scoped to the dev Log Analytics workspace. Full local scripts/check.py passed on the current tree; healthy 10-minute observation is running.
+
+First live 10-minute observation (2026-11-10 05:37 UTC) failed closed: 100 HTTP samples, three dependency_outage timeouts, 3% error rate, one latency window breach, and zero matching workspace events in the final 15-minute query. Azure system logs show the minReplicas=0 Container App scaled to zero at 05:24 UTC during a host pause, and Azure Monitor raised a missing-telemetry alert at 05:37 UTC. The app restarted and workspace console ingestion later resumed through 05:39 UTC (ingested 05:44 UTC). A second 10-minute observation is running with host idle sleep inhibited; the failed first run is retained as negative evidence, not counted as healthy acceptance.
+
+Second 10-minute observation ended 2026-11-10 06:44 UTC and also failed closed: 100 samples, ten dependency-outage timeouts, 10% error rate and zero recent workspace events. The host remained interrupted for hours; console event readback later showed last event at 05:59 UTC, ingested at 06:04 UTC, before the gate ended. Current macOS system resolver times out for Azure/GitHub despite direct DNS queries succeeding; a process-local, untracked DNS fallback in /private/tmp is being used for read-only Azure inspection. Azure alert history shows missing-telemetry alert instances Fired at 05:07, 05:37 and 06:07 UTC (first two Resolved), and an unhealthy-response alert Fired at 05:45 and Resolved at 06:01 UTC after an observed 404. A deliberate unknown-route request returned 404 at 14:21 UTC; workspace and alert confirmation are pending.
+
+Controlled unhealthy drill 2026-11-10: one unknown-route request at 14:21 UTC returned 404. Log Analytics ingested 27 recent synthetic health events including one non-200 by 14:29 UTC. Azure AlertsManagement reported a new Phonebuddy dev unhealthy health response instance Fired at 14:30:12 UTC. Recovery traffic then returned 36/36 HTTP 200. Synthetic requests were stopped after 14:30 UTC to exercise the existing minReplicas=0 and missing-telemetry rule; the earlier missing-telemetry instance remains Fired while traffic is withheld.
+
+Final healthy France Central dev evidence: hosted app release 3b0cea9 at the reviewed ACR digest returned 100/100 successful /ready and / responses after a 60-second prewarm across ten one-minute samples and 600 seconds of observation. The saved 2026-11-10 14:48:38 UTC gate report passed with error_rate=0, p95_latency_ms=232.339, no failure reasons, and Log Analytics telemetry_event_count=117 with unhealthy_event_count=0. The earlier failed 100-sample gate reported dependency_outage separately from unhealthy_response, and the bounded missing-version workspace probe returned missing_telemetry. The deliberate 14:21 UTC 404 was ingested and a new unhealthy-response alert Fired at 14:30:12, Resolved at 14:46:10 UTC. The existing missing-telemetry alert Resolved at 14:43:23 during resumed health traffic; after synthetic traffic stopped and the app scaled to zero, a new missing-telemetry instance Fired at 15:07:23 UTC. Thus both alert conditions fired in the live workspace without logging request data. Independent final acceptance review requested; final-head checks and PR merge remain.
+
+Finalization 2026-11-10: Independent agent validated TASK-79 AC1-3 and TASK-61 AC1-4 against deployment, gate and alert artifacts and found no blocking finding. TASK-61 proposed Done record and issue #17 progress comments now reconcile merged code PR #82 with the France Central live evidence; issue stays open until PR #90 merges. Full final local scripts/check.py passed (report /private/var/folders/zs/9bq4j3rx3wng_vzz52w8hrf80000gn/T/phonebuddy-quality-zjf4wxd7/report.json), pinned Bicep baseline passed, changed-workflow actionlint passed, and git diff --check passed. The trusted main-only health workflow release annotation is a post-merge operational verification, not a pre-merge code grant.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Provisioned France Central dev hosting and health alerts, aligned the dev OIDC role and workflows, and verified a clean 10-minute versioned gate with 117 workspace events. Deliberate unhealthy and missing-telemetry conditions fired Azure Monitor alerts. Independent review and local checks passed; PR #90 awaits final-head hosted checks and merge, followed by the trusted workflow and main CI observation.
+<!-- SECTION:FINAL_SUMMARY:END -->

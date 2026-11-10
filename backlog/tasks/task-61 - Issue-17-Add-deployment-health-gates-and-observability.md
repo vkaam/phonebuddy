@@ -1,11 +1,11 @@
 ---
 id: TASK-61
 title: Issue 17 - Add deployment health gates and observability
-status: In Progress
+status: Done
 assignee:
   - '@codex'
 created_date: '2026-11-02T16:36:00Z'
-updated_date: '2026-11-04T05:39:00Z'
+updated_date: '2026-11-10T16:18:00Z'
 labels:
   - infrastructure
   - cicd
@@ -26,6 +26,7 @@ references:
   - scripts/health_gate.py
   - tests/test_health_gate.py
   - tests/test_release_annotation.py
+  - https://github.com/vkaam/phonebuddy/pull/90
 modified_files:
   - >-
     backlog/tasks/task-61 -
@@ -63,10 +64,10 @@ Spec: Preserve the issue's approved acceptance. Do not broaden scope or weaken r
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 Telemetry, release annotations and alerts are provisioned in Bicep without logging secrets or call content.
-- [ ] #2 Bounded readiness and smoke checks verify the deployed version and essential paths after warm-up.
-- [ ] #3 Document error and latency thresholds and observation windows; missing telemetry blocks promotion and dependency outages are distinguishable.
-- [ ] #4 Injected unhealthy responses and missing telemetry trigger failure evidence and alerts; healthy workloads pass.
+- [x] #1 Telemetry, release annotations and alerts are provisioned in Bicep without logging secrets or call content.
+- [x] #2 Bounded readiness and smoke checks verify the deployed version and essential paths after warm-up.
+- [x] #3 Document error and latency thresholds and observation windows; missing telemetry blocks promotion and dependency outages are distinguishable.
+- [x] #4 Injected unhealthy responses and missing telemetry trigger failure evidence and alerts; healthy workloads pass.
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -111,4 +112,12 @@ The user asked to skip further live Azure telemetry validation and keep the depl
 Hosted CI on 4843ba5 caught actionlint ShellCheck SC2129 in the new workflow output writes. Grouped the three GITHUB_OUTPUT writes, then reran the full baseline successfully (report /private/var/folders/zs/9bq4j3rx3wng_vzz52w8hrf80000gn/T/phonebuddy-quality-22cpt7bc/report.json), pinned Bicep 0.34.44 validation, actionlint on all five workflows, and 13 focused tests. The source fix is ready for a new commit; CI on the next head remains outstanding.
 
 Hosted PR checks passed on implementation commit 1721c86843832a77503d3ba5d5cf7e1ee698c8c3: Quality and Risk report (advisory) both completed successfully. This commit includes the workflow lint correction. Workspace telemetry and alert firing remain deferred at the user’s direction; no acceptance criterion has been checked.
+
+TASK-79 follow-through on 2026-11-10 completed the live verification deferred after implementation PR #82 merged. France Central dev hosting deployment Succeeded with the versioned release-test app, managed-environment console diagnostics, 30-day workspace, Application Insights, and three enabled five-minute scheduled-query alerts. Clean hosted gate passed 100 requests over 600 seconds after warm-up, zero errors, 232.339 ms p95, 117 matching workspace events and zero unhealthy events. An intentional 404 was ingested and the unhealthy alert Fired at 14:30 UTC and Resolved at 14:46 UTC; after traffic stopped and minReplicas=0 scaled down, a new missing-telemetry alert Fired at 15:07 UTC. Failed gates and bounded negative probes labeled dependency_outage and missing_telemetry separately. The merged code includes the source-bound annotation script and guarded main-only workflow; live annotation creation awaits trusted dispatch after PR #90 merges. Independent agent reviewed code and alert/gate evidence with no blocker. Issue #17 remains open until the final required PR merges.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Added source-bound deployment health gating and Azure observability in merged PR #82, then verified the France Central dev pilot through TASK-79 / PR #90. The live gate passed 100 requests across 10 minutes with zero errors and 117 matching workspace events; deliberate unhealthy and missing-telemetry conditions raised Azure alerts. The main-only annotation workflow remains to be dispatched after PR #90 merges. Independent review found no blocking issue.
+<!-- SECTION:FINAL_SUMMARY:END -->
