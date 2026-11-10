@@ -31,6 +31,12 @@ France-group monthly €10 budgets now send 50/80/100% actual and 100% forecast
 alerts to the owner; they are alerts, not spending caps.
 This explicit location decision follows the Cognitive Services and Foundry
 preflight rejection of Belgium Central and does not permit automatic fallback.
+The TASK-79 health pilot also targets the France Central dev group. Static Web
+Apps is unavailable there for this subscription, so its hosting deployment
+explicitly omits that unused resource; the synthetic Container App and its
+monitoring resources stay in France Central. [Static Web Apps assets are globally
+distributed](https://learn.microsoft.com/en-us/azure/static-web-apps/faq), so any later web-front-end residency decision
+requires separate review.
 
 Use distinct resource groups, data, secrets, workload identities, deployment
 identities and access assignments for each environment, even if subscriptions
@@ -113,7 +119,7 @@ request bodies, secrets and call content are excluded. Azure Monitor sends
 container console and system logs to the environment's 30-day Log Analytics
 workspace; queries are restricted to this synthetic health event.
 
-After a 60-second warm-up, the manual dev/test health workflow probes `/ready`
+After a 60-second warm-up, the manual dev health workflow probes `/ready`
 and `/` for 10 consecutive minutes, with 10 requests in each one-minute sample.
 It requires at least 100 responses, the expected version and readiness value on
 every response, a server-error rate below 1% and p95 latency below 2 seconds in
@@ -134,8 +140,9 @@ the promotion gate. Alert rules create Azure Monitor alert state; notification
 recipients and on-call routing are not configured until the environment owner
 assigns approved contacts. Successful gates add a source-bound Application
 Insights deployment annotation with environment, release version, commit and
-workflow reference. The workflow only observes and annotates an existing dev or
-test deployment; it does not deploy or promote resources.
+workflow reference. The workflow only observes and annotates the existing dev
+deployment; it does not deploy or promote resources. Test dispatch remains
+unavailable until test hosting and telemetry are provisioned and verified.
 
 On a failed first release there is no previous healthy artifact: stop, keep the
 service unavailable or isolated, alert the incident owner, and investigate; do

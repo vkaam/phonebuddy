@@ -3,7 +3,8 @@
 `dev` and `test` use distinct Entra applications and service principals in the
 approved nonproduction tenant. Each application has exactly one GitHub Actions
 federation for its matching environment in `vkaam/phonebuddy`, and receives
-Contributor only on its own Belgium Central foundation resource group. Production
+Contributor only on its own foundation resource group: France Central for dev,
+Belgium Central for test until its workload migration is separately reviewed. Production
 is excluded. The previous shared identity and West Europe groups are historical;
 do not remove them as part of this bootstrap.
 
@@ -47,7 +48,7 @@ repository-ID-qualified subjects, one per application.
 Inspect Azure federation and role assignments, including inherited permissions.
 After the updated workflow is available on `main`, run **Azure OIDC authorization
 smoke** for both `dev` and `test`. Each run must authenticate, read its own
-Belgium Central foundation group, and receive an authorization denial for the
+foundation group in its configured region, and receive an authorization denial for the
 other group. The workflow runs only on `main` and is not triggered by PRs;
 GitHub branch restrictions and Entra federation provide additional boundaries.
 Passing the smoke check does not prove write scope or enable application

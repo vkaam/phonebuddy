@@ -361,6 +361,10 @@ def validate_hosting(template):
         raise ValueError('Workload image must use the provisioned registry and digest')
     if parameters['deployWorkload'].get('defaultValue') is not False:
         raise ValueError('Workload deployment must be opt-in')
+    if (parameters.get('deployStaticSite', {}).get('defaultValue') is not True
+            or resources['Microsoft.Web/staticSites'].get('condition')
+            != "[parameters('deployStaticSite')]"):
+        raise ValueError('Static Web App must remain default-on with an explicit opt-out')
     workspace = resources['Microsoft.OperationalInsights/workspaces']['properties']
     if workspace.get('retentionInDays') != 30:
         raise ValueError('Health telemetry retention must be explicitly bounded to 30 days')
@@ -416,7 +420,7 @@ def validate_hosting(template):
         raise ValueError('Hosting outputs must contain only public resource identifiers')
 
 
-def validate_what_if(result):
+def validate_what_if(result, expected_scope=None):
     """Fail closed except for known Azure-managed or conditionally omitted resources."""
     if not isinstance(result, dict) or result.get('status') != 'Succeeded' or result.get('error'):
         raise ValueError('What-if did not report success')
@@ -429,16 +433,25 @@ def validate_what_if(result):
     if any(not isinstance(change, dict) or change.get('changeType') not in allowed
            or not change.get('resourceId') for change in changes):
         raise ValueError('Incomplete or unexpected what-if result')
+    if expected_scope:
+        scope = expected_scope.rstrip('/').lower()
+        if (not re.fullmatch(
+                r'/subscriptions/[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}'
+                r'/resourcegroups/rg-pb-dev-francecentral-foundation', scope)
+                or any(not change['resourceId'].lower().startswith(scope + '/providers/')
+                       for change in changes)):
+            raise ValueError('What-if resource is outside the reviewed dev France Central scope')
     ignored = [change for change in changes if change['changeType'] == 'Ignore']
     expected_ignored_id_suffix = (
         '/providers/microsoft.insights/actiongroups/application insights smart detection'
     )
     if any(not (change['resourceId'].lower().endswith(expected_ignored_id_suffix)
-               or is_conditional_workload_ignore(change['resourceId']))
+               or is_conditional_workload_ignore(change['resourceId'])
+               or is_france_data_foundation_ignore(change['resourceId']))
            for change in ignored):
         raise ValueError(
             'Unexpected ignored resource; only Azure-managed Smart Detection and known '
-            'conditional dev/test release-test resources may be ignored'
+            'conditional dev/test or France Central data-foundation resources may be ignored'
         )
     return changes
 
@@ -471,6 +484,42 @@ def is_conditional_workload_ignore(resource_id):
     return False
 
 
+def is_france_data_foundation_ignore(resource_id):
+    """Allow the separate data template's exact resource families in a France hosting preview."""
+    parts = resource_id.strip('/').lower().split('/')
+    if (len(parts) < 8 or parts[0] != 'subscriptions'
+            or parts[2] != 'resourcegroups' or parts[4] != 'providers'
+            or not re.fullmatch(r'[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}', parts[1])):
+        return False
+    group = re.fullmatch(r'rg-pb-(dev|test)-francecentral-foundation', parts[3])
+    if not group:
+        return False
+    environment = group[1]
+    suffix = r'[a-z0-9]{13}'
+    provider = parts[5]
+    tail = parts[6:]
+    if provider == 'microsoft.cognitiveservices':
+        if len(tail) == 2 and tail[0] == 'accounts':
+            return bool(re.fullmatch(rf'cs-pb-{environment}-{suffix}-(foundry|speech)', tail[1]))
+        return (len(tail) == 4 and tail[0] == 'accounts'
+                and bool(re.fullmatch(rf'cs-pb-{environment}-{suffix}-foundry', tail[1]))
+                and tail[2] == 'projects' and tail[3] == f'phonebuddy-{environment}')
+    if provider == 'microsoft.managedidentity':
+        return tail == ['userassignedidentities', f'id-pb-{environment}-data']
+    if provider == 'microsoft.servicebus':
+        return (len(tail) == 2 and tail[0] == 'namespaces'
+                and bool(re.fullmatch(rf'sbpb{environment}{suffix}', tail[1])))
+    if provider == 'microsoft.sql':
+        server = (len(tail) in (2, 4) and tail[0] == 'servers'
+                  and bool(re.fullmatch(rf'sql-pb-{environment}-{suffix}', tail[1])))
+        return bool(server and (len(tail) == 2 or tail[2:] in
+                                (['databases', 'master'], ['databases', 'phonebuddy'])))
+    if provider == 'microsoft.storage':
+        return (len(tail) == 2 and tail[0] == 'storageaccounts'
+                and bool(re.fullmatch(rf'pb{environment}{suffix}', tail[1])))
+    return False
+
+
 def validate_quality_evidence(pages, expected_sha):
     """Require the latest GitHub Actions Quality check for the exact source."""
     if (not isinstance(pages, list) or not pages or not expected_sha
@@ -492,6 +541,7 @@ def validate_quality_evidence(pages, expected_sha):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--what-if-result', type=Path, help='validate an Azure what-if JSON result')
+    parser.add_argument('--expected-scope', help='exact resource-group scope for a live what-if')
     parser.add_argument('--quality-evidence', type=Path, help='validate GitHub check-run evidence')
     parser.add_argument('--expected-sha', help='expected commit for Quality evidence')
     parser.add_argument('--deployment-ready', choices=['dev', 'test', 'prod'],
@@ -520,7 +570,8 @@ def main():
         print(json.dumps(evidence))
         return
     if options.what_if_result:
-        changes = validate_what_if(json.loads(options.what_if_result.read_text()))
+        changes = validate_what_if(json.loads(options.what_if_result.read_text()),
+                                   options.expected_scope)
         counts = {kind: sum(item['changeType'] == kind for item in changes)
                   for kind in ('Create', 'Modify', 'NoChange', 'Ignore')}
         print(json.dumps({'whatIfChangeCounts': counts}))

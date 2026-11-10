@@ -39,7 +39,12 @@ jobs:
         run: |
           set -euo pipefail
           for environment in dev test; do
-            resource_group="rg-pb-${environment}-belgiumcentral-foundation"
+            if [[ "$environment" == dev ]]; then
+              region=francecentral
+            else
+              region=belgiumcentral
+            fi
+            resource_group="rg-pb-${environment}-${region}-foundation"
             if [[ "$environment" == "$TARGET_ENVIRONMENT" ]]; then
               az group show --name "$resource_group" --query name --output tsv >/dev/null
             else
@@ -53,4 +58,14 @@ jobs:
               fi
             fi
           done
+          if [[ "$TARGET_ENVIRONMENT" == dev ]]; then
+            if az group show --name rg-pb-dev-belgiumcentral-foundation --query name --output tsv >/dev/null 2>"$RUNNER_TEMP/former-dev-group-error"; then
+              echo "The dev identity can still read its former Belgium Central group."
+              exit 1
+            fi
+            if ! grep -q AuthorizationFailed "$RUNNER_TEMP/former-dev-group-error"; then
+              echo "The former dev group check failed for a reason other than denied access."
+              exit 1
+            fi
+          fi
           echo "The ${TARGET_ENVIRONMENT} identity can read only its own approved foundation group."
