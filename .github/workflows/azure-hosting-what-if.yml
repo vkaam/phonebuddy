@@ -49,6 +49,7 @@ jobs:
             --resource-group rg-pb-dev-francecentral-foundation \
             --template-file "$RUNNER_TEMP/hosting.json" \
             --parameters environment=dev owner=PHONEBUDDY-PLATFORM costCenter=PHONEBUDDY-NONPROD deployWorkload=false deployStaticSite=false imageDigest=0000000000000000000000000000000000000000000000000000000000000000 releaseVersion=preview \
+            --validation-level ProviderNoRbac \
             --result-format FullResourcePayloads --no-pretty-print --output json > "$RUNNER_TEMP/hosting-what-if.json"
           expected_scope="$(az group show --name rg-pb-dev-francecentral-foundation --query id --output tsv)"
           python3 -B scripts/check_bicep.py --what-if-result "$RUNNER_TEMP/hosting-what-if.json" --expected-scope "$expected_scope"
