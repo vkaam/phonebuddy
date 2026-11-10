@@ -83,6 +83,7 @@ class BicepCiBoundaryTests(unittest.TestCase):
         self.assertIn('persist-credentials: false', trusted)
         self.assertIn('--quality-evidence', trusted)
         self.assertIn('az deployment group what-if', trusted)
+        self.assertIn('--validation-level ProviderNoRbac', trusted)
         self.assertIn('rg-pb-dev-francecentral-foundation', trusted)
         self.assertIn('deployStaticSite=false', trusted)
         self.assertIn('--expected-scope', trusted)
