@@ -2,6 +2,7 @@
 import unittest
 
 import json
+import subprocess
 
 from scripts.health_gate import (
     evaluate_samples, query_workspace_telemetry, safe_base_url, wait_for_workspace_telemetry,
@@ -76,6 +77,46 @@ class WorkspaceTelemetryTests(unittest.TestCase):
 
         report = query_workspace_telemetry('workspace-id', 'app-name', 'release-1', failed_runner)
         self.assertEqual(report['reasons'], ['dependency_outage'])
+        self.assertEqual(report['diagnostic'], {
+            'operation': 'log_analytics_query', 'category': 'cli_error', 'exit_code': 1,
+        })
+
+    def test_workspace_query_diagnostic_classifies_auth_errors_without_echoing_cli_output(self):
+        sensitive_stderr = (
+            'AuthorizationFailed: Bearer token=do-not-log; '
+            'query=ContainerAppConsoleLogs; caller=+1-555-0100'
+        )
+
+        def failed_runner(*args, **kwargs):
+            return type('Result', (), {
+                'returncode': 1, 'stdout': '', 'stderr': sensitive_stderr,
+            })()
+
+        report = query_workspace_telemetry(
+            'workspace-id', 'app-name', 'release-1', failed_runner)
+        serialized = json.dumps(report)
+        self.assertEqual(report['diagnostic'], {
+            'operation': 'log_analytics_query',
+            'category': 'authorization_denied',
+            'exit_code': 1,
+        })
+        self.assertNotIn('do-not-log', serialized)
+        self.assertNotIn('ContainerAppConsoleLogs', serialized)
+        self.assertNotIn('+1-555-0100', serialized)
+
+    def test_workspace_query_timeout_is_redacted_and_fails_closed(self):
+        def timed_out_runner(*args, **kwargs):
+            raise subprocess.TimeoutExpired(['az', 'monitor'], timeout=60)
+
+        report = query_workspace_telemetry(
+            'workspace-id', 'app-name', 'release-1', timed_out_runner)
+        self.assertEqual(report['status'], 'fail')
+        self.assertEqual(report['reasons'], ['dependency_outage'])
+        self.assertEqual(report['diagnostic'], {
+            'operation': 'log_analytics_query', 'category': 'timeout',
+            'exit_code': None,
+        })
+        self.assertNotIn('secret token', json.dumps(report))
 
     def test_workspace_query_escapes_filter_values(self):
         captured = {}

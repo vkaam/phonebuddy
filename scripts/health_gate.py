@@ -131,6 +131,38 @@ def run_gate(url, expected_version, warmup_seconds=60, observation_seconds=600,
     return report
 
 
+def workspace_query_failure_diagnostic(result):
+    """Return bounded, redacted metadata for a failed Azure CLI query."""
+    stderr = getattr(result, 'stderr', '')
+    if not isinstance(stderr, str):
+        stderr = ''
+    # Inspect only a small prefix and map it to fixed labels. Never return CLI
+    # output, query text, resource identifiers, or caller data.
+    summary = stderr[:4096].casefold()
+    if ('does not have authorization' in summary or 'authorizationfailed' in summary
+            or 'forbidden' in summary):
+        category = 'authorization_denied'
+    elif ('unauthorized' in summary or 'authenticationfailed' in summary
+          or 'expired token' in summary):
+        category = 'authentication_failed'
+    elif ('workspace not found' in summary or 'resourcenotfound' in summary):
+        category = 'workspace_not_found'
+    elif ('invalidquery' in summary or 'badargumenterror' in summary
+          or 'semantic error' in summary):
+        category = 'query_rejected'
+    elif ('throttl' in summary or 'too many requests' in summary or '429' in summary):
+        category = 'throttled'
+    elif ('timed out' in summary or 'timeout' in summary):
+        category = 'timeout'
+    else:
+        category = 'cli_error'
+    exit_code = getattr(result, 'returncode', None)
+    if not isinstance(exit_code, int) or isinstance(exit_code, bool) or not 0 <= exit_code <= 255:
+        exit_code = None
+    return {'operation': 'log_analytics_query', 'category': category,
+            'exit_code': exit_code}
+
+
 def query_workspace_telemetry(workspace_id, app_name, expected_version, runner=subprocess.run):
     """Require enough version-matched health events and no unhealthy responses."""
     if not workspace_id or not app_name or not expected_version:
@@ -154,7 +186,9 @@ def query_workspace_telemetry(workspace_id, app_name, expected_version, runner=s
             check=False, capture_output=True, text=True, timeout=60,
         )
         if result.returncode != 0:
-            raise ValueError('Log Analytics query failed')
+            return {'status': 'fail', 'telemetry_event_count': 0,
+                    'unhealthy_event_count': 0, 'reasons': ['dependency_outage'],
+                    'diagnostic': workspace_query_failure_diagnostic(result)}
         payload = json.loads(result.stdout)
         if (not isinstance(payload, list) or len(payload) != 1
                 or not isinstance(payload[0], dict)):
@@ -174,10 +208,21 @@ def query_workspace_telemetry(workspace_id, app_name, expected_version, runner=s
             'unhealthy_event_count': unhealthy_count,
             'reasons': reasons,
         }
-    except (subprocess.SubprocessError, OSError, ValueError, KeyError, IndexError,
-            TypeError, json.JSONDecodeError):
+    except subprocess.TimeoutExpired:
+        category = 'timeout'
+    except FileNotFoundError:
+        category = 'cli_unavailable'
+    except (subprocess.SubprocessError, OSError):
+        category = 'cli_execution_error'
+    except (ValueError, KeyError, IndexError, TypeError, json.JSONDecodeError):
+        category = 'invalid_response'
+    else:
+        category = None
+    if category:
         return {'status': 'fail', 'telemetry_event_count': 0,
-                'unhealthy_event_count': 0, 'reasons': ['dependency_outage']}
+                'unhealthy_event_count': 0, 'reasons': ['dependency_outage'],
+                'diagnostic': {'operation': 'log_analytics_query', 'category': category,
+                               'exit_code': None}}
 
 
 def wait_for_workspace_telemetry(workspace_id, app_name, expected_version,
