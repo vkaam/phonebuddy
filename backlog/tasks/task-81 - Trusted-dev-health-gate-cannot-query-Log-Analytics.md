@@ -1,11 +1,11 @@
 ---
 id: TASK-81
 title: Trusted dev health gate cannot query Log Analytics
-status: In Progress
+status: Done
 assignee:
   - '@codex'
 created_date: '2026-11-10T20:46:00Z'
-updated_date: '2026-11-10T21:19:00Z'
+updated_date: '2026-11-10T21:21:00Z'
 labels: []
 dependencies: []
 references:
@@ -42,7 +42,7 @@ Spec: Add a bounded redacted diagnostic for hosted Log Analytics query failures 
 <!-- AC:BEGIN -->
 - [x] #1 Hosted query failures produce bounded redacted diagnostics containing only a fixed category and bounded exit code; raw CLI output, query contents, resource IDs, call data, and secrets are never emitted.
 - [x] #2 Query failures remain fail-closed as dependency_outage, and missing telemetry and unhealthy events continue to fail closed.
-- [ ] #3 Focused health-gate tests, repository Quality, and the required hosted Quality check on the final PR head pass.
+- [x] #3 Focused health-gate tests, repository Quality, and the required hosted Quality check on the final PR head pass.
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -61,4 +61,12 @@ Published draft PR #93: https://github.com/vkaam/phonebuddy/pull/93 at head 3268
 Independent read-only review on 2026-11-10 found no code-level defect in the diagnostic patch: the report emits only fixed labels and an exit code, and query failures remain fail-closed. Reviewer confirmed acceptance remains incomplete because no trusted hosted diagnostic or successful post-merge gate is evidenced and the query command is unchanged. Current PR head a56534c8ed749988052ff79beda239f1f532f868 has passing hosted Quality and advisory Risk checks. Keep PR #93 draft and TASK-81 In Progress pending hosted evidence and any required owner-approved workspace permission.
 
 Triage amendment on 2026-11-10: requester clarified the trusted result is only observable after merge. Reframed TASK-81 as the single-PR diagnostic implementation. Post-merge gate success remains issue-level evidence; a failure becomes linked follow-up work under current repository instructions. Independent review found no pre-merge code defect.
+
+Pre-merge gates now complete on final PR head 9751336c359b2a3d84d774a24da6c7f1a289dfb0: focused tests and Quality passed after latest-main integration; hosted Quality and advisory Risk checks passed. Earlier notes proposing to keep the PR draft pending the gate result are superseded by the requester's clarification that the trusted gate is a post-merge observation. No Azure role change or annotation has been made.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Added bounded, redacted Log Analytics CLI failure diagnostics with fixed categories and exit codes, preserving fail-closed gate behavior. Focused tests, repository Quality, hosted Quality, and independent read-only review passed on the current PR head. The trusted main-only dev gate remains a post-merge issue-level observation; Azure permissions were not changed.
+<!-- SECTION:FINAL_SUMMARY:END -->
