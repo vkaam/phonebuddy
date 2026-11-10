@@ -420,7 +420,7 @@ def validate_hosting(template):
         raise ValueError('Hosting outputs must contain only public resource identifiers')
 
 
-def validate_what_if(result):
+def validate_what_if(result, expected_scope=None):
     """Fail closed except for known Azure-managed or conditionally omitted resources."""
     if not isinstance(result, dict) or result.get('status') != 'Succeeded' or result.get('error'):
         raise ValueError('What-if did not report success')
@@ -433,6 +433,14 @@ def validate_what_if(result):
     if any(not isinstance(change, dict) or change.get('changeType') not in allowed
            or not change.get('resourceId') for change in changes):
         raise ValueError('Incomplete or unexpected what-if result')
+    if expected_scope:
+        scope = expected_scope.rstrip('/').lower()
+        if (not re.fullmatch(
+                r'/subscriptions/[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}'
+                r'/resourcegroups/rg-pb-dev-francecentral-foundation', scope)
+                or any(not change['resourceId'].lower().startswith(scope + '/providers/')
+                       for change in changes)):
+            raise ValueError('What-if resource is outside the reviewed dev France Central scope')
     ignored = [change for change in changes if change['changeType'] == 'Ignore']
     expected_ignored_id_suffix = (
         '/providers/microsoft.insights/actiongroups/application insights smart detection'
@@ -533,6 +541,7 @@ def validate_quality_evidence(pages, expected_sha):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--what-if-result', type=Path, help='validate an Azure what-if JSON result')
+    parser.add_argument('--expected-scope', help='exact resource-group scope for a live what-if')
     parser.add_argument('--quality-evidence', type=Path, help='validate GitHub check-run evidence')
     parser.add_argument('--expected-sha', help='expected commit for Quality evidence')
     parser.add_argument('--deployment-ready', choices=['dev', 'test', 'prod'],
@@ -561,7 +570,8 @@ def main():
         print(json.dumps(evidence))
         return
     if options.what_if_result:
-        changes = validate_what_if(json.loads(options.what_if_result.read_text()))
+        changes = validate_what_if(json.loads(options.what_if_result.read_text()),
+                                   options.expected_scope)
         counts = {kind: sum(item['changeType'] == kind for item in changes)
                   for kind in ('Create', 'Modify', 'NoChange', 'Ignore')}
         print(json.dumps({'whatIfChangeCounts': counts}))

@@ -7,7 +7,7 @@ on:
         description: Deployed environment to observe
         required: true
         type: choice
-        options: [dev, test]
+        options: [dev]
       release_version:
         description: Expected version reported by the deployed workload
         required: true

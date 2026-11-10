@@ -18,6 +18,8 @@ class SmokeWorkflowTests(unittest.TestCase):
         self.assertIn('region=francecentral', workflow)
         self.assertIn('region=belgiumcentral', workflow)
         self.assertIn('rg-pb-${environment}-${region}-foundation', workflow)
+        self.assertIn('rg-pb-dev-belgiumcentral-foundation', workflow)
+        self.assertIn('former-dev-group-error', workflow)
         self.assertIn('az group show', workflow)
         self.assertNotIn('az deployment', workflow)
         self.assertNotIn('secrets: inherit', workflow)
