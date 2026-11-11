@@ -11,6 +11,10 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit, urlunsplit
 from urllib.request import urlopen
 
+MAX_QUERY_THROTTLE_RETRIES = 3
+QUERY_THROTTLE_RETRY_BASE_SECONDS = 10
+QUERY_THROTTLE_RETRY_MAX_SECONDS = 30
+
 
 def safe_base_url(value):
     """Require a plain HTTPS origin/path and discard query or user info."""
@@ -163,7 +167,8 @@ def workspace_query_failure_diagnostic(result):
             'exit_code': exit_code}
 
 
-def query_workspace_telemetry(workspace_id, app_name, expected_version, runner=subprocess.run):
+def query_workspace_telemetry(workspace_id, app_name, expected_version, runner=subprocess.run,
+                              sleeper=time.sleep):
     """Require enough version-matched health events and no unhealthy responses."""
     if not workspace_id or not app_name or not expected_version:
         return {'status': 'fail', 'telemetry_event_count': 0,
@@ -180,15 +185,22 @@ def query_workspace_telemetry(workspace_id, app_name, expected_version, runner=s
         'unhealthy_event_count=countif(toint(health.status) != 200)'
     )
     try:
-        result = runner(
-            ['az', 'monitor', 'log-analytics', 'query', '--workspace', workspace_id,
-             '--analytics-query', query, '--output', 'json'],
-            check=False, capture_output=True, text=True, timeout=60,
-        )
-        if result.returncode != 0:
-            return {'status': 'fail', 'telemetry_event_count': 0,
-                    'unhealthy_event_count': 0, 'reasons': ['dependency_outage'],
-                    'diagnostic': workspace_query_failure_diagnostic(result)}
+        command = ['az', 'monitor', 'log-analytics', 'query', '--workspace', workspace_id,
+                   '--analytics-query', query, '--output', 'json']
+        for attempt in range(MAX_QUERY_THROTTLE_RETRIES + 1):
+            result = runner(
+                command, check=False, capture_output=True, text=True, timeout=60,
+            )
+            if result.returncode == 0:
+                break
+            diagnostic = workspace_query_failure_diagnostic(result)
+            if diagnostic['category'] != 'throttled' or attempt == MAX_QUERY_THROTTLE_RETRIES:
+                return {'status': 'fail', 'telemetry_event_count': 0,
+                        'unhealthy_event_count': 0, 'reasons': ['dependency_outage'],
+                        'diagnostic': diagnostic}
+            delay = min(QUERY_THROTTLE_RETRY_BASE_SECONDS * (2 ** attempt),
+                        QUERY_THROTTLE_RETRY_MAX_SECONDS)
+            sleeper(delay)
         payload = json.loads(result.stdout)
         if (not isinstance(payload, list) or len(payload) != 1
                 or not isinstance(payload[0], dict)):
