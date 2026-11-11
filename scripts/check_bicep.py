@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Compile the pinned Bicep baseline and check its environment contracts."""
+"""Compile Bicep templates and check their environment contracts."""
 import argparse
 from datetime import date, datetime, timezone
 import json
@@ -37,6 +37,18 @@ FOUNDATION_RESOURCE_GROUP_OUTPUT = (
     "parameters('location'))), "
     "'2022-09-01').outputs.resourceGroupName.value]"
 )
+FOUNDATION_RESOURCE_GROUP_OUTPUT_PATTERN = re.compile(
+    r"\[reference\(subscriptionResourceId\('Microsoft\.Resources/deployments', "
+    r"format\('phonebuddy-\{0\}-\{1\}-foundation', parameters\('environment'\), "
+    r"parameters\('location'\)\)\), '\d{4}-\d{2}-\d{2}'\)\.outputs\.resourceGroupName\.value\]"
+)
+
+
+def valid_foundation_resource_group_output(value):
+    """Allow compiler-selected API versions while constraining the referenced output."""
+    return (value == FOUNDATION_RESOURCE_GROUP_OUTPUT
+            or isinstance(value, str)
+            and FOUNDATION_RESOURCE_GROUP_OUTPUT_PATTERN.fullmatch(value) is not None)
 
 
 def run(*args):
@@ -318,7 +330,8 @@ def validate_foundation_isolation(template):
     if set(template.get('outputs', {})) != expected_outputs:
         raise ValueError('Foundation outputs may expose only the resource-group name')
     root_output = template['outputs']['resourceGroupName']
-    if root_output.get('type') != 'string' or root_output.get('value') != FOUNDATION_RESOURCE_GROUP_OUTPUT:
+    if (root_output.get('type') != 'string'
+            or not valid_foundation_resource_group_output(root_output.get('value'))):
         raise ValueError('Foundation output must contain only the environment resource-group name')
     if set(nested.get('outputs', {})) != expected_outputs:
         raise ValueError('Foundation module outputs may expose only the resource-group name')
@@ -382,10 +395,10 @@ def validate_hosting(template):
                            if resource.get('type') == 'Microsoft.Insights/diagnosticSettings']
     environment_diagnostics = next(
         (resource for resource in diagnostic_settings
-         if '/managedEnvironments/' in resource.get('scope', '')), None)
+         if '/managedEnvironments' in resource.get('scope', '')), None)
     app_diagnostics = next(
         (resource for resource in diagnostic_settings
-         if '/containerApps/' in resource.get('scope', '')), None)
+         if '/containerApps' in resource.get('scope', '')), None)
     environment_log_categories = {
         item.get('category')
         for item in environment_diagnostics.get('properties', {}).get('logs', [])

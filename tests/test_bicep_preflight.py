@@ -13,6 +13,7 @@ from scripts.check_bicep import (
     FOUNDATION_DEPLOYMENT_NAME,
     FOUNDATION_RESOURCE_GROUP_NAME,
     FOUNDATION_RESOURCE_GROUP_OUTPUT,
+    valid_foundation_resource_group_output,
     deployment_ready,
     environment_parameters,
     expected_resource_group_names,
@@ -339,6 +340,31 @@ def foundation_template(resource_group_name=FOUNDATION_RESOURCE_GROUP_NAME,
 
 
 class FoundationIsolationTests(unittest.TestCase):
+    def test_foundation_output_accepts_compiler_api_versions_and_rejects_other_references(self):
+        compiler_outputs = (
+            FOUNDATION_RESOURCE_GROUP_OUTPUT,
+            FOUNDATION_RESOURCE_GROUP_OUTPUT.replace("2022-09-01", "2025-04-01"),
+        )
+        for output in compiler_outputs:
+            with self.subTest(output=output):
+                self.assertTrue(valid_foundation_resource_group_output(output))
+                template = foundation_template()
+                template['outputs']['resourceGroupName']['value'] = output
+                validate_foundation_isolation(template)
+
+        unsafe_outputs = (
+            FOUNDATION_RESOURCE_GROUP_OUTPUT.replace("2022-09-01", "latest"),
+            FOUNDATION_RESOURCE_GROUP_OUTPUT.replace("phonebuddy-{0}-{1}-foundation", "other-{0}-{1}-deployment"),
+            "[reference('untrusted').outputs.resourceGroupName.value]",
+        )
+        for output in unsafe_outputs:
+            with self.subTest(output=output):
+                self.assertFalse(valid_foundation_resource_group_output(output))
+                template = foundation_template()
+                template['outputs']['resourceGroupName']['value'] = output
+                with self.assertRaisesRegex(ValueError, 'environment resource-group name'):
+                    validate_foundation_isolation(template)
+
     def test_environment_scoped_names_are_distinct(self):
         validate_foundation_isolation(foundation_template())
         names = expected_resource_group_names({

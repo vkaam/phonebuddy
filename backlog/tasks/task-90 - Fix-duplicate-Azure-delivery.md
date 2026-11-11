@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-11T18:05:00Z'
-updated_date: '2026-11-11T19:17:00Z'
+updated_date: '2026-11-11T19:33:00Z'
 labels: []
 dependencies: []
 references:
@@ -13,10 +13,12 @@ references:
 modified_files:
   - backlog/tasks/task-90 - Fix-duplicate-Azure-delivery.md
   - .github/workflows/azure-deploy.yml
-  - tests/test_bicep_ci_boundary.py
   - tests/test_deployment_policy.py
-  - backlog/tasks/task-92 - Verify-live-duplicate-Azure-delivery.md
   - scripts/check_bicep.py
+  - tests/test_bicep_preflight.py
+  - tests/test_bicep_ci_boundary.py
+  - docs/quality-and-delivery.md
+  - backlog/tasks/task-92 - Verify-live-duplicate-Azure-delivery.md
 priority: low
 type: bug
 ordinal: 81000
@@ -29,10 +31,10 @@ Need: A repeated delivery can fail when an immutable image tag already exists be
 
 Issue: https://github.com/vkaam/phonebuddy/issues/105
 Approved revision: 2026-11-11T18:04:24Z; body SHA-256 a8f1aa6aca896b074222f04e010eea6eb2c296d0d6825ceae38933a2abeceecb.
-Approval evidence: The owner requested a low-priority follow-up in Codex on 2026-11-11. The owner approved the split and post-merge verification on 2026-11-11; see https://github.com/vkaam/phonebuddy/issues/105#issuecomment-6804113134.
+Approval evidence: The owner requested a low-priority follow-up in Codex on 2026-11-11. The owner approved the split and post-merge verification on 2026-11-11; see https://github.com/vkaam/phonebuddy/issues/105#issuecomment-6804113134. The owner later directed that the Bicep validation work support both the repository's CI version and the newer installed version.
 Branch: agent/gh-105-duplicate-delivery
-Scope: .github/workflows/azure-deploy.yml; tests/test_deployment_policy.py; scripts/check_bicep.py; tests/test_bicep_ci_boundary.py; backlog/tasks/task-90 - Fix-duplicate-Azure-delivery.md; backlog/tasks/task-92 - Verify-live-duplicate-Azure-delivery.md
-Verify: python3 -B scripts/check.py; python3 -B scripts/check_bicep.py; actionlint .github/workflows/ci.yml .github/workflows/azure-deploy.yml .github/workflows/pr-safety.yml. Live duplicate-delivery verification is assigned to TASK-92 after this fix merges.
+Scope: .github/workflows/azure-deploy.yml; tests/test_deployment_policy.py; scripts/check_bicep.py; tests/test_bicep_preflight.py; tests/test_bicep_ci_boundary.py; docs/quality-and-delivery.md; backlog/tasks/task-90 - Fix-duplicate-Azure-delivery.md; backlog/tasks/task-92 - Verify-live-duplicate-Azure-delivery.md
+Verify: python3 -B scripts/check.py; python3 -B scripts/check_bicep.py; tests/test_bicep_preflight.py; actionlint .github/workflows/ci.yml .github/workflows/azure-deploy.yml .github/workflows/pr-safety.yml. Live duplicate-delivery verification is assigned to TASK-92 after this fix merges.
 <!-- SECTION:DESCRIPTION:END -->
 
 ## Acceptance Criteria
@@ -60,4 +62,6 @@ Read-only Azure evidence (2026-11-11): the installed Azure CLI and dev account a
 Owner directed removing the strict Bicep CLI version gate because the installed newer version should be accepted; this adds scripts/check_bicep.py to the task scope.
 
 Owner requested removing the exact Bicep version check. scripts/check_bicep.py no longer requires 0.34.44 and accepts the installed 0.49.2, but the full Bicep check then failed its existing compiled logging contract: Console and system logs must route from the Container Apps environment. scripts/check.py also remains failing locally; see local report from the latest run.
+
+Bicep 0.49.2 validation now passes locally with python3.15.exe -B scripts/check_bicep.py. All 36 tests in tests.test_bicep_preflight pass, including checks for both the 2022-09-01 and 2025-04-01 compiler-emitted output API versions and rejection of unrelated references; all 6 tests in tests.test_bicep_ci_boundary pass. Updated docs/quality-and-delivery.md to state CI uses 0.34.44 and 0.49.2 passed locally. The full scripts/check.py baseline still reports failure on this Windows host; python3.15.exe -B scripts/quality.py passes. The live backlog claim guard could not read the GitHub CLI token on this host and did not verify the claim. Hosted CI with Bicep 0.34.44 remains required on the updated PR head.
 <!-- SECTION:NOTES:END -->
