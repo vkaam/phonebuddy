@@ -1,0 +1,44 @@
+name: Backlog audit (advisory)
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  merge_group:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: read
+  pull-requests: read
+
+concurrency:
+  group: backlog-audit-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  audit:
+    name: Repository-wide task and issue drift
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Validate repository-wide consistency
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p artifacts
+          git fetch origin +refs/heads/main:refs/remotes/origin/main
+          python3 -B scripts/backlog_consistency.py --base origin/main \
+            --branch main --output artifacts/backlog-consistency-audit.json
+      - name: Retain audit evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: backlog-audit-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/backlog-consistency-audit.json
+          if-no-files-found: error
+          retention-days: 14

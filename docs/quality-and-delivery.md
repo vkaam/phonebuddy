@@ -83,11 +83,12 @@ python3 -B scripts/run_required_unittests.py
 PR Quality runs `python3 -B scripts/backlog_consistency.py --ci-pr` against
 fresh `origin/main` with read-only GitHub access and retains
 `artifacts/backlog-consistency.json`. The PR's approved task, dependencies,
-branch/PR claim and changed-path scope remain blocking. A separate advisory
-`Backlog audit` job retains the repository-wide result, including unrelated
-task/issue drift; its JSON `status` must be read even when the advisory job
-completes. An audit or upload failure cannot stop main promotion; a missing
-report is inconclusive and must be rerun for reconciliation. The local bundle
+branch/PR claim and changed-path scope remain blocking. The separate advisory
+`Backlog audit` workflow retains the repository-wide result, including
+unrelated task/issue drift. It is not a required check and does not delay the
+main CI workflow or its release trigger. Its JSON `status` must be read after
+the run; a missing report is inconclusive and must be rerun for reconciliation.
+The local bundle
 registers `--offline` structural validation; live
 claim validation remains an outstanding gate until run separately. Immediately
 before claiming/resuming use the full guard

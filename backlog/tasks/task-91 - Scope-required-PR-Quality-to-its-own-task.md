@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-11T18:21:00Z'
-updated_date: '2026-11-11T18:41:00Z'
+updated_date: '2026-11-11T18:45:00Z'
 labels: []
 dependencies: []
 references:
@@ -20,6 +20,7 @@ modified_files:
   - .github/workflows/ci.yml
   - docs/quality-and-delivery.md
   - docs/issue-backlog-governance.md
+  - .github/workflows/backlog-audit.yml
 ordinal: 81000
 ---
 
@@ -31,11 +32,12 @@ Issue: https://github.com/vkaam/phonebuddy/issues/107
 Approved revision: 2026-11-11T18:26:37Z; body SHA-256 5b94aecf30406e1b9c8427df479a88d807ec7d397c67b9522edd53bb9c6eb37e.
 Approval evidence: On 2026-11-11 the owner explicitly selected a PR-scoped blocking guard with unrelated mismatches reported separately, merge-based task completion, and early merge followed by full verification on main before promotion.
 Branch: agent/gh-107-1-pr-quality-scope
-Scope: .github/workflows/ci.yml; scripts/backlog_consistency.py; tests/test_backlog_consistency.py; docs/quality-and-delivery.md; docs/issue-backlog-governance.md; backlog/tasks/task-91 - Scope-required-PR-Quality-to-its-own-task.md
-Verify: From repository root run python3 -B -m unittest discover -s tests -p test_backlog_consistency.py, python3 -B scripts/run_required_unittests.py, python3 -B scripts/quality.py, actionlint .github/workflows/ci.yml, and the live Backlog consistency guard against fresh origin/main. Verify hosted PR Quality and the advisory audit on the final PR head. The actual main Quality and promotion result is post-merge evidence for a separate issue 107 task.
-Spec: Keep the PR's own approval, claim, scope and dependency violations blocking. Retain full repository audit evidence without letting an audit or artifact failure stop the CI workflow or downstream promotion. On PRs keep fast deterministic safety checks and source-scope security checks; wire full web, dependency and browser verification to merged main before release promotion. Existing Bicep PR validation remains required by issue 14. The trusted release consumes only the exact verified main artifact.
+Scope: .github/workflows/ci.yml; .github/workflows/backlog-audit.yml; scripts/backlog_consistency.py; tests/test_backlog_consistency.py; docs/quality-and-delivery.md; docs/issue-backlog-governance.md; backlog/tasks/task-91 - Scope-required-PR-Quality-to-its-own-task.md
+Verify: From repository root run python3 -B -m unittest discover -s tests -p test_backlog_consistency.py, python3 -B scripts/run_required_unittests.py, python3 -B scripts/quality.py, actionlint .github/workflows/ci.yml .github/workflows/backlog-audit.yml, and the live Backlog consistency guard against fresh origin/main. Verify hosted PR Quality and the separate advisory audit on the final PR head. The actual main Quality and promotion result is post-merge evidence for a separate issue 107 task.
+Spec: Keep the PR's own approval, claim, scope and dependency violations blocking. Retain full repository audit evidence in a separate workflow so its failure or delay cannot stop the CI workflow or downstream promotion. On PRs keep fast deterministic safety checks and source-scope security checks; wire full web, dependency and browser verification to merged main before release promotion. Existing Bicep PR validation remains required by issue 14. The trusted release consumes only the exact verified main artifact.
 Triage amendment 2026-11-11: The owner added early merge, full main verification and promote-after-verification. This changes the PR/main check boundary within issue 107; no Azure release workflow change is needed because it already waits for successful exact-SHA main CI.
-Triage amendment 2026-11-11 after independent review: TASK-91 pre-merge acceptance covers verified workflow wiring and PR checks. Actual merged-main verification and promotion evidence cannot precede this PR's merge and is assigned to a separate issue 107 slice. The advisory audit job must not change the CI workflow conclusion if its report or upload fails.
+Triage amendment 2026-11-11 after independent review: TASK-91 pre-merge acceptance covers verified workflow wiring and PR checks. Actual merged-main verification and promotion evidence cannot precede this PR's merge and is assigned to a separate issue 107 slice.
+Triage scope amendment 2026-11-11 after independent review: Add .github/workflows/backlog-audit.yml for the separate advisory audit. Keeping it inside CI could delay the trusted release even when advisory failures do not change CI's conclusion.
 <!-- SECTION:DESCRIPTION:END -->
 
 ## Acceptance Criteria
@@ -50,7 +52,7 @@ Triage amendment 2026-11-11 after independent review: TASK-91 pre-merge acceptan
 ## Implementation Plan
 
 <!-- SECTION:PLAN:BEGIN -->
-1. Separate focused PR consistency failures from complete repository audit findings. 2. Keep fast PR checks and move web/dependency/browser verification to exact-SHA main CI; leave existing Bicep PR safety and trusted main release gating intact. 3. Make stale-main failures actionable, add regression coverage and update policy documentation. 4. Run declared checks, publish the PR, obtain independent review and final-head checks, then merge and inspect main verification.
+1. Separate focused PR consistency failures from complete repository audit findings. 2. Keep fast PR checks and move web/dependency/browser verification to exact-SHA main CI; move the repository-wide audit into its own workflow so it cannot delay release. 3. Make stale-main failures actionable, add regression coverage and update policy documentation. 4. Run declared checks, publish the PR, obtain independent review and final-head checks, then merge and inspect main verification.
 <!-- SECTION:PLAN:END -->
 
 ## Implementation Notes
@@ -63,4 +65,8 @@ Draft PR #108 opened at head f071d283e612c96a0d2d65323bdea54e4abe2ec7. Hosted cu
 Independent review identified two closure/safety issues: post-merge main evidence cannot be a pre-merge TASK-91 criterion, and an advisory artifact upload failure could fail the overall CI workflow. The owner-approved triage amendment assigns actual main evidence to a separate issue 107 task; CI now marks the entire audit job advisory and warns on missing artifacts.
 
 Addressed both independent review findings before finalization. TASK-91 acceptance now checks pre-merge wiring, with actual main results assigned to later issue 107 work. The entire advisory audit job is continue-on-error, including artifact upload, and missing evidence emits a warning. Added fail-closed rejection of --ci-pr with --offline. Focused tests passed (30), required Python suite passed (137 with local loopback), repository checks passed, and checksum-verified actionlint 1.7.12 passed after the fixes. Re-review and final-head hosted checks are pending.
+
+Independent review found that an advisory job inside CI still delays the workflow_run promotion trigger. Approved triage scope now includes a separate backlog-audit workflow; this supersedes the in-CI audit job design.
+
+Moved the repository-wide Backlog audit to its own workflow after the independent timing review. The advisory workflow has read-only permissions, publishes JSON with if-no-files-found: error, and is not a CI job or release prerequisite. Pinned actionlint 1.7.12 passed on both workflows; repository checks and diff checks passed. Final-head hosted checks and independent re-review are pending.
 <!-- SECTION:NOTES:END -->

@@ -164,12 +164,12 @@ reconciliation changes; the guard supplies no automatic repair path.
 On a PR, required Quality runs the live guard with `--ci-pr --base origin/main`
 and the PR's head branch. It blocks on that task's approval, claim, scope and
 dependencies. If main has advanced beyond the tested merge commit, the check
-asks for an updated branch and rerun. A separate advisory Backlog audit retains
-the repository-wide result on PR and main runs; unrelated task or issue drift
-does not block another PR or release, including when the audit or artifact
-upload fails. Read its JSON `status` and reconcile failures. A missing report
-is inconclusive and needs a rerun; an advisory job's green completion is not a
-clean-audit assertion.
+asks for an updated branch and rerun. The separate advisory Backlog audit
+workflow retains the repository-wide result on PR and main runs; it is not a
+required check and is not part of the main CI workflow that triggers release.
+Unrelated task or issue drift, audit failure and artifact failure therefore do
+not block another PR or delay promotion. Read the audit JSON `status` and
+reconcile failures. A missing report is inconclusive and needs a rerun.
 The full guard remains required immediately before a worker claims or resumes a
 task. `scripts/check.py` registers the offline structural mode; `--offline`
 never validates a claim or provides live merge/approval evidence. Existing broad
