@@ -166,9 +166,11 @@ jobs:
           [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]
           mkdir -p artifacts
           printf '%s\n' "$digest" > artifacts/registry-image-digest.txt
-          printf 'registry_name=%s\n' "$registry_name" >> "$GITHUB_OUTPUT"
-          printf 'registry_server=%s\n' "$registry_server" >> "$GITHUB_OUTPUT"
-          printf 'image_digest=%s\n' "${digest#sha256:}" >> "$GITHUB_OUTPUT"
+          {
+            printf 'registry_name=%s\n' "$registry_name"
+            printf 'registry_server=%s\n' "$registry_server"
+            printf 'image_digest=%s\n' "${digest#sha256:}"
+          } >> "$GITHUB_OUTPUT"
       - name: Preview the exact Bicep release
         id: preview
         env:
