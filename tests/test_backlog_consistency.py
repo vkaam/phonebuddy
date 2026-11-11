@@ -238,6 +238,11 @@ class ConsistencyTests(unittest.TestCase):
         closed = self.run_guard([predecessor, completed_follower], completed_base, remote)
         self.assertEqual(closed["status"], "pass", closed)
 
+        archived_unfinished = record(82, archived=True)
+        with_archive = {**completed_base, archived_unfinished["id"]: deepcopy(archived_unfinished)}
+        self.assertFails(self.run_guard([predecessor, completed_follower, archived_unfinished],
+                                        with_archive, remote), "closed before all linked tasks")
+
     def test_unmerged_or_unchecked_legacy_status_does_not_complete(self):
         predecessor = record(81, status="In Progress")
         predecessor["meta"]["assignee"] = ["@codex"]

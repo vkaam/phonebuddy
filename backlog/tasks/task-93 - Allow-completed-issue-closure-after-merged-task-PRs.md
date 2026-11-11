@@ -5,12 +5,13 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-11T18:54:00Z'
-updated_date: '2026-11-11T19:00:00Z'
+updated_date: '2026-11-11T19:02:00Z'
 labels: []
 dependencies: []
 references:
   - https://github.com/vkaam/phonebuddy/issues/107
   - scripts/backlog_consistency.py
+  - https://github.com/vkaam/phonebuddy/pull/109
 modified_files:
   - >-
     backlog/tasks/task-93 -
@@ -56,4 +57,8 @@ Triage amendment 2026-11-11: Investigation showed unchanged Done tasks are alrea
 Implemented effective completion for checked legacy In Progress records on main with a merged PR; audit emits a stale-status warning. Closed issue state requires effective completion for linked tasks. Added multi-task, unmerged and unchecked regression cases. Focused guard tests passed (32); required Python suite passed (139); repository checks and live claim guard passed with one expected stale-status warning.
 
 Preserved archived unfinished dependencies as unsatisfied; a checked but archived In Progress task does not gain effective completion. Focused tests pass (32) and required suite passes (139) after this edge-case fix.
+
+Draft PR #109 opened at a971550689b293dbe28acfa2bb924602eb7f6d8c. Hosted Quality and independent review are pending.
+
+Independent review found archived unfinished tasks were excluded from issue-closure readiness. The guard now includes all linked tasks in the closed-issue check, so archival alone cannot simulate completion; added the closed multi-task regression case.
 <!-- SECTION:NOTES:END -->
