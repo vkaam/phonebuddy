@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-11T12:17:00Z'
-updated_date: '2026-11-11T12:36:00Z'
+updated_date: '2026-11-11T13:40:00Z'
 labels:
   - infrastructure
   - cicd
@@ -37,6 +37,8 @@ Branch: agent/gh-18-3-live-telemetry-query-fix
 Scope: scripts/health_gate.py; tests/test_health_gate.py; docs/azure-delivery-policy.md; backlog/tasks/task-85 - Issue-18-follow-up-Fix-live-Azure-telemetry-query.md
 Verify: python3 -B scripts/run_required_unittests.py; BICEP=/tmp/bicep python3 -B scripts/check_bicep.py; actionlint .github/workflows/ci.yml .github/workflows/azure-deploy.yml .github/workflows/pr-safety.yml; hosted main CI and Azure release must prove exact-source Bicep deployment and a passing telemetry gate with at least 100 version-matched events and zero unhealthy events.
 Change control: Any further files require a recorded triage amendment.
+
+Replaced by: TASK-87
 <!-- SECTION:DESCRIPTION:END -->
 
 ## Acceptance Criteria
@@ -60,4 +62,6 @@ Research confirms the configured Bicep route is Azure Monitor with Dedicated dia
 Scoped diagnostics now inspect bounded prefixes of both stderr and stdout; reports include only an allowlisted error code, fixed category, exit code and which stream carried the output. Known throttling codes are classified for existing bounded retries. Focused health-gate tests pass (17 tests); required repository unit suite passes (130 tests), Bicep checks pass, actionlint passes, and git diff --check passes. The exact live Azure error remains unproven until the updated diagnostic runs in the source-bound main deployment; keep the task active.
 
 Draft PR #99: https://github.com/vkaam/phonebuddy/pull/99, head cc4c856d675fe7e6074ba6f91fc9470317766237. Hosted checks and source-bound main deployment are still pending; the PR explicitly keeps TASK-85 active and states that the live telemetry fix is unproven.
+
+Replaced by: TASK-87. The owner redirected the release-gate requirement to HTTP readiness/health only; the merged diagnostic PR remains historical evidence, but the analytics-query acceptance is no longer the selected outcome.
 <!-- SECTION:NOTES:END -->

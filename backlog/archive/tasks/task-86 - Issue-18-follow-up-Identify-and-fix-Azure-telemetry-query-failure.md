@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-11T12:57:00Z'
-updated_date: '2026-11-11T13:06:00Z'
+updated_date: '2026-11-11T13:40:00Z'
 labels:
   - infrastructure
   - cicd
@@ -40,6 +40,8 @@ Branch: agent/gh-18-4-live-telemetry-query-root-cause
 Scope: scripts/health_gate.py; tests/test_health_gate.py; docs/azure-delivery-policy.md; this task's own CLI-managed record
 Verify: python3 -B scripts/run_required_unittests.py; BICEP=/tmp/bicep python3 -B scripts/check_bicep.py; actionlint .github/workflows/ci.yml .github/workflows/azure-deploy.yml .github/workflows/pr-safety.yml; hosted main CI and Azure release must prove exact-source Bicep deployment and a passing telemetry gate with at least 100 version-matched events and zero unhealthy events.
 Change control: Further files or Azure RBAC changes require recorded triage and any required owner approval.
+
+Replaced by: TASK-87
 <!-- SECTION:DESCRIPTION:END -->
 
 ## Acceptance Criteria
@@ -63,4 +65,6 @@ Latest live evidence: run 43022610694 on main merge 12563888 passed source verif
 Added allowlisted numeric HTTP status extraction from both bounded CLI streams and fixed status-to-category mapping (authentication, authorization, missing resource, query rejection, throttling, timeout and provider error). No raw CLI output is retained. Focused suite passes (18 tests); repository suite passes (131 tests); Bicep checks, actionlint and diff check pass. The exact HTTP status from the live stderr is still unknown and the task remains active pending a main deployment.
 
 Draft PR #100: https://github.com/vkaam/phonebuddy/pull/100, head 6823f95e70d078d31913535412eb461ca9a05f22. Hosted checks and the next main-triggered deployment are pending; this PR adds safe status evidence and does not claim the live query is fixed.
+
+Replaced by: TASK-87. The owner redirected the release-gate requirement to HTTP readiness/health only; the merged diagnostic PR remains historical evidence, but the analytics-query acceptance is no longer the selected outcome.
 <!-- SECTION:NOTES:END -->

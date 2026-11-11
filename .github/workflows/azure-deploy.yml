@@ -204,7 +204,7 @@ jobs:
             --output json > artifacts/deployment.json
           printf '%s\n' "$IMAGE_DIGEST" > artifacts/image-digest.txt
           printf 'succeeded=true\n' >> "$GITHUB_OUTPUT"
-      - name: Observe the deployed version and telemetry
+      - name: Observe the deployed version and HTTP health
         id: observe
         env:
           IMAGE_DIGEST: ${{ steps.image.outputs.image_digest }}
@@ -216,17 +216,12 @@ jobs:
           insights_id=$(az resource list --resource-group "$RESOURCE_GROUP" \
             --resource-type Microsoft.Insights/components \
             --query "[?starts_with(name, 'appi-pb-dev-')].id | [0]" --output tsv)
-          workspace_id=$(az monitor log-analytics workspace list \
-            --resource-group "$RESOURCE_GROUP" \
-            --query "[?starts_with(name, 'log-pb-dev-')].customerId | [0]" --output tsv)
           test -n "$app_url"
           test -n "$insights_id"
-          test -n "$workspace_id"
           printf '%s\n' "$insights_id" > artifacts/insights-resource-id.txt
-          printf '%s\n' "$workspace_id" > artifacts/workspace-id.txt
           python3 -B scripts/health_gate.py \
             --url "https://$app_url" --expected-version "$RELEASE_SHA" \
-            --workspace-id "$workspace_id" --app-name "$APP_NAME" \
+            --skip-workspace-telemetry \
             > artifacts/health-gate.json
       - name: Decide whether release recovery is required
         id: recovery-decision
