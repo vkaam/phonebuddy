@@ -4,6 +4,7 @@ import argparse
 from datetime import datetime, timezone
 import json
 import math
+import re
 import subprocess
 import sys
 import time
@@ -142,7 +143,26 @@ def workspace_query_failure_diagnostic(result):
         stderr = ''
     # Inspect only a small prefix and map it to fixed labels. Never return CLI
     # output, query text, resource identifiers, or caller data.
-    summary = stderr[:4096].casefold()
+    bounded_stderr = stderr[:4096]
+    summary = bounded_stderr.casefold()
+    error_code = None
+    code_patterns = (
+        r'^\s*ERROR:\s*\(([A-Za-z][A-Za-z0-9_.-]{1,63})\)',
+        r'^\s*([A-Za-z][A-Za-z0-9_.-]{1,63}):',
+        r'\bCode\s*:\s*([A-Za-z][A-Za-z0-9_.-]{1,63})',
+        r'"code"\s*:\s*"([A-Za-z][A-Za-z0-9_.-]{1,63})"',
+        r'\(([A-Za-z][A-Za-z0-9_.-]{1,63})\)',
+    )
+    safe_code_suffixes = (
+        'error', 'failed', 'denied', 'notfound', 'timeout', 'forbidden',
+        'unauthorized', 'badrequest', 'toomanyrequests',
+    )
+    for pattern in code_patterns:
+        match = re.search(pattern, bounded_stderr, re.IGNORECASE)
+        candidate = match.group(1) if match else ''
+        if candidate.casefold().endswith(safe_code_suffixes):
+            error_code = candidate
+            break
     if ('does not have authorization' in summary or 'authorizationfailed' in summary
             or 'forbidden' in summary):
         category = 'authorization_denied'
@@ -152,7 +172,7 @@ def workspace_query_failure_diagnostic(result):
     elif ('workspace not found' in summary or 'resourcenotfound' in summary):
         category = 'workspace_not_found'
     elif ('invalidquery' in summary or 'badargumenterror' in summary
-          or 'semantic error' in summary):
+          or 'semantic error' in summary or 'badrequest' in summary):
         category = 'query_rejected'
     elif ('throttl' in summary or 'too many requests' in summary or '429' in summary):
         category = 'throttled'
@@ -164,7 +184,7 @@ def workspace_query_failure_diagnostic(result):
     if not isinstance(exit_code, int) or isinstance(exit_code, bool) or not 0 <= exit_code <= 255:
         exit_code = None
     return {'operation': 'log_analytics_query', 'category': category,
-            'exit_code': exit_code}
+            'exit_code': exit_code, 'error_code': error_code}
 
 
 def query_workspace_telemetry(workspace_id, app_name, expected_version, runner=subprocess.run,
@@ -235,7 +255,7 @@ def query_workspace_telemetry(workspace_id, app_name, expected_version, runner=s
         return {'status': 'fail', 'telemetry_event_count': 0,
                 'unhealthy_event_count': 0, 'reasons': ['dependency_outage'],
                 'diagnostic': {'operation': 'log_analytics_query', 'category': category,
-                               'exit_code': None}}
+                               'exit_code': None, 'error_code': None}}
 
 
 def wait_for_workspace_telemetry(workspace_id, app_name, expected_version,

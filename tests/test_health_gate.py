@@ -105,6 +105,7 @@ class WorkspaceTelemetryTests(unittest.TestCase):
         self.assertEqual(report['reasons'], ['dependency_outage'])
         self.assertEqual(report['diagnostic'], {
             'operation': 'log_analytics_query', 'category': 'throttled', 'exit_code': 1,
+            'error_code': None,
         })
         self.assertEqual(len(calls), 4)
         self.assertEqual(sleeps, [10, 20, 30])
@@ -143,6 +144,7 @@ class WorkspaceTelemetryTests(unittest.TestCase):
         self.assertEqual(report['reasons'], ['dependency_outage'])
         self.assertEqual(report['diagnostic'], {
             'operation': 'log_analytics_query', 'category': 'cli_error', 'exit_code': 1,
+            'error_code': None,
         })
 
     def test_workspace_query_diagnostic_classifies_auth_errors_without_echoing_cli_output(self):
@@ -163,10 +165,33 @@ class WorkspaceTelemetryTests(unittest.TestCase):
             'operation': 'log_analytics_query',
             'category': 'authorization_denied',
             'exit_code': 1,
+            'error_code': 'AuthorizationFailed',
         })
         self.assertNotIn('do-not-log', serialized)
         self.assertNotIn('ContainerAppConsoleLogs', serialized)
         self.assertNotIn('+1-555-0100', serialized)
+
+    def test_workspace_query_reports_sanitized_provider_error_code(self):
+        sensitive_stderr = (
+            'ERROR: (BadRequest) workspace=123e4567-e89b-12d3-a456-426614174000 '
+            'query=ContainerAppConsoleLogs; Bearer token=do-not-log'
+        )
+
+        def failed_runner(*args, **kwargs):
+            return type('Result', (), {
+                'returncode': 1, 'stdout': '', 'stderr': sensitive_stderr,
+            })()
+
+        report = query_workspace_telemetry(
+            'workspace-id', 'app-name', 'release-1', failed_runner)
+        serialized = json.dumps(report)
+        self.assertEqual(report['diagnostic'], {
+            'operation': 'log_analytics_query', 'category': 'query_rejected',
+            'exit_code': 1, 'error_code': 'BadRequest',
+        })
+        self.assertNotIn('123e4567-e89b-12d3-a456-426614174000', serialized)
+        self.assertNotIn('ContainerAppConsoleLogs', serialized)
+        self.assertNotIn('do-not-log', serialized)
 
     def test_workspace_query_timeout_is_redacted_and_fails_closed(self):
         def timed_out_runner(*args, **kwargs):
@@ -178,7 +203,7 @@ class WorkspaceTelemetryTests(unittest.TestCase):
         self.assertEqual(report['reasons'], ['dependency_outage'])
         self.assertEqual(report['diagnostic'], {
             'operation': 'log_analytics_query', 'category': 'timeout',
-            'exit_code': None,
+            'exit_code': None, 'error_code': None,
         })
         self.assertNotIn('secret token', json.dumps(report))
 
