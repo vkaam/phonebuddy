@@ -1,0 +1,77 @@
+---
+id: TASK-89
+title: Record Azure Foundry as an authorized factory model option
+status: Done
+assignee:
+  - '@codex'
+created_date: '2026-11-11T15:42:00Z'
+updated_date: '2026-11-11T16:17:00Z'
+labels:
+  - factory
+  - autonomy
+dependencies: []
+references:
+  - https://github.com/vkaam/phonebuddy/issues/37
+  - docs/agentic-development-contract.md
+  - https://github.com/vkaam/phonebuddy/pull/104
+modified_files:
+  - docs/agentic-development-contract.md
+  - >-
+    backlog/tasks/task-89 -
+    Record-Azure-Foundry-as-an-authorized-factory-model-option.md
+priority: high
+type: docs
+ordinal: 80000
+---
+
+## Description
+
+<!-- SECTION:DESCRIPTION:BEGIN -->
+Need: The factory contract records the owner-selected signed-in Codex subscription path and says paid OpenAI API use is not authorized. The owner has now approved Azure Foundry as an additional option. Record this decision before any factory inference integration so the implementation can preserve the approved identity, data, and spending boundaries.
+
+Issue: https://github.com/vkaam/phonebuddy/issues/37
+Approved requirements revision: 2026-11-04T06:22:57Z; body SHA-256 e89fb516577a1895faad3736db993a071936a91605451ac43357ba337c217deb.
+Approval evidence: The owner directly instructed in this Codex conversation: “No, we can use azure foundry as well.” This authorizes Azure Foundry as an additional model option. Existing TASK-73 approval still prohibits paid OpenAI API usage. This does not authorize reusing the product Foundry identity or data for factory runs, provisioning new factory resources, or any unbounded spend.
+Branch: agent/gh-37-6-azure-foundry-option
+Scope: docs/agentic-development-contract.md; this task record through Backlog CLI
+Verify: python3 -B scripts/quality.py; python3 -B scripts/run_required_unittests.py; python3 -B scripts/backlog_consistency.py --offline; git diff --check; PR Quality must pass, including the browser tests. The local all-in-one check is not usable here because the required Playwright browser binary is unavailable in this environment.
+<!-- SECTION:DESCRIPTION:END -->
+
+## Acceptance Criteria
+<!-- AC:BEGIN -->
+- [x] #1 The contract records Azure Foundry as an additional owner-approved inference option alongside subscription Codex while keeping paid OpenAI API use unauthorized.
+- [x] #2 The contract distinguishes approval of the Foundry option from verified factory access, resource isolation, model choice, retention, and spending limits; it does not grant the coding runner product data or deployment permissions.
+- [x] #3 The task and changed document stay within their declared scope and pass the declared local checks.
+<!-- AC:END -->
+
+## Implementation Plan
+
+<!-- SECTION:PLAN:BEGIN -->
+1. Inspect the current runtime-decision table and deployment evidence for existing dev/test Foundry resources. 2. Record Azure Foundry as an additional allowed model option, preserving subscription Codex and the prohibition on paid OpenAI API usage. 3. State that approval of the option does not grant the factory product identity/data, production access, new resources, or unbounded spend; keep model selection, isolation, and enforceable limits open. 4. Run the task-declared checks, verify scope, and publish one PR.
+<!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Updated the factory runtime decision to add owner-approved Azure Foundry while retaining subscription Codex, the no-paid-OpenAI-API direction, and the separate factory identity/resource, production-access, and limit gates.
+
+AC1-2 verified against docs/agentic-development-contract.md: Azure Foundry is an additional owner-approved option; paid OpenAI API remains unauthorized; approval grants no product data/identity, production access, factory provisioning or unbounded spend. Local verification: scripts/quality.py passed; scripts/run_required_unittests.py passed in report /tmp/phonebuddy-quality-uz8jm7wt/report.json; scripts/backlog_consistency.py --offline passed; git diff --check passed. The full scripts/check.py bundle failed only because this environment has no Playwright Chromium headless-shell binary; browser tests did not execute. Hosted Quality including browser tests remains required on the PR head.
+
+Adjusted the declared local verification to the documentation-relevant checks plus required hosted Quality because this worktree has no Playwright Chromium binary and the all-in-one local bundle cannot run the browser suite. Hosted Quality on PR #104 did execute the browser suite and passed.
+
+Final-head evidence: PR #104 head cdb850872784c2ae051a74f6e43e02a6b933beb8 passed Quality run 43052792758, including browser tests, workflow validation, Bicep validation and secret scanning; advisory Risk report 43052789812 succeeded. PR remains draft pending independent review; no model inference, factory identity or resource provisioning was enabled.
+
+Completion-record verification: after the branch-local Done commit, final head cfef914ee9a54c65d798de2f4d4857ca619493b9 passed required Quality run 43053236452 (including browser tests and live Backlog consistency), immutable-image applicability check, and advisory Risk report 43053229181. PR #104 remains draft pending independent review; no merge was performed.
+
+Review correction: earlier completion notes describe intermediate heads cdb8508 and cfef914. The final PR head reviewed was c46f3a74564387d7b3b9c0e3fb6597831d77bcb1; Quality run 43053671547 and advisory Risk report 43053668472 passed on that head. The immutable release-image applicability check also passed in run 43053671547.
+
+Final evidence correction: PR #104 head 2064f015b6e0deba29cf9e842fca73a7014d5084 passed Quality and immutable-image applicability in run 43055260663 and advisory Risk reporting in run 43055256748. The PR description records that head and those runs. The task-record correction below requires current-head checks before merge.
+
+Current-head correction: the completion-record update is included in PR #104 head c2d5c0a059c44ab9d661d23bd3cd61dfe9779bb2. Quality and immutable-image applicability passed in run 43055947299; advisory Risk passed in run 43055940097. The independent review of this head found no substantive issues; it noted only that the prior final summary had not yet been updated with this CI evidence.
+<!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Recorded the owner-approved Azure Foundry option alongside subscription Codex, while preserving the no-paid-OpenAI-API direction and the factory isolation, production-access and enforceable-limit gates. Local repository checks, the 134-test Python suite, offline Backlog validation, and diff checks passed. Hosted Quality including browser tests, live Backlog consistency, Bicep and secret checks, and immutable-image applicability passed on PR #104 head c2d5c0a059c44ab9d661d23bd3cd61dfe9779bb2 in run 43055947299; advisory Risk passed in run 43055940097. Independent review of that head found no substantive issues. No Foundry runtime or resources were enabled; model selection, isolated factory access, cost/time limits and evidence retention remain unresolved.
+<!-- SECTION:FINAL_SUMMARY:END -->
