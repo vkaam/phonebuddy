@@ -1,0 +1,273 @@
+name: Azure release deployment
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: read
+  actions: read
+  checks: read
+
+concurrency:
+  group: azure-dev-release
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  deploy-dev:
+    name: Deploy approved main image to dev
+    if: >-
+      github.repository == 'vkaam/phonebuddy' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main' &&
+      github.event.workflow_run.head_repository.full_name == github.repository &&
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    environment: dev
+    permissions:
+      contents: read
+      actions: read
+      checks: read
+      id-token: write
+    env:
+      RELEASE_SHA: ${{ github.event.workflow_run.head_sha }}
+      SOURCE_RUN_ID: ${{ github.event.workflow_run.id }}
+      SOURCE_RUN_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+      RESOURCE_GROUP: rg-pb-dev-francecentral-foundation
+      APP_NAME: ca-pb-dev-release-test
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify successful Quality and current main source
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
+          current_main=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')
+          test "$current_main" = "$RELEASE_SHA"
+          gh api --paginate --slurp \
+            "repos/$GITHUB_REPOSITORY/commits/$RELEASE_SHA/check-runs?per_page=100" \
+            > "$RUNNER_TEMP/check-runs.json"
+          python3 -B scripts/check_bicep.py \
+            --quality-evidence "$RUNNER_TEMP/check-runs.json" \
+            --expected-sha "$RELEASE_SHA"
+      - name: Download the source run's immutable image artifact
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          repository: ${{ github.repository }}
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
+          name: release-image-${{ github.event.workflow_run.id }}-${{ github.event.workflow_run.run_attempt }}
+          path: ${{ runner.temp }}/release-image
+      - name: Verify artifact identity and integrity
+        env:
+          EXPECTED_SHA: ${{ github.event.workflow_run.head_sha }}
+          EXPECTED_RUN_ID: ${{ github.event.workflow_run.id }}
+          EXPECTED_RUN_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/release-image"
+          sha256sum --check release-test.tar.gz.sha256
+          python3 - "$EXPECTED_SHA" "$EXPECTED_RUN_ID" "$EXPECTED_RUN_ATTEMPT" manifest.json <<'PY'
+          import json
+          import sys
+
+          expected_sha, expected_run, expected_attempt, path = sys.argv[1:]
+          with open(path, encoding='utf-8') as source:
+              manifest = json.load(source)
+          if (manifest.get('schema_version') != 1
+                  or manifest.get('source_sha') != expected_sha
+                  or manifest.get('workflow_run_id') != int(expected_run)
+                  or manifest.get('workflow_run_attempt') != int(expected_attempt)
+                  or manifest.get('image_tag') != f'phonebuddy-release-test:{expected_sha}'
+                  or manifest.get('image_archive') != 'release-test.tar.gz'):
+              raise SystemExit('Image artifact does not match the successful main CI run')
+          PY
+          docker load --input release-test.tar.gz
+      - name: Compile the exact-source Bicep template
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --location --retry 3 \
+            https://github.com/Azure/bicep/releases/download/v0.34.44/bicep-linux-x64 \
+            -o "$RUNNER_TEMP/bicep"
+          printf '%s  %s\n' \
+            dcc869edf53652303d4822b650d727419eeac33bce80cfb61f8ccc5cd2ccee47 \
+            "$RUNNER_TEMP/bicep" | sha256sum --check
+          chmod +x "$RUNNER_TEMP/bicep"
+          "$RUNNER_TEMP/bicep" build infra/hosting.bicep \
+            --outfile "$RUNNER_TEMP/hosting.json"
+      - uses: azure/login@a641126d1b8aa4d1fa005f4f92df94a3a4c4c906 # v3.1.0
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: Promote the exact image digest to the scoped Azure registry
+        id: image
+        run: |
+          set -euo pipefail
+          mapfile -t registries < <(
+            az acr list --resource-group "$RESOURCE_GROUP" \
+              --query "[?starts_with(name, 'pbdev')].name" --output tsv
+          )
+          if [[ ${#registries[@]} -ne 1 ]]; then
+            echo "Expected exactly one dev registry in $RESOURCE_GROUP." >&2
+            exit 1
+          fi
+          registry_name=${registries[0]}
+          registry_server=$(az acr show --name "$registry_name" --query loginServer --output tsv)
+          image_name="release-test:$RELEASE_SHA"
+          docker tag "phonebuddy-release-test:$RELEASE_SHA" "$registry_server/$image_name"
+          az acr login --name "$registry_name"
+
+          if existing_digest=$(az acr repository show --name "$registry_name" \
+              --image "$image_name" --query digest --output tsv 2>/dev/null); then
+            write_enabled=$(az acr repository show-tags --name "$registry_name" \
+              --repository release-test --detail \
+              --query "[?name=='$RELEASE_SHA'].changeableAttributes.writeEnabled | [0]" \
+              --output tsv)
+            if [[ "$write_enabled" != false ]]; then
+              echo "An existing source-SHA image tag is not locked; refusing to overwrite it." >&2
+              exit 1
+            fi
+            local_image_id=$(docker image inspect --format '{{.Id}}' \
+              "phonebuddy-release-test:$RELEASE_SHA")
+            docker pull "$registry_server/release-test@$existing_digest"
+            remote_image_id=$(docker image inspect --format '{{.Id}}' \
+              "$registry_server/release-test@$existing_digest")
+            if [[ "$local_image_id" != "$remote_image_id" ]]; then
+              echo "The locked source-SHA image does not match this CI artifact." >&2
+              exit 1
+            fi
+            digest=$existing_digest
+          else
+            docker push "$registry_server/$image_name"
+            digest=$(az acr repository show --name "$registry_name" \
+              --image "$image_name" --query digest --output tsv)
+            test -n "$digest"
+            az acr repository update --name "$registry_name" \
+              --image "$image_name" --write-enabled false
+            write_enabled=$(az acr repository show-tags --name "$registry_name" \
+              --repository release-test --detail \
+              --query "[?name=='$RELEASE_SHA'].changeableAttributes.writeEnabled | [0]" \
+              --output tsv)
+            test "$write_enabled" = false
+          fi
+          [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]
+          mkdir -p artifacts
+          printf '%s\n' "$digest" > artifacts/registry-image-digest.txt
+          printf 'registry_name=%s\n' "$registry_name" >> "$GITHUB_OUTPUT"
+          printf 'registry_server=%s\n' "$registry_server" >> "$GITHUB_OUTPUT"
+          printf 'image_digest=%s\n' "${digest#sha256:}" >> "$GITHUB_OUTPUT"
+      - name: Preview the exact Bicep release
+        id: preview
+        env:
+          IMAGE_DIGEST: ${{ steps.image.outputs.image_digest }}
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          az deployment group what-if \
+            --resource-group "$RESOURCE_GROUP" \
+            --template-file "$RUNNER_TEMP/hosting.json" \
+            --parameters environment=dev owner=PHONEBUDDY-PLATFORM \
+              costCenter=PHONEBUDDY-NONPROD deployWorkload=true \
+              managePullRoleAssignment=false \
+              deployStaticSite=false imageDigest="$IMAGE_DIGEST" \
+              releaseVersion="$RELEASE_SHA" \
+            --validation-level ProviderNoRbac \
+            --result-format FullResourcePayloads --no-pretty-print \
+            --output json > artifacts/what-if.json
+          expected_scope=$(az group show --name "$RESOURCE_GROUP" --query id --output tsv)
+          python3 -B scripts/check_bicep.py \
+            --what-if-result artifacts/what-if.json --expected-scope "$expected_scope"
+      - name: Apply the reviewed Bicep release
+        id: deploy
+        env:
+          IMAGE_DIGEST: ${{ steps.image.outputs.image_digest }}
+        run: |
+          set -euo pipefail
+          touch "$RUNNER_TEMP/deployment-started"
+          az deployment group create \
+            --name "pbdev-${SOURCE_RUN_ID}-${SOURCE_RUN_ATTEMPT}" \
+            --resource-group "$RESOURCE_GROUP" \
+            --template-file "$RUNNER_TEMP/hosting.json" \
+            --parameters environment=dev owner=PHONEBUDDY-PLATFORM \
+              costCenter=PHONEBUDDY-NONPROD deployWorkload=true \
+              managePullRoleAssignment=false \
+              deployStaticSite=false imageDigest="$IMAGE_DIGEST" \
+              releaseVersion="$RELEASE_SHA" \
+            --output json > artifacts/deployment.json
+          printf '%s\n' "$IMAGE_DIGEST" > artifacts/image-digest.txt
+          printf 'succeeded=true\n' >> "$GITHUB_OUTPUT"
+      - name: Observe the deployed version and telemetry
+        env:
+          IMAGE_DIGEST: ${{ steps.image.outputs.image_digest }}
+        run: |
+          set -euo pipefail
+          app_url=$(az resource show --resource-group "$RESOURCE_GROUP" \
+            --name "$APP_NAME" --resource-type Microsoft.App/containerApps \
+            --query 'properties.configuration.ingress.fqdn' --output tsv)
+          insights_id=$(az resource list --resource-group "$RESOURCE_GROUP" \
+            --resource-type Microsoft.Insights/components \
+            --query "[?starts_with(name, 'appi-pb-dev-')].id | [0]" --output tsv)
+          workspace_id=$(az monitor log-analytics workspace list \
+            --resource-group "$RESOURCE_GROUP" \
+            --query "[?starts_with(name, 'log-pb-dev-')].customerId | [0]" --output tsv)
+          test -n "$app_url"
+          test -n "$insights_id"
+          test -n "$workspace_id"
+          printf '%s\n' "$insights_id" > artifacts/insights-resource-id.txt
+          printf '%s\n' "$workspace_id" > artifacts/workspace-id.txt
+          python3 -B scripts/health_gate.py \
+            --url "https://$app_url" --expected-version "$RELEASE_SHA" \
+            --workspace-id "$workspace_id" --app-name "$APP_NAME" \
+            > artifacts/health-gate.json
+      - name: Isolate a partial or unhealthy release
+        if: failure() && (steps.deploy.outcome == 'failure' || steps.deploy.outputs.succeeded == 'true')
+        run: |
+          set -euo pipefail
+          mapfile -t active_revisions < <(
+            az containerapp revision list --name "$APP_NAME" \
+              --resource-group "$RESOURCE_GROUP" \
+              --query "[?properties.active==\`true\`].name" --output tsv
+          )
+          if [[ ${#active_revisions[@]} -eq 0 ]]; then
+            echo 'No active revision remains; release is already isolated.'
+            printf 'No active revision remained after a failed health gate.\n' \
+              > artifacts/recovery.txt
+          else
+            for revision in "${active_revisions[@]}"; do
+              az containerapp revision deactivate --name "$APP_NAME" \
+                --resource-group "$RESOURCE_GROUP" --revision "$revision"
+            done
+            printf 'Deactivated active revision(s): %s\n' "${active_revisions[*]}" \
+              > artifacts/recovery.txt
+          fi
+          echo 'Unhealthy release was isolated; promotion stopped.'
+      - name: Record successful release annotation
+        if: success()
+        run: |
+          set -euo pipefail
+          insights_id=$(cat artifacts/insights-resource-id.txt)
+          python3 -B scripts/release_annotation.py \
+            --resource-id "$insights_id" --environment dev \
+            --release-version "$RELEASE_SHA" --commit-sha "$RELEASE_SHA" \
+            --workflow-ref "$GITHUB_WORKFLOW_REF"
+      - name: Retain release evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/
+          if-no-files-found: ignore
+          retention-days: 30

@@ -1,9 +1,11 @@
 ---
 id: TASK-62
 title: Issue 18 - Deploy default-branch changes automatically through CI/CD
-status: To Do
-assignee: []
+status: In Progress
+assignee:
+  - '@codex'
 created_date: '2026-11-02T16:36:00Z'
+updated_date: '2026-11-11T08:45:00Z'
 labels:
   - infrastructure
   - cicd
@@ -14,6 +16,26 @@ dependencies:
   - TASK-61
 references:
   - https://github.com/vkaam/phonebuddy/issues/18
+  - .github/workflows/ci.yml
+  - infra/hosting.bicep
+  - scripts/check_bicep.py
+  - scripts/health_gate.py
+  - infra/release-test/Dockerfile
+  - infra/github-oidc.md
+  - docs/azure-delivery-policy.md
+  - docs/quality-and-delivery.md
+modified_files:
+  - >-
+    backlog/tasks/task-62 -
+    Issue-18-Deploy-default-branch-changes-automatically-through-CI-CD.md
+  - .github/workflows/ci.yml
+  - .github/workflows/azure-deploy.yml
+  - infra/hosting.bicep
+  - scripts/check_bicep.py
+  - tests/test_bicep_ci_boundary.py
+  - docs/azure-delivery-policy.md
+  - docs/quality-and-delivery.md
+  - infra/github-oidc.md
 priority: high
 type: task
 ordinal: 59000
@@ -41,3 +63,9 @@ Spec: Preserve the issue's approved acceptance. Do not broaden scope or weaken r
 - [ ] #4 Failure halts promotion and invokes recovery; duplicate triggers, concurrent pushes and partial deployment are tested.
 - [ ] #5 Document repository and environment settings enabling deployment without an extra routine manual release approval.
 <!-- AC:END -->
+
+## Implementation Plan
+
+<!-- SECTION:PLAN:BEGIN -->
+1. Inspect the current CI, Bicep hosting template, application build, OIDC workflow, health gate, and delivery policy to find the smallest complete main-to-release path consistent with the approved issue. 2. Add a main-only exact-SHA deployment workflow that waits for successful required Quality evidence, builds and identifies immutable application artifacts once, serializes environment releases, deploys applicable Bicep and the same artifact through OIDC, and gates promotion on readiness and telemetry. 3. Add deterministic coverage for stale or failed CI, duplicate and concurrent triggers, immutable artifact promotion, deployment failure, health failure, and recovery behavior within the approved paths. 4. Document required GitHub environment, identity, and repository settings and run the task's local verification commands. 5. Publish a draft PR and verify all hosted checks on its current head; leave live Azure deployment evidence and any unavailable environment prerequisites explicit.
+<!-- SECTION:PLAN:END -->

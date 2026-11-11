@@ -2,10 +2,13 @@
 
 This increment starts Phase 0 of the [software plan](software-plan.md) on the
 existing GitHub repository. It does not decide a future Azure DevOps migration.
-There is no product application or user workload yet. Pilot hosting templates
-and cloud identities exist, but the release-test workload has not been deployed.
-A green baseline check validates the repository and its safety policy; it does
-not establish calling, isolation, transcription, or summary quality.
+There is no production product workload yet. The synthetic release-test workload
+is hosted in the France Central dev group at release `3b0cea9`, deployed outside
+the mainline CI path. TASK-62 adds a main-only CI delivery path for this pilot;
+until that change is merged and a hosted run succeeds, the existing deployment
+is not evidence of CI delivery. A green baseline check validates the repository
+and its safety policy; it does not establish calling, isolation, transcription,
+or summary quality.
 
 For the Azure release-test workload, the dev/test-only manual health gate in
 [`azure-health-gate.yml`](../.github/workflows/azure-health-gate.yml) validates the reported release version and readiness
@@ -17,8 +20,11 @@ version-matched health events and no unhealthy responses in the environment's
 Log Analytics workspace. It waits up to five minutes for ingestion and fails
 closed on missing records or query errors. See the [Azure delivery policy](azure-delivery-policy.md)
 for log retention, alert timing, contact prerequisites and the deployment
-annotation fields. The workflow observes an existing deployment and does not
-deploy or promote it.
+annotation fields. The standalone manual workflow observes an existing
+deployment and does not deploy or promote it. After TASK-62 merges, the trusted
+main-only release workflow will deploy the synthetic image and applicable
+hosting Bicep, then invoke the same health gate before annotating the release.
+This pilot does not deploy the product web app, Static Web Apps, test or prod.
 
 TASK-60 adds a separate infrastructure validation layer. `python3 -B
 scripts/check_bicep.py` requires Bicep CLI 0.34.44, compiles the main, hosting
