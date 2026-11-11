@@ -155,6 +155,9 @@ missing response, version mismatch, timeout or dependency outage fails closed.
 The report distinguishes an unavailable dependency from an unhealthy service
 response and records counts and timings without storing response bodies or target
 URLs.
+Failed Log Analytics queries record only a fixed category, bounded exit code,
+allowlisted provider code, output stream and numeric HTTP status when available.
+The CI artifact never includes raw Azure CLI output or query text.
 
 Azure Monitor evaluates missing health telemetry, server errors and p95 latency
 every five minutes over a five-minute window. Log ingestion can take several
