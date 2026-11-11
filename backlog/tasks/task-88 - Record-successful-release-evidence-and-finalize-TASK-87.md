@@ -1,11 +1,11 @@
 ---
 id: TASK-88
 title: Record successful release evidence and finalize TASK-87
-status: In Progress
+status: Done
 assignee:
   - '@codex'
 created_date: '2026-11-11T14:52:00Z'
-updated_date: '2026-11-11T14:57:00Z'
+updated_date: '2026-11-11T14:59:00Z'
 labels:
   - infrastructure
   - cicd
@@ -43,8 +43,8 @@ Verify: backlog task view TASK-87 --plain; python3 -B scripts/backlog_consistenc
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 TASK-87 acceptance criteria 1–3 are checked only with evidence from main CI run 43037440339 and Azure release run 43039388142; its implementation and final summary record 100 HTTP requests, 600 seconds, 0% errors, zero unhealthy/version-mismatched responses, p95 456.604 ms, skipped candidate recovery, successful annotation, and no required analytics query.
-- [ ] #2 TASK-87 is marked Done with a concise final summary after its acceptance evidence is recorded; this task has its own scope, PR reference, verification, and final summary.
+- [x] #1 TASK-87 acceptance criteria 1–3 are checked only with evidence from main CI run 43037440339 and Azure release run 43039388142; its implementation and final summary record 100 HTTP requests, 600 seconds, 0% errors, zero unhealthy/version-mismatched responses, p95 456.604 ms, skipped candidate recovery, successful annotation, and no required analytics query.
+- [x] #2 TASK-87 is marked Done with a concise final summary after its acceptance evidence is recorded; this task has its own scope, PR reference, verification, and final summary.
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -62,4 +62,12 @@ Verify: backlog task view TASK-87 --plain; python3 -B scripts/backlog_consistenc
 TASK-87’s post-merge acceptance evidence is verified: main CI run 43037440339 attempt 3 passed; Azure release run 43039388142 succeeded for main SHA 6f693bd4373b17725aec09d411460408ea72af9e. Retained artifact 13864429706 reports 100 HTTP requests over 600 seconds, zero errors or unhealthy/version mismatches, p95 456.604 ms; Bicep apply and release annotation passed, candidate recovery was skipped, and analytics query was skipped. TASK-87 criteria 1–3 are checked and its branch-local status is Done. Live consistency guard passes with claim_verified=true; git diff --check passes. Finalization PR and its checks pending.
 
 Draft PR #103 opened for this task. PR #102 implementation was merged and the main release completed successfully. Current-head PR checks are pending; this record will be finalized after checks pass.
+
+PR #103 current-head checks passed on commit 2e5ebf335f9b4a67aa767ae0782c549d9346dc97: Quality, advisory Risk report, and immutable release image checks all succeeded. The task-record finalization changes still need their own final PR head checks after commit.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Recorded the successful main CI and Azure release evidence, checked all TASK-87 acceptance criteria, and finalized TASK-87 as Done. The HTTP-only pilot release applied Bicep and passed 100 version-matched HTTP requests over 600 seconds with zero errors or unhealthy responses and p95 456.604 ms; candidate recovery was skipped, release annotation succeeded, and analytics was not a release prerequisite. This task’s evidence and completion record are carried in PR #103.
+<!-- SECTION:FINAL_SUMMARY:END -->
