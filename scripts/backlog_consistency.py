@@ -135,7 +135,7 @@ def load_tasks(root, ref=None):
             continue
         if not ref and (root / path).is_symlink():
             raise EvidenceError(f"{path}: symlink task records are not supported.")
-        text = git(root, "show", f"{ref}:{path}") if ref else (root / path).read_text()
+        text = git(root, "show", f"{ref}:{path}") if ref else (root / path).read_text(encoding="utf-8")
         task = parse_task(text, path)
         if task["id"] in tasks:
             raise EvidenceError(f"{task['id']}: ambiguous duplicate native ID.")
@@ -156,6 +156,22 @@ def field(task, name):
         match = re.search(r"\bBranch: ([A-Za-z0-9/_-]+)", body)
         return match[1] if match else ""
     return ""
+
+
+def focus_for_branch(tasks, branch):
+    """Include the PR's task and its native dependencies, never unrelated work."""
+    owners = [tid for tid, task in tasks.items() if not task["archived"] and field(task, "Branch") == branch]
+    focus = set(owners)
+
+    def add_dependencies(tid):
+        for dependency in tasks[tid]["meta"]["dependencies"]:
+            if dependency in tasks and dependency not in focus:
+                focus.add(dependency)
+                add_dependencies(dependency)
+
+    for owner in owners:
+        add_dependencies(owner)
+    return focus
 
 
 def historical(task, base):
@@ -282,7 +298,7 @@ def collect(root, repository, tasks, base_sha, client=None):
     default = repo["default_branch"]
     default_sha = client.get(f"git/ref/heads/{quote(default, safe='')}")["object"]["sha"]
     if default_sha != base_sha:
-        raise EvidenceError("Default-branch evidence is stale; fetch origin and update --base before claiming.")
+        raise EvidenceError("Default-branch evidence is stale; fetch current main and rerun validation.")
     pulls = client.pages("pulls?state=all")
     for pr in pulls:
         pr["on_default_branch"] = bool(pr.get("merged_at") and pr.get("merge_commit_sha")
@@ -319,11 +335,12 @@ def collect(root, repository, tasks, base_sha, client=None):
             "pulls": pulls, "claims": claims, "collected_at": datetime.now(timezone.utc).isoformat()}
 
 
-def validate(tasks, base, repository, live=None, target=None, branch=None, changed=()):
+def validate(tasks, base, repository, live=None, target=None, branch=None, changed=(), focus=None):
     errors, warnings, specs, blocked = [], [], {}, {}
 
     def fail(tid, reason):
-        errors.append(f"{tid}: {reason}")
+        if focus is None or tid in focus or tid == "scope":
+            errors.append(f"{tid}: {reason}")
 
     for tid in base.keys() - tasks.keys():
         fail(tid, "native identity/history was removed; retain an explicit archival/migration record")
@@ -433,9 +450,11 @@ def validate(tasks, base, repository, live=None, target=None, branch=None, chang
                      tuple(text for _, text in tasks[tid]["ac"]))
         if signature in signatures:
             fail(tid, f"duplicate decomposition of {signatures[signature]}")
+            fail(signatures[signature], f"duplicate decomposition of {tid}")
         signatures[signature] = tid
         if info["branch"] in branches:
             fail(tid, f"feature branch already assigned to {branches[info['branch']]}")
+            fail(branches[info["branch"]], f"feature branch already assigned to {tid}")
         branches[info["branch"]] = tid
         if live:
             issue = live["issues"].get(info["issue"])
@@ -530,6 +549,7 @@ def main(argv=None):
     parser.add_argument("--repository", default=os.environ.get("GITHUB_REPOSITORY", "vkaam/phonebuddy"))
     parser.add_argument("--task", help="Validate this native task immediately before claim/resume")
     parser.add_argument("--branch", help="Task branch (defaults to GITHUB_HEAD_REF or current branch)")
+    parser.add_argument("--ci-pr", action="store_true", help="Block only on this PR's task and dependencies")
     parser.add_argument("--offline", action="store_true", help="Structural checks only; cannot verify a claim")
     parser.add_argument("--output", type=Path, help="Write JSON evidence in addition to stdout")
     args = parser.parse_args(argv)
@@ -552,6 +572,13 @@ def main(argv=None):
         base = load_tasks(root, base_sha)
         before = source(root, tasks)
         branch = args.branch or os.environ.get("GITHUB_HEAD_REF") or git(root, "branch", "--show-current").strip()
+        if args.ci_pr and args.task:
+            raise EvidenceError("--ci-pr and --task serve different validation modes.")
+        if args.ci_pr and args.offline:
+            raise EvidenceError("PR Quality requires live GitHub evidence; --offline cannot validate a claim.")
+        if args.ci_pr and git(root, "merge-base", "--is-ancestor", base_sha, "HEAD", optional=True) is None:
+            raise EvidenceError("Test merge is behind current main; update the branch and rerun CI.")
+        focus = focus_for_branch(tasks, branch) if args.ci_pr else None
         # --no-renames includes both old and new paths in scope validation.
         changed = git(root, "diff", "--no-renames", "--name-only", "-z", base_sha, "--").split("\0")
         changed = [p for p in changed if p]
@@ -565,10 +592,11 @@ def main(argv=None):
                 if root not in destination.parents:
                     raise EvidenceError(f"{path}: changed symlink escapes the approved checkout.")
                 changed.append(destination.relative_to(root).as_posix())
-        selected = {tid: t for tid, t in tasks.items() if not t["archived"] and not historical(t, base)
+        selected = {tid: t for tid, t in tasks.items() if (focus is None or tid in focus)
+                    and not t["archived"] and not historical(t, base)
                     and (t["meta"]["status"] != "Done" or tid not in base or base[tid]["meta"]["status"] != "Done")}
         live = None if args.offline else collect(root, args.repository, selected, base_sha)
-        report.update(validate(tasks, base, args.repository, live, args.task, branch, changed))
+        report.update(validate(tasks, base, args.repository, live, args.task, branch, changed, focus))
         report.update({"source": before, "base_sha": base_sha, "branch": branch,
                        "repository": args.repository, "changed_paths": changed})
         if live:
