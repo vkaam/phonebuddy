@@ -105,7 +105,7 @@ class WorkspaceTelemetryTests(unittest.TestCase):
         self.assertEqual(report['reasons'], ['dependency_outage'])
         self.assertEqual(report['diagnostic'], {
             'operation': 'log_analytics_query', 'category': 'throttled', 'exit_code': 1,
-            'error_code': None, 'error_source': 'stderr',
+            'error_code': None, 'error_source': 'stderr', 'http_status': 429,
         })
         self.assertEqual(len(calls), 4)
         self.assertEqual(sleeps, [10, 20, 30])
@@ -144,7 +144,7 @@ class WorkspaceTelemetryTests(unittest.TestCase):
         self.assertEqual(report['reasons'], ['dependency_outage'])
         self.assertEqual(report['diagnostic'], {
             'operation': 'log_analytics_query', 'category': 'cli_error', 'exit_code': 1,
-            'error_code': None, 'error_source': 'stderr',
+            'error_code': None, 'error_source': 'stderr', 'http_status': None,
         })
 
     def test_workspace_query_diagnostic_classifies_auth_errors_without_echoing_cli_output(self):
@@ -167,6 +167,7 @@ class WorkspaceTelemetryTests(unittest.TestCase):
             'exit_code': 1,
             'error_code': 'AuthorizationFailed',
             'error_source': 'stderr',
+            'http_status': None,
         })
         self.assertNotIn('do-not-log', serialized)
         self.assertNotIn('ContainerAppConsoleLogs', serialized)
@@ -189,6 +190,7 @@ class WorkspaceTelemetryTests(unittest.TestCase):
         self.assertEqual(report['diagnostic'], {
             'operation': 'log_analytics_query', 'category': 'query_rejected',
             'exit_code': 1, 'error_code': 'BadRequest', 'error_source': 'stderr',
+            'http_status': None,
         })
         self.assertNotIn('123e4567-e89b-12d3-a456-426614174000', serialized)
         self.assertNotIn('ContainerAppConsoleLogs', serialized)
@@ -205,6 +207,7 @@ class WorkspaceTelemetryTests(unittest.TestCase):
         self.assertEqual(report['diagnostic'], {
             'operation': 'log_analytics_query', 'category': 'timeout',
             'exit_code': None, 'error_code': None, 'error_source': 'none',
+            'http_status': None,
         })
         self.assertNotIn('secret token', json.dumps(report))
 
@@ -227,9 +230,36 @@ class WorkspaceTelemetryTests(unittest.TestCase):
         self.assertEqual(report['diagnostic'], {
             'operation': 'log_analytics_query', 'category': 'throttled',
             'exit_code': 1, 'error_code': 'TooManyRequests', 'error_source': 'stdout',
+            'http_status': None,
         })
         self.assertNotIn('private', serialized)
         self.assertNotIn('do-not-log', serialized)
+
+    def test_workspace_query_classifies_safe_http_status_without_echoing_output(self):
+        examples = [
+            ('ERROR: request failed with status code: 403; resource=private',
+             'authorization_denied', 403),
+            ('HTTP/1.1 404 Not Found; workspace=private',
+             'workspace_not_found', 404),
+            ('{"status":400,"message":"query=private"}',
+             'query_rejected', 400),
+            ('HTTP 503; token=do-not-log', 'provider_error', 503),
+        ]
+        for stderr, category, status in examples:
+            with self.subTest(status=status):
+                def failed_runner(*args, **kwargs):
+                    return type('Result', (), {
+                        'returncode': 1, 'stdout': '', 'stderr': stderr,
+                    })()
+
+                report = query_workspace_telemetry(
+                    'workspace-id', 'app-name', 'release-1', failed_runner)
+                serialized = json.dumps(report)
+                self.assertEqual(report['diagnostic']['category'], category)
+                self.assertEqual(report['diagnostic']['http_status'], status)
+                self.assertEqual(report['diagnostic']['error_source'], 'stderr')
+                self.assertNotIn('private', serialized)
+                self.assertNotIn('do-not-log', serialized)
 
     def test_workspace_query_escapes_filter_values(self):
         captured = {}

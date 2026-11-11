@@ -171,24 +171,45 @@ def workspace_query_failure_diagnostic(result):
                 break
         if error_code:
             break
+    status_patterns = (
+        r'\bHTTP(?:/\d(?:\.\d)?)?\s+([1-5]\d{2})\b',
+        r'\bstatus\s+code\s*[:=]?\s*([1-5]\d{2})\b',
+        r'\bstatus\s*[:=]\s*([1-5]\d{2})\b',
+        r'"status(?:Code|_code)?"\s*:\s*([1-5]\d{2})\b',
+    )
+    http_status = None
+    for _, output in streams:
+        for pattern in status_patterns:
+            match = re.search(pattern, output, re.IGNORECASE)
+            if match:
+                http_status = int(match.group(1))
+                break
+        if http_status is not None:
+            break
     code = (error_code or '').casefold()
-    if ('does not have authorization' in summary or 'authorizationfailed' in summary
+    if (http_status in (401, 403) or 'does not have authorization' in summary
+            or 'authorizationfailed' in summary
             or 'forbidden' in summary or code.endswith(('authorizationfailed', 'forbidden'))):
         category = 'authorization_denied'
-    elif ('unauthorized' in summary or 'authenticationfailed' in summary
+    elif (http_status == 401 or 'unauthorized' in summary or 'authenticationfailed' in summary
           or 'expired token' in summary or code.endswith(('unauthorized', 'authenticationfailed'))):
         category = 'authentication_failed'
-    elif ('workspace not found' in summary or 'resourcenotfound' in summary):
+    elif (http_status == 404 or 'workspace not found' in summary
+          or 'resourcenotfound' in summary):
         category = 'workspace_not_found'
-    elif ('invalidquery' in summary or 'badargumenterror' in summary
+    elif (http_status == 400 or 'invalidquery' in summary or 'badargumenterror' in summary
           or 'semantic error' in summary or 'badrequest' in summary
           or code.endswith(('badrequest', 'badargumenterror', 'invalidquery'))):
         category = 'query_rejected'
-    elif ('throttl' in summary or 'too many requests' in summary or '429' in summary
+    elif (http_status == 429 or 'throttl' in summary or 'too many requests' in summary
+          or '429' in summary
           or code.endswith(('toomanyrequests', 'throttled', 'serverbusy'))):
         category = 'throttled'
-    elif ('timed out' in summary or 'timeout' in summary or code.endswith('timeout')):
+    elif (http_status in (408, 504) or 'timed out' in summary or 'timeout' in summary
+          or code.endswith('timeout')):
         category = 'timeout'
+    elif http_status is not None and http_status >= 500:
+        category = 'provider_error'
     else:
         category = 'cli_error'
     exit_code = getattr(result, 'returncode', None)
@@ -196,7 +217,7 @@ def workspace_query_failure_diagnostic(result):
         exit_code = None
     return {'operation': 'log_analytics_query', 'category': category,
             'exit_code': exit_code, 'error_code': error_code,
-            'error_source': error_source}
+            'error_source': error_source, 'http_status': http_status}
 
 
 def query_workspace_telemetry(workspace_id, app_name, expected_version, runner=subprocess.run,
@@ -268,7 +289,7 @@ def query_workspace_telemetry(workspace_id, app_name, expected_version, runner=s
                 'unhealthy_event_count': 0, 'reasons': ['dependency_outage'],
                 'diagnostic': {'operation': 'log_analytics_query', 'category': category,
                                'exit_code': None, 'error_code': None,
-                               'error_source': 'none'}}
+                               'error_source': 'none', 'http_status': None}}
 
 
 def wait_for_workspace_telemetry(workspace_id, app_name, expected_version,
