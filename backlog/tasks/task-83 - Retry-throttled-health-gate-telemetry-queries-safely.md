@@ -1,11 +1,11 @@
 ---
 id: TASK-83
 title: Retry throttled health-gate telemetry queries safely
-status: In Progress
+status: Done
 assignee:
   - '@codex'
 created_date: '2026-11-11T07:35:00Z'
-updated_date: '2026-11-11T07:39:00Z'
+updated_date: '2026-11-11T07:42:00Z'
 labels:
   - infrastructure
   - cicd
@@ -46,7 +46,7 @@ Spec: Add finite, bounded-backoff retries only for classified Log Analytics thro
 <!-- AC:BEGIN -->
 - [x] #1 Classified Log Analytics throttling is retried a finite number of times with bounded backoff, without exposing raw CLI output or query details.
 - [x] #2 Exhausted retries remain dependency_outage, and missing telemetry, unhealthy events, and HTTP health thresholds continue to fail closed.
-- [ ] #3 Focused health-gate tests, local Quality, live consistency validation, and hosted Quality pass on the final PR head.
+- [x] #3 Focused health-gate tests, local Quality, live consistency validation, and hosted Quality pass on the final PR head.
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -59,4 +59,12 @@ Spec: Add finite, bounded-backoff retries only for classified Log Analytics thro
 
 <!-- SECTION:NOTES:BEGIN -->
 Implemented three finite retries for throttled Log Analytics queries with 10/20/30-second capped exponential backoff. Only the fixed throttled diagnostic category retries; authorization, query, timeout, and other errors fail immediately. Persistent throttling returns the existing redacted dependency_outage diagnostic. Focused health-gate suite passed (15 tests), repository Quality passed, and live consistency/claim validation passed against current origin. No permission or health threshold changes were made.
+
+PR #96 opened at commit 03b069f. Hosted Quality run 42981250248 passed and advisory Risk report 42981250259 passed on that head. TASK-83 is marked Done on the feature branch; finalization will be committed to the same PR and checks will be rerun on the resulting final head. The trusted post-merge Azure gate remains issue-level verification under #92.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Added up to three retries for Log Analytics throttling with 10, 20, and 30 second capped backoff. Persistent throttling remains a redacted dependency_outage; other query failures do not retry. Focused tests, local Quality, live consistency, and hosted Quality passed. No Azure permissions or health thresholds changed. Successful trusted post-merge gate evidence remains outstanding under issue #92.
+<!-- SECTION:FINAL_SUMMARY:END -->
