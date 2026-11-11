@@ -218,6 +218,46 @@ class ConsistencyTests(unittest.TestCase):
         reopened["meta"]["status"] = "To Do"
         self.assertFails(self.run_guard([task, reopened], base, live(pulls=[pull(branch="agent/task-81", merged=True)]), target="TASK-80", branch="agent/task-80"), "dependencies lack")
 
+    def test_merged_legacy_in_progress_record_is_effectively_complete(self):
+        predecessor = record(81, status="In Progress")
+        predecessor["meta"]["assignee"] = ["@codex"]
+        predecessor["ac"][0] = (True, predecessor["ac"][0][1])
+        follower = record(deps=("TASK-81",))
+        base = {predecessor["id"]: deepcopy(predecessor)}
+        remote = live(pulls=[pull(branch="agent/task-81", merged=True)])
+        result = self.run_guard([predecessor, follower], base, remote,
+                                target="TASK-80", branch="agent/task-80")
+        self.assertTrue(result["claim_verified"], result)
+        self.assertTrue(any("TASK-81: merged PR" in w for w in result["warnings"]), result)
+
+        remote["issues"][ISSUE]["state"] = "closed"
+        self.assertFails(self.run_guard([predecessor, follower], base, remote), "closed before all linked tasks")
+        completed_follower = record(status="Done", deps=("TASK-81",))
+        completed_base = {**base, completed_follower["id"]: deepcopy(completed_follower)}
+        remote["pulls"].append(pull(number=2, merged=True))
+        closed = self.run_guard([predecessor, completed_follower], completed_base, remote)
+        self.assertEqual(closed["status"], "pass", closed)
+
+    def test_unmerged_or_unchecked_legacy_status_does_not_complete(self):
+        predecessor = record(81, status="In Progress")
+        predecessor["meta"]["assignee"] = ["@codex"]
+        follower = record(deps=("TASK-81",))
+        base = {predecessor["id"]: deepcopy(predecessor)}
+        for pr in [pull(branch="agent/task-81"), pull(branch="agent/task-81", merged=True)]:
+            self.assertFails(self.run_guard([predecessor, follower], base,
+                                            live(pulls=[pr]), target="TASK-80",
+                                            branch="agent/task-80"), "dependencies lack")
+        predecessor["ac"][0] = (True, predecessor["ac"][0][1])
+        self.assertFails(self.run_guard([predecessor, follower], base,
+                                        live(pulls=[pull(branch="agent/task-81", merged=True)]),
+                                        target="TASK-80", branch="agent/task-80"), "dependencies lack")
+        archived = record(81, status="In Progress", archived=True)
+        archived["meta"]["assignee"] = ["@codex"]
+        archived["ac"][0] = (True, archived["ac"][0][1])
+        self.assertFails(self.run_guard([archived, follower], {archived["id"]: deepcopy(archived)},
+                                        live(pulls=[pull(branch="agent/task-81", merged=True)]),
+                                        target="TASK-80", branch="agent/task-80"), "dependencies lack")
+
     def test_imports_are_ineligible_and_new_records_cannot_backdate_exemption(self):
         old = record(created="2026-10-29")
         result = self.run_guard([old], {old["id"]: old}, target=old["id"], branch="agent/task-80")

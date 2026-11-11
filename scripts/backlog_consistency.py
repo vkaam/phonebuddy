@@ -394,9 +394,14 @@ def validate(tasks, base, repository, live=None, target=None, branch=None, chang
             return False
         old = base.get(tid)
         current = tasks.get(tid)
-        if (not old or not current or old["meta"]["status"] != "Done"
-                or current["meta"]["status"] != "Done" or not old["ac"]
+        legacy_merged = (old and current and old["meta"]["status"] == "In Progress"
+                         and current["meta"]["status"] == "In Progress")
+        if (not old or not current or ((old["archived"] or current["archived"])
+                                    and old["meta"]["status"] != "Done")
+                or not (old["meta"]["status"] == current["meta"]["status"] == "Done"
+                                            or legacy_merged) or not old["ac"]
                 or current["ac"] != old["ac"] or current["meta"]["dependencies"] != old["meta"]["dependencies"]
+                or not all(x[0] for x in current["ac"])
                 or any(field(current, key) != field(old, key) for key in
                        ("Issue", "Primary issue", "Branch", "Scope", "Verify", "Verification"))
                 or not all(x[0] for x in old["ac"])):
@@ -421,6 +426,8 @@ def validate(tasks, base, repository, live=None, target=None, branch=None, chang
 
     for tid, task in tasks.items():
         blocked[tid] = [dep for dep in task["meta"]["dependencies"] if not completed(dep)]
+        if task["meta"]["status"] == "In Progress" and completed(tid):
+            warnings.append(f"{tid}: merged PR and checked acceptance establish completion; native status is stale")
         # Superseded IDs must not survive on any active downstream record.
         old = base.get(tid)
         replacements = re.findall(r"^Replaced by: (TASK-[1-9][0-9]*)\s*$", task["body"], re.M) if task["archived"] else []
@@ -458,8 +465,14 @@ def validate(tasks, base, repository, live=None, target=None, branch=None, chang
         branches[info["branch"]] = tid
         if live:
             issue = live["issues"].get(info["issue"])
-            if not issue or "body" not in issue or issue.get("state") != "open":
-                fail(tid, "issue is closed or live approval/revision evidence is unavailable")
+            if not issue or "body" not in issue:
+                fail(tid, "live approval/revision evidence is unavailable")
+            elif issue.get("state") == "closed" and not all(
+                    completed(peer["id"]) for peer in tasks.values()
+                    if not peer["archived"] and primary_issue(peer, repository) == info["issue"]):
+                fail(tid, "issue is closed before all linked tasks have merged completion")
+            elif issue.get("state") not in {"open", "closed"}:
+                fail(tid, "issue state is unavailable")
             elif hashlib.sha256((issue["body"] or "").encode()).hexdigest() != info["digest"]:
                 fail(tid, "issue body changed; authorized triage must reassess the approved revision")
             prs = [p for p in live["pulls"] if p["head"]["ref"] == info["branch"]
@@ -473,7 +486,8 @@ def validate(tasks, base, repository, live=None, target=None, branch=None, chang
                 fail(tid, "competing branch/PR claims; reconcile ownership before execution")
             if any(c["status"] == "To Do" and c.get("pr") for c in claims):
                 fail(tid, "open implementation PR has an unclaimed To Do record")
-            if tasks[tid]["meta"]["status"] == "In Progress" and not claims and info["branch"] != branch:
+            if (tasks[tid]["meta"]["status"] == "In Progress" and not completed(tid)
+                    and not claims and info["branch"] != branch):
                 fail(tid, "active claim has no live branch/PR; reconcile deleted or stale work")
             if tasks[tid]["meta"]["status"] == "In Progress" and blocked[tid]:
                 fail(tid, "active work lacks default-branch completion: " + ", ".join(blocked[tid]))
