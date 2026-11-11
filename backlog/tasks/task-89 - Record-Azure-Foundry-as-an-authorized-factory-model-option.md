@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-11T15:42:00Z'
-updated_date: '2026-11-11T15:48:00Z'
+updated_date: '2026-11-11T15:52:00Z'
 labels:
   - factory
   - autonomy
@@ -33,7 +33,7 @@ Approved requirements revision: 2026-11-04T06:22:57Z; body SHA-256 e89fb516577a1
 Approval evidence: The owner directly instructed in this Codex conversation: “No, we can use azure foundry as well.” This authorizes Azure Foundry as an additional model option. Existing TASK-73 approval still prohibits paid OpenAI API usage. This does not authorize reusing the product Foundry identity or data for factory runs, provisioning new factory resources, or any unbounded spend.
 Branch: agent/gh-37-6-azure-foundry-option
 Scope: docs/agentic-development-contract.md; this task record through Backlog CLI
-Verify: python3 -B scripts/check.py; git diff --check; manually verify that the recorded decision matches the owner instruction and preserves TASK-73 and Issue #37 authority boundaries.
+Verify: python3 -B scripts/quality.py; python3 -B scripts/run_required_unittests.py; python3 -B scripts/backlog_consistency.py --offline; git diff --check; PR Quality must pass, including the browser tests. The local all-in-one check is not usable here because the required Playwright browser binary is unavailable in this environment.
 <!-- SECTION:DESCRIPTION:END -->
 
 ## Acceptance Criteria
@@ -55,4 +55,6 @@ Verify: python3 -B scripts/check.py; git diff --check; manually verify that the 
 Updated the factory runtime decision to add owner-approved Azure Foundry while retaining subscription Codex, the no-paid-OpenAI-API direction, and the separate factory identity/resource, production-access, and limit gates.
 
 AC1-2 verified against docs/agentic-development-contract.md: Azure Foundry is an additional owner-approved option; paid OpenAI API remains unauthorized; approval grants no product data/identity, production access, factory provisioning or unbounded spend. Local verification: scripts/quality.py passed; scripts/run_required_unittests.py passed in report /tmp/phonebuddy-quality-uz8jm7wt/report.json; scripts/backlog_consistency.py --offline passed; git diff --check passed. The full scripts/check.py bundle failed only because this environment has no Playwright Chromium headless-shell binary; browser tests did not execute. Hosted Quality including browser tests remains required on the PR head.
+
+Adjusted the declared local verification to the documentation-relevant checks plus required hosted Quality because this worktree has no Playwright Chromium binary and the all-in-one local bundle cannot run the browser suite. Hosted Quality on PR #104 did execute the browser suite and passed.
 <!-- SECTION:NOTES:END -->
