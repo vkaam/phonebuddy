@@ -190,6 +190,9 @@ class WorkspaceTelemetryTests(unittest.TestCase):
             return self.runner_for(100, 0)(command, **kwargs)
 
         query_workspace_telemetry('workspace-id', "app'name", "release'1", runner)
+        self.assertIn("""Log contains '"event":"health_request"'""", captured['query'])
+        self.assertLess(captured['query'].index('Log contains'),
+                        captured['query'].index('| extend health='))
         self.assertIn("ContainerAppName == 'app''name'", captured['query'])
         self.assertIn("health.version) == 'release''1'", captured['query'])
 
