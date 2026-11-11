@@ -84,11 +84,19 @@ reconciler is still required for unattended, race-free synchronization.
 A branch-local Done record is a proposed completion. Merge to the default
 branch makes that task Done final and accepts its scoped criteria. A multi-task
 issue remains open after an intermediate merge; close it when every required
-task PR has merged and its Done record is on the default branch. Record the
+task PR has merged and its completion evidence is on the default branch. Record the
 merged PRs and task IDs on the issue. No separate human acceptance ceremony or
 post-merge deployment gate delays this closure. A successful merge does not
 claim that deployment, live health or recovery succeeded. Observe default-branch
 CI/CD after merge and report its actual state.
+
+For older records stranded In Progress after their sole PR merged, checked
+native acceptance plus that PR's merge on current main establishes effective
+completion. The consistency audit warns about the stale native status; it does
+not require another PR solely to flip that status. An unchecked criterion,
+unmerged PR or branch-local proposed completion cannot satisfy a dependency or
+justify closing an issue. Keep an issue open while any required linked task
+remains incomplete. Track genuinely unfinished live proof as its own task.
 
 Human cancellation is a different outcome from successful completion and must
 not masquerade as delivery. A closed issue flag or archived unfinished task
@@ -113,7 +121,7 @@ reconciliation and an authorized merge controller remain unimplemented.
 
 ## Executable consistency guard
 
-Run the same read-only validator locally and in CI:
+Run the repository-wide read-only audit locally:
 
 ```sh
 git fetch origin
@@ -161,11 +169,25 @@ reference. Archival preserves unfinished status and cannot satisfy dependencies.
 The guard also rejects silently removed identities. Use the Backlog CLI for all
 reconciliation changes; the guard supplies no automatic repair path.
 
-CI runs live validation inside the existing Quality gate using a read-only,
-unprivileged token, retaining its JSON with QA artifacts. `scripts/check.py`
-registers the offline structural mode; `--offline` never validates a claim or
-provides live merge/approval evidence. Existing broad imports may therefore
-appear as warnings in an audit while remaining blocked for execution.
+On a PR, required Quality runs the live guard with `--ci-pr --base origin/main`
+and the PR's head branch. It blocks on that task's approval, claim, scope and
+dependencies. If main has advanced beyond the tested merge commit, the check
+asks for an updated branch and rerun. The separate advisory Backlog audit
+workflow retains the repository-wide result on PR and main runs; it is not a
+required check and is not part of the main CI workflow that triggers release.
+Unrelated task or issue drift, audit failure and artifact failure therefore do
+not block another PR or delay promotion. Read the audit JSON `status` and
+reconcile failures. A missing report is inconclusive and needs a rerun.
+The full guard remains required immediately before a worker claims or resumes a
+task. `scripts/check.py` registers the offline structural mode; `--offline`
+never validates a claim or provides live merge/approval evidence. Existing broad
+imports may therefore appear as warnings in an audit while remaining blocked
+for execution.
+
+Protected-main Quality runs the full web, dependency and browser checks before
+the exact-source release image is built. The trusted release path still verifies
+successful main Quality, artifact identity and post-deployment health before
+promotion; a failed or missing main check cannot authorize it.
 
 This is a point-in-time consistency gate for human-directed work. Approval text
 is checked for required provenance and revision, not cryptographically attested

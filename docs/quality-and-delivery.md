@@ -68,6 +68,10 @@ Task completion on a feature branch is provisional until merge. An independent
 agent may validate task acceptance and review the PR. Merge a small, ready PR
 after required pre-merge checks and blocking findings are clear. The merge makes
 its task Done final; close the parent issue when all required task PRs merge.
+For legacy tasks left In Progress on main after their sole PR merged, checked
+native acceptance and the merged PR establish effective completion; the audit
+reports the stale status without demanding another PR. Incomplete acceptance
+or an unmerged task still blocks issue closure.
 Report task and PR transitions on the issue without rewriting approved intent.
 Observe default-branch CI/CD afterward. A failure creates a new linked issue
 and native task; it does not reopen the merged work. Runtime reconciliation and
@@ -80,13 +84,18 @@ python3 -B scripts/quality.py
 python3 -B scripts/run_required_unittests.py
 ```
 
-Backlog consistency is an explicit required check. CI runs
-`python3 -B scripts/backlog_consistency.py` against the fresh default-branch
-commit with read-only GitHub access and retains `artifacts/backlog-consistency.json`.
-It checks native task specifications, approved issue revisions, dependencies,
-branch/PR claims, migrations and changed-path scope. The local bundle registers
-`--offline` structural validation; live claim validation remains an outstanding
-gate until run separately. Immediately before claiming/resuming use the same
+PR Quality runs `python3 -B scripts/backlog_consistency.py --ci-pr` against
+fresh `origin/main` with read-only GitHub access and retains
+`artifacts/backlog-consistency.json`. The PR's approved task, dependencies,
+branch/PR claim and changed-path scope remain blocking. The separate advisory
+`Backlog audit` workflow retains the repository-wide result, including
+unrelated task/issue drift. It is not a required check and does not delay the
+main CI workflow or its release trigger. Its JSON `status` must be read after
+the run; a missing report is inconclusive and must be rerun for reconciliation.
+The local bundle
+registers `--offline` structural validation; live
+claim validation remains an outstanding gate until run separately. Immediately
+before claiming/resuming use the full guard
 command with `--base origin/main --task TASK-ID --branch RECORDED-BRANCH` after
 fetching origin. Require `claim_verified: true`. See the
 [guard contract and limits](issue-backlog-governance.md#executable-consistency-guard).
@@ -171,17 +180,19 @@ changes to the browser/toolchain lockfile or runner identity miss and repopulate
 a new cache. The v2 key also separates the smaller headless-shell cache from
 an earlier experiment that included the full Chromium browser.
 
-The workflow continues to run `npm ci`, `npm audit`, lint, unit and browser
-smoke tests, the build, actionlint, Gitleaks, and source-bound evidence uploads
-after either a cache hit or miss. A cache hit is a download optimization, not
-verification evidence. We do not cache npm: the current locked graph installs
+On a protected `main` push, Quality still runs `npm ci`, `npm audit`, lint,
+web unit and browser smoke tests, the build, actionlint, Bicep validation,
+Gitleaks, and source-bound evidence uploads after either a cache hit or miss.
+PR Quality keeps the repository and Python policy tests, the PR-scoped live
+claim/scope guard, actionlint, Bicep validation and Gitleaks. The full web and
+dependency checks run on the merged main SHA before the release image is built
+or promoted. A cache hit is a download optimization, not verification evidence.
+We do not cache npm: the current locked graph installs
 28 packages in about 1–2 seconds, and an initial 59 MB npm cache hit did not
 reduce `npm ci` time.
 
-Pull request data can affect caches used by pull request CI. GitHub scopes
-`pull_request` caches to the PR merge ref and does not allow those runs to write
-the default-branch cache; low-trust events do not get write access to that
-shared default-branch scope. See [GitHub's cache access rules](https://docs.github.com/en/actions/reference/workflows-and-actions/dependency-caching#restrictions-for-accessing-a-cache).
+The browser cache is used only on protected `main` pushes. See
+[GitHub's cache access rules](https://docs.github.com/en/actions/reference/workflows-and-actions/dependency-caching#restrictions-for-accessing-a-cache).
 The privileged `.github/workflows/pr-safety.yml` workflow does not restore or
 consume CI caches, PR artifacts, or PR code. Keep cache use out of
 `pull_request_target` workflows.
@@ -223,7 +234,11 @@ dependency installation, locked npm install, audit, every test, build,
 actionlint, Gitleaks, and evidence uploads still ran on the warm hit.
 
 The `CI` workflow runs on every PR (without path filters), pushes to `main`,
-manual dispatch, and merge groups. Its single stable check is `Quality`. It:
+manual dispatch, and merge groups. Its single stable required check is
+`Quality`. PR and merge-group runs keep the fast safety checks; protected-main
+pushes add the locked web install, audit, lint, unit/browser tests and build.
+The exact-source release image is built only after main Quality succeeds, and
+the trusted Azure release verifies that run and artifact before promotion. Quality:
 
 - Checks UTF-8 text, final newlines, trailing whitespace, conflict markers,
   local Markdown file links, and immutable action references. Anchor existence
@@ -238,8 +253,9 @@ manual dispatch, and merge groups. Its single stable check is `Quality`. It:
 
 Actions use immutable revisions; downloaded tools have pinned SHA-256 hashes.
 Dependabot proposes weekly action and web npm updates. The local bundle and
-hosted Quality run `npm audit` against the locked web dependency graph; any
-reported severity or registry failure fails the check. CI retains the audit
+protected-main Quality run `npm audit` against the locked web dependency graph;
+any reported severity or registry failure stops main verification and promotion.
+It does not block an otherwise ready PR. CI retains the audit
 log with its QA evidence. A maintainer reviews each finding, affected usage,
 and proposed update, applies a verified fix, and reruns the checks. If a fix is
 unavailable or the registry cannot be reached, record the finding or outage,
