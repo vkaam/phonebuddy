@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-11T13:31:00Z'
-updated_date: '2026-11-11T13:58:00Z'
+updated_date: '2026-11-11T14:16:00Z'
 labels:
   - infrastructure
   - cicd
@@ -49,6 +49,7 @@ modified_files:
   - scripts/health_gate.py
   - tests/test_health_gate.py
   - .github/workflows/azure-deploy.yml
+  - .github/workflows/ci.yml
   - docs/azure-delivery-policy.md
 priority: high
 type: bug
@@ -63,9 +64,10 @@ Need: Four source-bound Azure release attempts applied Bicep and passed 100 vers
 Issue: https://github.com/vkaam/phonebuddy/issues/101
 Approved requirements revision: 2026-11-11T13:34:38Z; body SHA-256 7d9c56e9a2a30974e203e405f91b28e7bd8db43537213161e1d779db0e0bcabf.
 Approval evidence: The owner directed: “I think we can just skip the log analytics cli check. We are not really interested in analytics for now anyways. We want to focus on product.” New Issue #101 records this direction. Original Issue #18 remains unchanged. This changes the release gate only; exact-source authorization, Bicep and HTTP readiness/health checks remain required.
+Scope amendment (2026-11-11): The owner approved adding .github/workflows/ci.yml to address long waits caused by network-dependent browser dependency setup. See Issue #101 comments 6798126113 and 6798131856.
 Branch: agent/gh-18-5-http-only-release-health-gate
-Scope: scripts/health_gate.py; tests/test_health_gate.py; .github/workflows/azure-deploy.yml; docs/azure-delivery-policy.md; backlog/tasks/task-84 - Issue-18-follow-up-Fix-live-Azure-telemetry-gate-and-verify-release.md; backlog/archive/tasks/task-84 - Issue-18-follow-up-Fix-live-Azure-telemetry-gate-and-verify-release.md; backlog/tasks/task-85 - Issue-18-follow-up-Fix-live-Azure-telemetry-query.md; backlog/archive/tasks/task-85 - Issue-18-follow-up-Fix-live-Azure-telemetry-query.md; backlog/tasks/task-86 - Issue-18-follow-up-Identify-and-fix-Azure-telemetry-query-failure.md; backlog/archive/tasks/task-86 - Issue-18-follow-up-Identify-and-fix-Azure-telemetry-query-failure.md; this task's own CLI-managed record.
-Verify: python3 -B scripts/run_required_unittests.py; BICEP=/tmp/bicep python3 -B scripts/check_bicep.py; actionlint .github/workflows/ci.yml .github/workflows/azure-deploy.yml .github/workflows/pr-safety.yml; git diff --check; hosted main CI and Azure deployment must prove exact-source artifact identity, Bicep apply, 100 version-matched healthy HTTP requests, and release annotation without requiring Log Analytics query success.
+Scope: scripts/health_gate.py; tests/test_health_gate.py; .github/workflows/azure-deploy.yml; .github/workflows/ci.yml; docs/azure-delivery-policy.md; backlog/tasks/task-84 - Issue-18-follow-up-Fix-live-Azure-telemetry-gate-and-verify-release.md; backlog/archive/tasks/task-84 - Issue-18-follow-up-Fix-live-Azure-telemetry-gate-and-verify-release.md; backlog/tasks/task-85 - Issue-18-follow-up-Fix-live-Azure-telemetry-query.md; backlog/archive/tasks/task-85 - Issue-18-follow-up-Fix-live-Azure-telemetry-query.md; backlog/tasks/task-86 - Issue-18-follow-up-Identify-and-fix-Azure-telemetry-query-failure.md; backlog/archive/tasks/task-86 - Issue-18-follow-up-Identify-and-fix-Azure-telemetry-query-failure.md; backlog/tasks/task-87 - Issue-18-follow-up-Use-HTTP-health-as-the-release-gate-without-workspace-analytics.md.
+Verify: python3 -B scripts/run_required_unittests.py; BICEP=/tmp/bicep python3 -B scripts/check_bicep.py; actionlint .github/workflows/ci.yml .github/workflows/azure-deploy.yml .github/workflows/pr-safety.yml; git diff --check; hosted main CI and Azure deployment must prove exact-source artifact identity, Bicep apply, 100 version-matched healthy HTTP requests, and release annotation without requiring Log Analytics query success. CI browser validation remains required and must not wait on long package-manager retries.
 <!-- SECTION:DESCRIPTION:END -->
 
 ## Acceptance Criteria
@@ -95,4 +97,6 @@ Implemented the HTTP-only main release profile: health_gate.py accepts --skip-wo
 Required local verification after the HTTP-only changes: repository Python suite passed 134 tests; Bicep baseline checks passed; actionlint 1.7.12 passed using the CI-pinned binary verified against its SHA-256; git diff --check passed; live TASK-87 consistency guard passed with claim_verified=true on origin/main 8c23918. Hosted PR and post-merge release evidence remain pending.
 
 PR #102: https://github.com/vkaam/phonebuddy/pull/102. Branch agent/gh-18-5-http-only-release-health-gate is published with commit 52466ad. PR is ready for review/checks; TASK-87 remains active until hosted main release evidence records passing HTTP health and annotation.
+
+Owner-approved scope amendment added .github/workflows/ci.yml. CI run 43034054328 completed the web install, lint, unit tests and build, then stalled in Playwright --with-deps while apt could not resolve azure.archive.ubuntu.com; the job's 10-minute cap cancelled the step. Updated CI to install only the Chromium headless shell, avoiding network-dependent apt package retries while retaining the required browser test. Hosted validation pending.
 <!-- SECTION:NOTES:END -->
