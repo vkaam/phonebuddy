@@ -176,9 +176,11 @@ service incident owner coordinates response and communications; the data owner
 authorizes stateful recovery; and the budget owner responds to cost alerts. Named
 people or on-call rotations and escalation contacts are prerequisites for enabling
 each environment. TASK-10 through TASK-13 implement and exercise the broader
-recovery controls; this pilot isolates the dev Container App if the Bicep apply
-partially fails after it starts or if the post-deploy health gate fails, but is
-not a substitute for the full rollback and recovery work in TASK-63 and TASK-64.
+recovery controls; this pilot deactivates only an active Container App revision
+whose `RELEASE_VERSION` matches the failed release after a partial Bicep apply
+or failed post-deploy health gate. If no active candidate revision matches, it
+records that fact and leaves other revisions unchanged. This is not a substitute
+for the full rollback and recovery work in TASK-63 and TASK-64.
 
 ## Data and AI resource controls
 

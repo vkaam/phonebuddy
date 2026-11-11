@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-02T16:36:00Z'
-updated_date: '2026-11-11T09:21:00Z'
+updated_date: '2026-11-11T09:37:00Z'
 labels:
   - infrastructure
   - cicd
@@ -33,8 +33,10 @@ modified_files:
   - infra/hosting.bicep
   - scripts/check_bicep.py
   - scripts/health_gate.py
+  - scripts/deployment_policy.py
   - tests/test_bicep_ci_boundary.py
   - tests/test_health_gate.py
+  - tests/test_deployment_policy.py
   - docs/azure-delivery-policy.md
   - docs/quality-and-delivery.md
   - infra/github-oidc.md
@@ -75,5 +77,5 @@ Spec: Preserve the issue's approved acceptance. Do not broaden scope or weaken r
 ## Implementation Notes
 
 <!-- SECTION:NOTES:BEGIN -->
-Draft PR #97: https://github.com/vkaam/phonebuddy/pull/97. Current source head ce0f1ee2daf2f6b77e1cf918cfeb959a0b21e85d passes hosted Quality, the non-main release-image no-op, and advisory Risk report. The required 122-test Python suite, Bicep baseline, actionlint, and diff checks pass locally. The health query now filters structured health_request events before parsing, matching the Bicep alert query; this is source-level remediation only. Latest live health run 42984895566 predates this correction and failed closed with a Log Analytics cli_error after 100 probes passed, so updated Azure telemetry behavior remains unverified until the workflow runs with this code. Remaining gates: review/merge, dev OIDC settings, registry-scoped AcrPush, and successful CI-driven Bicep deployment plus health telemetry. No CI Azure deployment has occurred.
+Draft PR #97: https://github.com/vkaam/phonebuddy/pull/97. The existing source through ce0f1ee2daf2f6b77e1cf918cfeb959a0b21e85d passed hosted Quality, the non-main release-image no-op, and advisory Risk report. This follow-up adds executable policy checks for current-main freshness, exact run/attempt artifact provenance, duplicate reuse of only the same locked image, and recovery for partial apply or failed observation; recovery targets only active revisions tagged with the failed release version. The health query filters health_request events before parsing. The required 128-test suite, workflow lint, and diff checks pass locally; Bicep baseline passed on the prior unchanged template. Latest live health run 42984895566 predates the query change and failed closed with Log Analytics cli_error after request probes passed. Current Azure telemetry behavior and CI-driven Bicep deployment remain unverified. Remaining gates are review/merge, dev OIDC settings, registry-scoped AcrPush, then successful main CI deploy and health gate.
 <!-- SECTION:NOTES:END -->

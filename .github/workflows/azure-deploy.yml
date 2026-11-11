@@ -55,7 +55,8 @@ jobs:
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
           current_main=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')
-          test "$current_main" = "$RELEASE_SHA"
+          python3 -B scripts/deployment_policy.py verify-current-source \
+            --release-sha "$RELEASE_SHA" --main-sha "$current_main"
           gh api --paginate --slurp \
             "repos/$GITHUB_REPOSITORY/commits/$RELEASE_SHA/check-runs?per_page=100" \
             > "$RUNNER_TEMP/check-runs.json"
@@ -79,21 +80,9 @@ jobs:
           set -euo pipefail
           cd "$RUNNER_TEMP/release-image"
           sha256sum --check release-test.tar.gz.sha256
-          python3 - "$EXPECTED_SHA" "$EXPECTED_RUN_ID" "$EXPECTED_RUN_ATTEMPT" manifest.json <<'PY'
-          import json
-          import sys
-
-          expected_sha, expected_run, expected_attempt, path = sys.argv[1:]
-          with open(path, encoding='utf-8') as source:
-              manifest = json.load(source)
-          if (manifest.get('schema_version') != 1
-                  or manifest.get('source_sha') != expected_sha
-                  or manifest.get('workflow_run_id') != int(expected_run)
-                  or manifest.get('workflow_run_attempt') != int(expected_attempt)
-                  or manifest.get('image_tag') != f'phonebuddy-release-test:{expected_sha}'
-                  or manifest.get('image_archive') != 'release-test.tar.gz'):
-              raise SystemExit('Image artifact does not match the successful main CI run')
-          PY
+          python3 -B "$GITHUB_WORKSPACE/scripts/deployment_policy.py" verify-manifest \
+            --path manifest.json --source-sha "$EXPECTED_SHA" \
+            --run-id "$EXPECTED_RUN_ID" --run-attempt "$EXPECTED_RUN_ATTEMPT"
           docker load --input release-test.tar.gz
       - name: Compile the exact-source Bicep template
         run: |
@@ -130,25 +119,29 @@ jobs:
           docker tag "phonebuddy-release-test:$RELEASE_SHA" "$registry_server/$image_name"
           az acr login --name "$registry_name"
 
-          if existing_digest=$(az acr repository show --name "$registry_name" \
-              --image "$image_name" --query digest --output tsv 2>/dev/null); then
+          repository_exists=$(az acr repository list --name "$registry_name" \
+            --query "contains(@, 'release-test')" --output tsv)
+          existing_tag=''
+          if [[ "$repository_exists" == true ]]; then
+            existing_tag=$(az acr repository show-tags --name "$registry_name" \
+              --repository release-test \
+              --query "[?name=='$RELEASE_SHA'].name | [0]" --output tsv)
+          fi
+          if [[ -n "$existing_tag" && "$existing_tag" != None ]]; then
+            existing_digest=$(az acr repository show --name "$registry_name" \
+              --image "$image_name" --query digest --output tsv)
             write_enabled=$(az acr repository show-tags --name "$registry_name" \
               --repository release-test --detail \
               --query "[?name=='$RELEASE_SHA'].changeableAttributes.writeEnabled | [0]" \
               --output tsv)
-            if [[ "$write_enabled" != false ]]; then
-              echo "An existing source-SHA image tag is not locked; refusing to overwrite it." >&2
-              exit 1
-            fi
             local_image_id=$(docker image inspect --format '{{.Id}}' \
               "phonebuddy-release-test:$RELEASE_SHA")
             docker pull "$registry_server/release-test@$existing_digest"
             remote_image_id=$(docker image inspect --format '{{.Id}}' \
               "$registry_server/release-test@$existing_digest")
-            if [[ "$local_image_id" != "$remote_image_id" ]]; then
-              echo "The locked source-SHA image does not match this CI artifact." >&2
-              exit 1
-            fi
+            python3 -B scripts/deployment_policy.py verify-existing-image \
+              --write-enabled "$write_enabled" --local-image-id "$local_image_id" \
+              --remote-image-id "$remote_image_id"
             digest=$existing_digest
           else
             docker push "$registry_server/$image_name"
@@ -212,6 +205,7 @@ jobs:
           printf '%s\n' "$IMAGE_DIGEST" > artifacts/image-digest.txt
           printf 'succeeded=true\n' >> "$GITHUB_OUTPUT"
       - name: Observe the deployed version and telemetry
+        id: observe
         env:
           IMAGE_DIGEST: ${{ steps.image.outputs.image_digest }}
         run: |
@@ -234,28 +228,44 @@ jobs:
             --url "https://$app_url" --expected-version "$RELEASE_SHA" \
             --workspace-id "$workspace_id" --app-name "$APP_NAME" \
             > artifacts/health-gate.json
-      - name: Isolate a partial or unhealthy release
-        if: failure() && (steps.deploy.outcome == 'failure' || steps.deploy.outputs.succeeded == 'true')
+      - name: Decide whether release recovery is required
+        id: recovery-decision
+        if: always()
+        env:
+          DEPLOY_OUTCOME: ${{ steps.deploy.outcome }}
+          DEPLOY_SUCCEEDED: ${{ steps.deploy.outputs.succeeded }}
+          OBSERVE_OUTCOME: ${{ steps.observe.outcome }}
         run: |
           set -euo pipefail
-          mapfile -t active_revisions < <(
-            az containerapp revision list --name "$APP_NAME" \
-              --resource-group "$RESOURCE_GROUP" \
-              --query "[?properties.active==\`true\`].name" --output tsv
-          )
-          if [[ ${#active_revisions[@]} -eq 0 ]]; then
-            echo 'No active revision remains; release is already isolated.'
-            printf 'No active revision remained after a failed health gate.\n' \
-              > artifacts/recovery.txt
+          python3 -B scripts/deployment_policy.py recovery-required \
+            --deploy-outcome "$DEPLOY_OUTCOME" \
+            --deploy-succeeded "$DEPLOY_SUCCEEDED" \
+            --observe-outcome "$OBSERVE_OUTCOME"
+      - name: Isolate a partial or unhealthy release
+        if: always() && steps.recovery-decision.outputs.required == 'true'
+        run: |
+          set -euo pipefail
+          az containerapp revision list --name "$APP_NAME" \
+            --resource-group "$RESOURCE_GROUP" --output json \
+            > "$RUNNER_TEMP/container-app-revisions.json"
+          python3 -B scripts/deployment_policy.py candidate-revisions \
+            --path "$RUNNER_TEMP/container-app-revisions.json" \
+            --release-version "$RELEASE_SHA" \
+            > "$RUNNER_TEMP/candidate-revisions.txt"
+          mapfile -t candidate_revisions < "$RUNNER_TEMP/candidate-revisions.txt"
+          if [[ ${#candidate_revisions[@]} -eq 0 ]]; then
+            echo 'No active revision for this release was found; existing revisions remain unchanged.'
+            printf 'No active candidate revision matched release %s; no revision was deactivated.\n' \
+              "$RELEASE_SHA" > artifacts/recovery.txt
           else
-            for revision in "${active_revisions[@]}"; do
+            for revision in "${candidate_revisions[@]}"; do
               az containerapp revision deactivate --name "$APP_NAME" \
                 --resource-group "$RESOURCE_GROUP" --revision "$revision"
             done
-            printf 'Deactivated active revision(s): %s\n' "${active_revisions[*]}" \
+            printf 'Deactivated candidate revision(s): %s\n' "${candidate_revisions[*]}" \
               > artifacts/recovery.txt
           fi
-          echo 'Unhealthy release was isolated; promotion stopped.'
+          echo 'Failed release was isolated where its candidate revision was active; promotion stopped.'
       - name: Record successful release annotation
         if: success()
         run: |
