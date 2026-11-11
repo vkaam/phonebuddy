@@ -41,11 +41,10 @@ requires separate review.
 TASK-62 adds the first automatic dev delivery path on protected `main`. The
 workflow builds the synthetic release-test image once, validates and promotes
 the source-bound artifact, deploys the applicable France Central hosting
-resources through Bicep, and requires the existing health and telemetry gate
-before recording a release annotation. It does not deploy the product web app,
-Static Web Apps, or test/prod resources. Until the branch is merged and the
-hosted path succeeds, this describes the implementation; it is not evidence of
-a CI deployment.
+resources through Bicep, and requires the version-matched HTTP readiness and
+request-health gate before recording a release annotation. Workspace analytics
+are not a prerequisite for this product pilot's main release path. It does not
+deploy the product web app, Static Web Apps, or test/prod resources.
 
 Use distinct resource groups, data, secrets, workload identities, deployment
 identities and access assignments for each environment, even if subscriptions
@@ -86,8 +85,9 @@ environment.
    What-if is not proof of a successful deployment. The job pushes the already
    built image by digest, then deploys the applicable France Central hosting
    resources from Bicep.
-4. The dev stage must pass deployment and the existing health and telemetry
-   gate before the release annotation is written. Test and prod are not
+4. The dev stage must pass deployment and the full HTTP readiness and request-
+   health gate before the release annotation is written. The main release path
+   does not require a Log Analytics query or workspace event count. Test and prod are not
    automatically deployed by this pilot. Each needs its own reviewed inputs,
    scoped identity, resources and verified health gates before it can be
    enabled. An operator may stop the pipeline for an incident; resumption
@@ -105,10 +105,10 @@ and keep the failed release stopped or recovered under this policy.
 ## Gates and recovery
 
 These are minimum initial release gates for each applicable component. The dev
-release-test pilot uses the request and telemetry checks below; its current
-workflow does not exercise migrations or promote test/prod. A missing metric,
-insufficient samples, timeout or unavailable test is
-unknown and fails closed. Do not substitute a green deployment command for health.
+release-test pilot uses the readiness and request-health checks below; its
+current workflow does not exercise migrations or promote test/prod. A missing
+HTTP sample, timeout or unavailable readiness check is unknown and fails
+closed. Do not substitute a green deployment command for health.
 For components not deployed in a release, record why their gate is not applicable.
 
 | Gate | Initial pass condition and window | Failure action |
@@ -132,7 +132,7 @@ or unknown-route request. Events contain only the configured release version,
 HTTP status and response duration. Request lines, client addresses, query strings,
 request bodies, secrets and call content are excluded. Azure Monitor sends
 container console and system logs to the environment's 30-day Log Analytics
-workspace; queries are restricted to this synthetic health event.
+workspace; any query is restricted to this synthetic health event.
 The managed environment uses the Azure Monitor logging destination and its
 diagnostic setting sends logs to dedicated resource-specific tables. The
 release gate therefore queries `ContainerAppConsoleLogs` and its `Log` and
@@ -142,19 +142,21 @@ aligned when changing the logging destination. See Microsoft's [Container Apps
 logging guide](https://learn.microsoft.com/en-us/azure/container-apps/log-monitoring)
 and [resource-specific table reference](https://learn.microsoft.com/en-us/azure/azure-monitor/reference/tables/containerappconsolelogs).
 
-After a 60-second warm-up, the manual dev health workflow probes `/ready`
-and `/` for 10 consecutive minutes, with 10 requests in each one-minute sample.
-It requires at least 100 responses, the expected version and readiness value on
-every response, a server-error rate below 1% and p95 latency below 2 seconds in
-each rolling five-minute window. Before recording the release annotation, the
-workflow also queries the environment's Log Analytics workspace and requires at
-least 100 health events matching the candidate version, with no unhealthy
-responses. It polls for up to five minutes for Azure Monitor ingestion. Empty or
-insufficient telemetry after that wait, unhealthy events, a failed query,
-missing response, version mismatch, timeout or dependency outage fails closed.
-The report distinguishes an unavailable dependency from an unhealthy service
-response and records counts and timings without storing response bodies or target
-URLs.
+The main CI release workflow waits 60 seconds, then probes `/ready` and `/` for
+10 consecutive minutes, with 10 requests in each one-minute sample. Promotion
+requires at least 100 responses, the expected version and readiness value on
+every response, a server-error rate below 1%, and p95 latency below 2 seconds in
+each rolling five-minute window. It records the HTTP observations and successful
+release annotation without querying Log Analytics or waiting for workspace event
+ingestion.
+
+The manual dev health workflow separately observes an existing deployment with
+the same HTTP checks and can query the environment's Log Analytics workspace for
+at least 100 candidate-version health events with no unhealthy responses. That
+manual query polls for up to five minutes for Azure Monitor ingestion. Its
+result is diagnostic evidence for the manual run and does not affect promotion
+by the main CI release workflow. Reports record counts and timings without
+storing response bodies or target URLs.
 Failed Log Analytics queries record only a fixed category, bounded exit code,
 allowlisted provider code, output stream and numeric HTTP status when available.
 The CI artifact never includes raw Azure CLI output or query text.

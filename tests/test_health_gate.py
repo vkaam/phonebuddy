@@ -1,11 +1,16 @@
 """Test the release health gate's fail-closed evidence rules."""
+from contextlib import redirect_stdout
+import io
+from pathlib import Path
 import unittest
+from unittest.mock import patch
 
 import json
 import subprocess
 
 from scripts.health_gate import (
-    evaluate_samples, query_workspace_telemetry, safe_base_url, wait_for_workspace_telemetry,
+    evaluate_samples, main, query_workspace_telemetry, safe_base_url,
+    wait_for_workspace_telemetry,
 )
 
 
@@ -159,7 +164,8 @@ class WorkspaceTelemetryTests(unittest.TestCase):
             })()
 
         report = query_workspace_telemetry(
-            'workspace-id', 'app-name', 'release-1', failed_runner)
+            'workspace-id', 'app-name', 'release-1', failed_runner,
+            sleeper=lambda _delay: None)
         serialized = json.dumps(report)
         self.assertEqual(report['diagnostic'], {
             'operation': 'log_analytics_query',
@@ -225,7 +231,8 @@ class WorkspaceTelemetryTests(unittest.TestCase):
             })()
 
         report = query_workspace_telemetry(
-            'workspace-id', 'app-name', 'release-1', failed_runner)
+            'workspace-id', 'app-name', 'release-1', failed_runner,
+            sleeper=lambda _delay: None)
         serialized = json.dumps(report)
         self.assertEqual(report['diagnostic'], {
             'operation': 'log_analytics_query', 'category': 'throttled',
@@ -299,6 +306,55 @@ class WorkspaceTelemetryTests(unittest.TestCase):
             )
             self.assertEqual(actual, report)
         self.assertEqual(sleeps, [])
+
+
+class HealthGateCliTests(unittest.TestCase):
+    def test_main_release_workflow_uses_http_only_health_profile(self):
+        workflow_path = Path(__file__).resolve().parents[1] / '.github/workflows/azure-deploy.yml'
+        workflow = workflow_path.read_text()
+        observe_start = workflow.index('name: Observe the deployed version and HTTP health')
+        observe_end = workflow.index('name: Decide whether release recovery is required')
+        observe_step = workflow[observe_start:observe_end]
+
+        self.assertIn('--skip-workspace-telemetry', observe_step)
+        self.assertNotIn('--workspace-id', observe_step)
+        self.assertNotIn('az monitor log-analytics workspace list', observe_step)
+
+    def test_skip_workspace_telemetry_keeps_healthy_http_gate_and_never_queries(self):
+        http_report = {'status': 'pass', 'reasons': [], 'request_count': 100}
+        output = io.StringIO()
+        with patch('scripts.health_gate.run_gate', return_value=http_report), \
+                patch('scripts.health_gate.wait_for_workspace_telemetry') as query, \
+                redirect_stdout(output):
+            exit_code = main([
+                '--url', 'https://example.test', '--expected-version', 'release-1',
+                '--skip-workspace-telemetry',
+            ])
+
+        self.assertEqual(exit_code, 0)
+        query.assert_not_called()
+        report = json.loads(output.getvalue())
+        self.assertEqual(report['request_count'], 100)
+        self.assertNotIn('workspace_telemetry', report)
+
+    def test_skip_workspace_telemetry_does_not_override_http_health_failure(self):
+        http_report = {
+            'status': 'fail', 'reasons': ['unhealthy_response'], 'request_count': 100,
+        }
+        output = io.StringIO()
+        with patch('scripts.health_gate.run_gate', return_value=http_report), \
+                patch('scripts.health_gate.wait_for_workspace_telemetry') as query, \
+                redirect_stdout(output):
+            exit_code = main([
+                '--url', 'https://example.test', '--expected-version', 'release-1',
+                '--skip-workspace-telemetry',
+            ])
+
+        self.assertEqual(exit_code, 1)
+        query.assert_not_called()
+        report = json.loads(output.getvalue())
+        self.assertEqual(report['status'], 'fail')
+        self.assertEqual(report['reasons'], ['unhealthy_response'])
 
 
 if __name__ == '__main__':

@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-11T10:33:00Z'
-updated_date: '2026-11-11T10:50:00Z'
+updated_date: '2026-11-11T13:39:00Z'
 labels:
   - infrastructure
   - cicd
@@ -38,6 +38,8 @@ Approval evidence: The user explicitly authorized fixing failures from the merge
 Branch: agent/gh-18-2-telemetry-gate-fix
 Scope: scripts/health_gate.py; tests/test_health_gate.py; .github/workflows/azure-deploy.yml; docs/azure-delivery-policy.md; backlog/tasks/task-84 - Issue-18-follow-up-Fix-live-Azure-telemetry-gate-and-verify-release.md
 Verify: python3 -B scripts/run_required_unittests.py; BICEP=/tmp/bicep python3 -B scripts/check_bicep.py; actionlint .github/workflows/ci.yml .github/workflows/azure-deploy.yml .github/workflows/pr-safety.yml; hosted main CI and Azure release deployment must prove the exact source-bound artifact deploys and the telemetry gate passes.
+
+Replaced by: TASK-87
 <!-- SECTION:DESCRIPTION:END -->
 
 ## Acceptance Criteria
@@ -61,4 +63,6 @@ Verify: python3 -B scripts/run_required_unittests.py; BICEP=/tmp/bicep python3 -
 
 <!-- SECTION:NOTES:BEGIN -->
 Live deployment attempt 43001834438 (main merge commit e0a6f7148ca3d7913052d1798bce3ccc4e63d778) passed exact-source validation, artifact download/integrity, Bicep compile, OIDC login, ACR digest promotion, what-if and apply. The 600-second health window had 100 successful version checks, 0.0% errors and p95 276.474 ms; telemetry query failed with generic cli_error/exit 1 and zero events. Recovery safely deactivated candidate revision ca-pb-dev-release-test--0000001; retained artifact 13847172636. Existing report intentionally discarded raw stderr, so the underlying query failure is not yet identified. Added bounded provider error-code extraction (no raw stderr, query, IDs or token values) and regression coverage; 129 required unit tests pass, Bicep baseline passes, actionlint and diff checks pass. Next: publish this diagnostic change and use the retained report from the next authorized main deployment to identify the exact provider error before changing query behavior.
+
+Replaced by: TASK-87. The owner redirected the release-gate requirement to HTTP readiness/health only; the merged diagnostic PR remains historical evidence, but the analytics-query acceptance is no longer the selected outcome.
 <!-- SECTION:NOTES:END -->

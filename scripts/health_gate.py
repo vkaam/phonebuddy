@@ -315,23 +315,32 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--url', required=True, help='HTTPS service base URL; no query or fragment')
     parser.add_argument('--expected-version', required=True)
-    parser.add_argument('--workspace-id', required=True, help='Log Analytics workspace customer ID')
-    parser.add_argument('--app-name', required=True, help='Azure Container App name')
+    parser.add_argument('--workspace-id', help='Log Analytics workspace customer ID')
+    parser.add_argument('--app-name', help='Azure Container App name')
+    parser.add_argument(
+        '--skip-workspace-telemetry', action='store_true',
+        help='skip the optional Log Analytics query; HTTP readiness and health checks still apply',
+    )
     parser.add_argument('--warmup-seconds', type=int, default=60)
     parser.add_argument('--observation-seconds', type=int, default=600)
     parser.add_argument('--sample-interval-seconds', type=int, default=60)
     parser.add_argument('--requests-per-sample', type=int, default=10)
     parser.add_argument('--timeout-seconds', type=float, default=5)
     args = parser.parse_args(argv)
+    if (not args.skip_workspace_telemetry
+            and (not args.workspace_id or not args.app_name)):
+        parser.error('--workspace-id and --app-name are required unless workspace telemetry is skipped')
     try:
         report = run_gate(args.url, args.expected_version, args.warmup_seconds,
                           args.observation_seconds, args.sample_interval_seconds,
                           args.requests_per_sample, args.timeout_seconds)
-        telemetry = wait_for_workspace_telemetry(
-            args.workspace_id, args.app_name, args.expected_version)
-        report['workspace_telemetry'] = telemetry
-        report['reasons'] = sorted(set(report['reasons'] + telemetry['reasons']))
-        report['status'] = 'pass' if report['status'] == 'pass' and telemetry['status'] == 'pass' else 'fail'
+        if not args.skip_workspace_telemetry:
+            telemetry = wait_for_workspace_telemetry(
+                args.workspace_id, args.app_name, args.expected_version)
+            report['workspace_telemetry'] = telemetry
+            report['reasons'] = sorted(set(report['reasons'] + telemetry['reasons']))
+            report['status'] = ('pass' if report['status'] == 'pass'
+                                and telemetry['status'] == 'pass' else 'fail')
     except ValueError as error:
         parser.error(str(error))
     print(json.dumps(report, sort_keys=True))
