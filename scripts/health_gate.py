@@ -138,45 +138,56 @@ def run_gate(url, expected_version, warmup_seconds=60, observation_seconds=600,
 
 def workspace_query_failure_diagnostic(result):
     """Return bounded, redacted metadata for a failed Azure CLI query."""
-    stderr = getattr(result, 'stderr', '')
-    if not isinstance(stderr, str):
-        stderr = ''
-    # Inspect only a small prefix and map it to fixed labels. Never return CLI
-    # output, query text, resource identifiers, or caller data.
-    bounded_stderr = stderr[:4096]
-    summary = bounded_stderr.casefold()
+    streams = []
+    for name in ('stderr', 'stdout'):
+        value = getattr(result, name, '')
+        if isinstance(value, str) and value:
+            # Inspect only a small prefix and map it to fixed labels. Never
+            # return CLI output, query text, resource identifiers, or caller data.
+            streams.append((name, value[:4096]))
+    summary = '\n'.join(value for _, value in streams).casefold()
     error_code = None
     code_patterns = (
         r'^\s*ERROR:\s*\(([A-Za-z][A-Za-z0-9_.-]{1,63})\)',
         r'^\s*([A-Za-z][A-Za-z0-9_.-]{1,63}):',
+        r'\bErrorCode\s*[=:]\s*([A-Za-z][A-Za-z0-9_.-]{1,63})',
         r'\bCode\s*:\s*([A-Za-z][A-Za-z0-9_.-]{1,63})',
         r'"code"\s*:\s*"([A-Za-z][A-Za-z0-9_.-]{1,63})"',
         r'\(([A-Za-z][A-Za-z0-9_.-]{1,63})\)',
     )
     safe_code_suffixes = (
         'error', 'failed', 'denied', 'notfound', 'timeout', 'forbidden',
-        'unauthorized', 'badrequest', 'toomanyrequests',
+        'unauthorized', 'badrequest', 'toomanyrequests', 'throttled',
+        'serverbusy', 'serviceunavailable', 'invalidquery',
     )
-    for pattern in code_patterns:
-        match = re.search(pattern, bounded_stderr, re.IGNORECASE)
-        candidate = match.group(1) if match else ''
-        if candidate.casefold().endswith(safe_code_suffixes):
-            error_code = candidate
+    error_source = streams[0][0] if streams else 'none'
+    for stream_name, output in streams:
+        for pattern in code_patterns:
+            match = re.search(pattern, output, re.IGNORECASE | re.MULTILINE)
+            candidate = match.group(1) if match else ''
+            if candidate.casefold().endswith(safe_code_suffixes):
+                error_code = candidate
+                error_source = stream_name
+                break
+        if error_code:
             break
+    code = (error_code or '').casefold()
     if ('does not have authorization' in summary or 'authorizationfailed' in summary
-            or 'forbidden' in summary):
+            or 'forbidden' in summary or code.endswith(('authorizationfailed', 'forbidden'))):
         category = 'authorization_denied'
     elif ('unauthorized' in summary or 'authenticationfailed' in summary
-          or 'expired token' in summary):
+          or 'expired token' in summary or code.endswith(('unauthorized', 'authenticationfailed'))):
         category = 'authentication_failed'
     elif ('workspace not found' in summary or 'resourcenotfound' in summary):
         category = 'workspace_not_found'
     elif ('invalidquery' in summary or 'badargumenterror' in summary
-          or 'semantic error' in summary or 'badrequest' in summary):
+          or 'semantic error' in summary or 'badrequest' in summary
+          or code.endswith(('badrequest', 'badargumenterror', 'invalidquery'))):
         category = 'query_rejected'
-    elif ('throttl' in summary or 'too many requests' in summary or '429' in summary):
+    elif ('throttl' in summary or 'too many requests' in summary or '429' in summary
+          or code.endswith(('toomanyrequests', 'throttled', 'serverbusy'))):
         category = 'throttled'
-    elif ('timed out' in summary or 'timeout' in summary):
+    elif ('timed out' in summary or 'timeout' in summary or code.endswith('timeout')):
         category = 'timeout'
     else:
         category = 'cli_error'
@@ -184,7 +195,8 @@ def workspace_query_failure_diagnostic(result):
     if not isinstance(exit_code, int) or isinstance(exit_code, bool) or not 0 <= exit_code <= 255:
         exit_code = None
     return {'operation': 'log_analytics_query', 'category': category,
-            'exit_code': exit_code, 'error_code': error_code}
+            'exit_code': exit_code, 'error_code': error_code,
+            'error_source': error_source}
 
 
 def query_workspace_telemetry(workspace_id, app_name, expected_version, runner=subprocess.run,
@@ -255,7 +267,8 @@ def query_workspace_telemetry(workspace_id, app_name, expected_version, runner=s
         return {'status': 'fail', 'telemetry_event_count': 0,
                 'unhealthy_event_count': 0, 'reasons': ['dependency_outage'],
                 'diagnostic': {'operation': 'log_analytics_query', 'category': category,
-                               'exit_code': None, 'error_code': None}}
+                               'exit_code': None, 'error_code': None,
+                               'error_source': 'none'}}
 
 
 def wait_for_workspace_telemetry(workspace_id, app_name, expected_version,

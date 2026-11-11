@@ -133,6 +133,14 @@ HTTP status and response duration. Request lines, client addresses, query string
 request bodies, secrets and call content are excluded. Azure Monitor sends
 container console and system logs to the environment's 30-day Log Analytics
 workspace; queries are restricted to this synthetic health event.
+The managed environment uses the Azure Monitor logging destination and its
+diagnostic setting sends logs to dedicated resource-specific tables. The
+release gate therefore queries `ContainerAppConsoleLogs` and its `Log` and
+`ContainerAppName` columns, not the legacy `ContainerAppConsoleLogs_CL` table
+and `_s` columns. Keep the Bicep routing, telemetry query and workspace schema
+aligned when changing the logging destination. See Microsoft's [Container Apps
+logging guide](https://learn.microsoft.com/en-us/azure/container-apps/log-monitoring)
+and [resource-specific table reference](https://learn.microsoft.com/en-us/azure/azure-monitor/reference/tables/containerappconsolelogs).
 
 After a 60-second warm-up, the manual dev health workflow probes `/ready`
 and `/` for 10 consecutive minutes, with 10 requests in each one-minute sample.
