@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-11T13:31:00Z'
-updated_date: '2026-11-11T13:53:00Z'
+updated_date: '2026-11-11T13:58:00Z'
 labels:
   - infrastructure
   - cicd
@@ -93,4 +93,6 @@ Correction: tests/test_bicep_ci_boundary.py protects the standalone azure-health
 Implemented the HTTP-only main release profile: health_gate.py accepts --skip-workspace-telemetry; azure-deploy.yml no longer lists the workspace or stores its ID artifact and passes that fixed flag; the manual azure-health-gate.yml workflow still retains its independent analytics query. Documentation distinguishes the main release gate from the manual analytics observation. Focused health-gate suite passes 20 tests; full unit, Bicep, actionlint, diff and hosted verification remain pending.
 
 Required local verification after the HTTP-only changes: repository Python suite passed 134 tests; Bicep baseline checks passed; actionlint 1.7.12 passed using the CI-pinned binary verified against its SHA-256; git diff --check passed; live TASK-87 consistency guard passed with claim_verified=true on origin/main 8c23918. Hosted PR and post-merge release evidence remain pending.
+
+PR #102: https://github.com/vkaam/phonebuddy/pull/102. Branch agent/gh-18-5-http-only-release-health-gate is published with commit 52466ad. PR is ready for review/checks; TASK-87 remains active until hosted main release evidence records passing HTTP health and annotation.
 <!-- SECTION:NOTES:END -->
