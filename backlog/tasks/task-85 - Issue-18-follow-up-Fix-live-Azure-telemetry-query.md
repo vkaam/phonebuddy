@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-11T12:17:00Z'
-updated_date: '2026-11-11T12:34:00Z'
+updated_date: '2026-11-11T12:36:00Z'
 labels:
   - infrastructure
   - cicd
@@ -58,4 +58,6 @@ Change control: Any further files require a recorded triage amendment.
 Research confirms the configured Bicep route is Azure Monitor with Dedicated diagnostic tables, matching the documented ContainerAppConsoleLogs schema (ContainerAppName and Log); that configuration predates this release. The current artifact still reports cli_error/exit 1/error_code null. Earlier trusted run 42904952753 classified the same query as throttled, while later runs show an unclassified CLI failure. The current diagnostic parser examines stderr only, so the next scoped change will inspect both CLI output streams and emit only allowlisted provider codes/fixed categories; raw output remains excluded.
 
 Scoped diagnostics now inspect bounded prefixes of both stderr and stdout; reports include only an allowlisted error code, fixed category, exit code and which stream carried the output. Known throttling codes are classified for existing bounded retries. Focused health-gate tests pass (17 tests); required repository unit suite passes (130 tests), Bicep checks pass, actionlint passes, and git diff --check passes. The exact live Azure error remains unproven until the updated diagnostic runs in the source-bound main deployment; keep the task active.
+
+Draft PR #99: https://github.com/vkaam/phonebuddy/pull/99, head cc4c856d675fe7e6074ba6f91fc9470317766237. Hosted checks and source-bound main deployment are still pending; the PR explicitly keeps TASK-85 active and states that the live telemetry fix is unproven.
 <!-- SECTION:NOTES:END -->
