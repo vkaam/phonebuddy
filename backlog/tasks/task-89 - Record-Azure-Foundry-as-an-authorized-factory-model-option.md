@@ -5,7 +5,7 @@ status: Done
 assignee:
   - '@codex'
 created_date: '2026-11-11T15:42:00Z'
-updated_date: '2026-11-11T15:58:00Z'
+updated_date: '2026-11-11T16:07:00Z'
 labels:
   - factory
   - autonomy
@@ -62,10 +62,14 @@ Adjusted the declared local verification to the documentation-relevant checks pl
 Final-head evidence: PR #104 head cdb850872784c2ae051a74f6e43e02a6b933beb8 passed Quality run 43052792758, including browser tests, workflow validation, Bicep validation and secret scanning; advisory Risk report 43052789812 succeeded. PR remains draft pending independent review; no model inference, factory identity or resource provisioning was enabled.
 
 Completion-record verification: after the branch-local Done commit, final head cfef914ee9a54c65d798de2f4d4857ca619493b9 passed required Quality run 43053236452 (including browser tests and live Backlog consistency), immutable-image applicability check, and advisory Risk report 43053229181. PR #104 remains draft pending independent review; no merge was performed.
+
+Review correction: earlier completion notes describe intermediate heads cdb8508 and cfef914. The final PR head reviewed was c46f3a74564387d7b3b9c0e3fb6597831d77bcb1; Quality run 43053671547 and advisory Risk report 43053668472 passed on that head. The immutable release-image applicability check also passed in run 43053671547.
 <!-- SECTION:NOTES:END -->
 
 ## Final Summary
 
 <!-- SECTION:FINAL_SUMMARY:BEGIN -->
 Recorded the owner-approved Azure Foundry option alongside subscription Codex while retaining the no-paid-OpenAI-API direction and the factory isolation, production-access and enforceable-limit gates. Focused local repository, unit, offline consistency and diff checks passed. Current-head hosted Quality and advisory Risk report passed on PR #104 head cdb8508. No Foundry runtime or resources were enabled; model selection, isolated factory access and cost/retention limits remain unresolved.
+
+Correction: the final reviewed PR head was c46f3a74564387d7b3b9c0e3fb6597831d77bcb1, not the earlier intermediate heads. Quality run 43053671547, immutable-image applicability, and advisory Risk report 43053668472 passed; the PR remains draft pending final-head revalidation and merge.
 <!-- SECTION:FINAL_SUMMARY:END -->
