@@ -68,6 +68,16 @@ class BicepWhatIfValidationTests(unittest.TestCase):
 
 
 class BicepCiBoundaryTests(unittest.TestCase):
+    def test_existing_tag_lookup_requests_objects_before_filtering_by_name(self):
+        workflow = (Path(__file__).resolve().parents[1] / '.github/workflows/azure-deploy.yml').read_text()
+        lookup = workflow.split('existing_tag=$(az acr repository show-tags', 1)[1].split(')', 1)[0]
+        self.assertIn('--detail', lookup)
+        self.assertIn("[?name=='$RELEASE_SHA'].name | [0]", lookup)
+        existing, absent = workflow.split('if [[ -n "$existing_tag"', 1)[1].split('          else', 1)
+        self.assertIn('verify-existing-image', existing)
+        self.assertNotIn('docker push', existing)
+        self.assertIn('docker push', absent)
+
     def test_azure_identity_is_confined_to_trusted_main_workflows(self):
         root = Path(__file__).resolve().parents[1] / '.github/workflows'
         quality = (root / 'ci.yml').read_text()

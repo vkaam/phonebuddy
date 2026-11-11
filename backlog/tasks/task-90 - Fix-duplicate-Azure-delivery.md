@@ -1,14 +1,20 @@
 ---
 id: TASK-90
 title: Fix duplicate Azure delivery
-status: To Do
-assignee: []
+status: In Progress
+assignee:
+  - '@codex'
 created_date: '2026-11-11T18:05:00Z'
-updated_date: '2026-11-11T18:06:00Z'
+updated_date: '2026-11-11T18:13:00Z'
 labels: []
 dependencies: []
 references:
   - https://github.com/vkaam/phonebuddy/issues/105
+modified_files:
+  - backlog/tasks/task-90 - Fix-duplicate-Azure-delivery.md
+  - .github/workflows/azure-deploy.yml
+  - tests/test_bicep_ci_boundary.py
+  - tests/test_deployment_policy.py
 priority: low
 type: bug
 ordinal: 81000
@@ -33,3 +39,15 @@ Verify: python3 -B scripts/check.py; python3 -B scripts/check_bicep.py; actionli
 - [ ] #2 An absent tag follows the normal publication path, with automated tests covering both lookup paths.
 - [ ] #3 Relevant local and hosted checks pass and safe duplicate delivery evidence is recorded when Azure is available.
 <!-- AC:END -->
+
+## Implementation Plan
+
+<!-- SECTION:PLAN:BEGIN -->
+1. Inspect the release workflow and existing tests for tag detection and immutable image verification. 2. Correct tag detection and add meaningful coverage for existing and absent tags and fail-closed verification. 3. Run the declared local checks and publish the existing draft PR. 4. Obtain independent review, required hosted checks and available duplicate-delivery evidence before finalizing.
+<!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+The ACR lookup now requests detailed tag objects before filtering by name. Focused policy and workflow tests pass locally; the behavioral promotion-step test requires Bash and is skipped on this Windows host. Full scripts/check.py failed locally and check_bicep.py could not find Bicep; hosted checks and duplicate-delivery Azure evidence remain required. Independent review identified the missing workflow-level coverage, which is now added but awaits execution in hosted CI.
+<!-- SECTION:NOTES:END -->
