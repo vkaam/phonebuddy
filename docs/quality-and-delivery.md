@@ -68,6 +68,10 @@ Task completion on a feature branch is provisional until merge. An independent
 agent may validate task acceptance and review the PR. Merge a small, ready PR
 after required pre-merge checks and blocking findings are clear. The merge makes
 its task Done final; close the parent issue when all required task PRs merge.
+For legacy tasks left In Progress on main after their sole PR merged, checked
+native acceptance and the merged PR establish effective completion; the audit
+reports the stale status without demanding another PR. Incomplete acceptance
+or an unmerged task still blocks issue closure.
 Report task and PR transitions on the issue without rewriting approved intent.
 Observe default-branch CI/CD afterward. A failure creates a new linked issue
 and native task; it does not reopen the merged work. Runtime reconciliation and

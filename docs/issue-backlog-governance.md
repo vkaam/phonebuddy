@@ -84,11 +84,19 @@ reconciler is still required for unattended, race-free synchronization.
 A branch-local Done record is a proposed completion. Merge to the default
 branch makes that task Done final and accepts its scoped criteria. A multi-task
 issue remains open after an intermediate merge; close it when every required
-task PR has merged and its Done record is on the default branch. Record the
+task PR has merged and its completion evidence is on the default branch. Record the
 merged PRs and task IDs on the issue. No separate human acceptance ceremony or
 post-merge deployment gate delays this closure. A successful merge does not
 claim that deployment, live health or recovery succeeded. Observe default-branch
 CI/CD after merge and report its actual state.
+
+For older records stranded In Progress after their sole PR merged, checked
+native acceptance plus that PR's merge on current main establishes effective
+completion. The consistency audit warns about the stale native status; it does
+not require another PR solely to flip that status. An unchecked criterion,
+unmerged PR or branch-local proposed completion cannot satisfy a dependency or
+justify closing an issue. Keep an issue open while any required linked task
+remains incomplete. Track genuinely unfinished live proof as its own task.
 
 Human cancellation is a different outcome from successful completion and must
 not masquerade as delivery. A closed issue flag or archived unfinished task
