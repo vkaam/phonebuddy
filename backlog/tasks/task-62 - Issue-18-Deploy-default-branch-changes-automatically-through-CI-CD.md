@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-02T16:36:00Z'
-updated_date: '2026-11-11T09:15:00Z'
+updated_date: '2026-11-11T09:21:00Z'
 labels:
   - infrastructure
   - cicd
@@ -75,5 +75,5 @@ Spec: Preserve the issue's approved acceptance. Do not broaden scope or weaken r
 ## Implementation Notes
 
 <!-- SECTION:NOTES:BEGIN -->
-Draft PR #97: https://github.com/vkaam/phonebuddy/pull/97. The source implementation at ad17d462897dedb0b24979edd9bab3dc47f2edca has hosted Quality, the explicit non-main release-image no-op, and advisory Risk report all passing. Local Bicep baseline, actionlint, focused boundary tests, and diff checks pass; the local browser suite could not launch because libnspr4.so is missing, but the hosted Quality browser suite passed. Remaining delivery gates: review/merge, a configured dev environment and registry-scoped AcrPush role, and a successful health/telemetry gate. Health run 42984895566 passed 100 request probes (0% errors, p95 325ms) but failed closed when the Log Analytics CLI query returned cli_error with zero telemetry rows. No CI Azure deployment has occurred yet.
+Draft PR #97: https://github.com/vkaam/phonebuddy/pull/97. Current source head ce0f1ee2daf2f6b77e1cf918cfeb959a0b21e85d passes hosted Quality, the non-main release-image no-op, and advisory Risk report. The required 122-test Python suite, Bicep baseline, actionlint, and diff checks pass locally. The health query now filters structured health_request events before parsing, matching the Bicep alert query; this is source-level remediation only. Latest live health run 42984895566 predates this correction and failed closed with a Log Analytics cli_error after 100 probes passed, so updated Azure telemetry behavior remains unverified until the workflow runs with this code. Remaining gates: review/merge, dev OIDC settings, registry-scoped AcrPush, and successful CI-driven Bicep deployment plus health telemetry. No CI Azure deployment has occurred.
 <!-- SECTION:NOTES:END -->
