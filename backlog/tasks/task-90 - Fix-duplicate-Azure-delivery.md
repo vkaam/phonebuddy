@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-11T18:05:00Z'
-updated_date: '2026-11-11T18:34:00Z'
+updated_date: '2026-11-11T19:01:00Z'
 labels: []
 dependencies: []
 references:
@@ -16,6 +16,7 @@ modified_files:
   - tests/test_bicep_ci_boundary.py
   - tests/test_deployment_policy.py
   - backlog/tasks/task-92 - Verify-live-duplicate-Azure-delivery.md
+  - scripts/check_bicep.py
 priority: low
 type: bug
 ordinal: 81000
@@ -55,4 +56,8 @@ The ACR lookup now requests detailed tag objects before filtering by name. Focus
 PR #106 head 5097d99e4edd7608c8f62df07fa1c29ca6232923 passed hosted Quality run 43076192295 attempt 2, including the Linux behavioral tests, actionlint and Bicep validation. An independent agent reviewed that exact tree and found no additional scoped defects; live Azure duplicate-delivery evidence remains outstanding. The current host has no Azure CLI or Docker.
 
 Read-only Azure evidence (2026-11-11): the installed Azure CLI and dev account are available. Against the existing main-source tag 63e88d30f87c392814fb7c859b96724f868285d1, the detailed ACR lookup returned the tag with writeEnabled false; the earlier query without --detail returned no match. A detailed lookup for an absent all-zero tag returned no match. This verifies live query behavior only, not full image reuse or duplicate deployment. Docker remains unavailable on this host.
+
+Owner directed removing the strict Bicep CLI version gate because the installed newer version should be accepted; this adds scripts/check_bicep.py to the task scope.
+
+Owner requested removing the exact Bicep version check. scripts/check_bicep.py no longer requires 0.34.44 and accepts the installed 0.49.2, but the full Bicep check then failed its existing compiled logging contract: Console and system logs must route from the Container Apps environment. scripts/check.py also remains failing locally; see local report from the latest run.
 <!-- SECTION:NOTES:END -->

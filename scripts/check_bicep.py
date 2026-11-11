@@ -12,7 +12,6 @@ import tempfile
 from urllib.parse import urlencode
 
 ROOT = Path(__file__).resolve().parents[1]
-VERSION = '0.34.44'
 ENVIRONMENTS = ('dev', 'test', 'prod')
 FOUNDRY_API_VERSION = '2024-10-01'
 FOUNDRY_MODEL = {
@@ -581,9 +580,6 @@ def main():
         print(json.dumps({'whatIfChangeCounts': counts}))
         return
     binary = os.environ.get('BICEP', 'bicep')
-    version = run(binary, '--version')
-    if not version.startswith('Bicep CLI version ' + VERSION + ' '):
-        raise ValueError('Expected Bicep CLI version ' + VERSION)
     run(binary, 'lint', 'infra/main.bicep')
     run(binary, 'lint', 'infra/hosting.bicep')
     hosting = json.loads(run(binary, 'build', 'infra/hosting.bicep', '--stdout'))
