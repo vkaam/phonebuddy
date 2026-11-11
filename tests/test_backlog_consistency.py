@@ -243,6 +243,18 @@ class ConsistencyTests(unittest.TestCase):
         self.assertFails(self.run_guard([predecessor, completed_follower, archived_unfinished],
                                         with_archive, remote), "closed before all linked tasks")
 
+    def test_closed_issue_does_not_parse_unrelated_malformed_peer(self):
+        completed = record(status="Done")
+        base = {completed["id"]: deepcopy(completed)}
+        completed["body"] += "\nCompletion evidence annotation.\n"
+        other_issue = f"https://github.com/{REPO}/issues/2"
+        unrelated = record(82, archived=True, issue=other_issue)
+        unrelated["body"] = unrelated["body"].replace(f"Issue: {other_issue}\n", "")
+        remote = live(state="closed", pulls=[pull(merged=True)])
+        focus = {completed["id"]}
+        result = self.run_guard([completed, unrelated], base, remote, focus=focus)
+        self.assertEqual(result["status"], "pass", result)
+
     def test_unmerged_or_unchecked_legacy_status_does_not_complete(self):
         predecessor = record(81, status="In Progress")
         predecessor["meta"]["assignee"] = ["@codex"]
