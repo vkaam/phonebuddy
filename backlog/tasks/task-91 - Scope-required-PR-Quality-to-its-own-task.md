@@ -1,11 +1,11 @@
 ---
 id: TASK-91
 title: Scope required PR Quality to its own task
-status: In Progress
+status: Done
 assignee:
   - '@codex'
 created_date: '2026-11-11T18:21:00Z'
-updated_date: '2026-11-11T18:45:00Z'
+updated_date: '2026-11-11T18:50:00Z'
 labels: []
 dependencies: []
 references:
@@ -42,11 +42,11 @@ Triage scope amendment 2026-11-11 after independent review: Add .github/workflow
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 A PR with an invalid or missing claim, approval revision, changed-file scope, or dependency fails required Quality.
-- [ ] #2 Unrelated task and issue inconsistencies are retained in an advisory audit report without failing another PR or the CI workflow; missing audit evidence is visibly inconclusive.
-- [ ] #3 Moving main does not fail a PR solely for an event-time base SHA; the guard uses current evidence or reports an actionable rerun condition.
-- [ ] #4 The reviewed CI wiring keeps fast repository, policy, workflow, infrastructure and introduced-secret checks on PRs and requires full web, dependency and browser checks on the exact merged main SHA before the immutable release image can be built or promoted.
-- [ ] #5 Regression tests, hosted PR checks and policy documentation prove the blocking boundary, unrelated stale records, moving main, and pre-promotion main verification wiring.
+- [x] #1 A PR with an invalid or missing claim, approval revision, changed-file scope, or dependency fails required Quality.
+- [x] #2 Unrelated task and issue inconsistencies are retained in an advisory audit report without failing another PR or the CI workflow; missing audit evidence is visibly inconclusive.
+- [x] #3 Moving main does not fail a PR solely for an event-time base SHA; the guard uses current evidence or reports an actionable rerun condition.
+- [x] #4 The reviewed CI wiring keeps fast repository, policy, workflow, infrastructure and introduced-secret checks on PRs and requires full web, dependency and browser checks on the exact merged main SHA before the immutable release image can be built or promoted.
+- [x] #5 Regression tests, hosted PR checks and policy documentation prove the blocking boundary, unrelated stale records, moving main, and pre-promotion main verification wiring.
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -69,4 +69,12 @@ Addressed both independent review findings before finalization. TASK-91 acceptan
 Independent review found that an advisory job inside CI still delays the workflow_run promotion trigger. Approved triage scope now includes a separate backlog-audit workflow; this supersedes the in-CI audit job design.
 
 Moved the repository-wide Backlog audit to its own workflow after the independent timing review. The advisory workflow has read-only permissions, publishes JSON with if-no-files-found: error, and is not a CI job or release prerequisite. Pinned actionlint 1.7.12 passed on both workflows; repository checks and diff checks passed. Final-head hosted checks and independent re-review are pending.
+
+Final independent review at 6f17fdc9e125a8a846bed791d1ea9ac6e6d128de found no blocking findings and validated AC 1-5. Hosted CI run 43081128701 succeeded, including Quality, focused guard, actionlint, Bicep and Gitleaks; advisory audit run 43081128821 succeeded and uploaded JSON. Reviewer independently reran focused guard tests: 30 passed. Main verification and promotion evidence remain separate issue 107 work.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Scoped blocking PR Quality to the approved task and current evidence; retained full repository drift in a separate advisory workflow; moved full web verification to main before immutable release creation. Final-head PR checks and independent acceptance review passed. Actual merged-main evidence remains a separate issue 107 slice.
+<!-- SECTION:FINAL_SUMMARY:END -->
