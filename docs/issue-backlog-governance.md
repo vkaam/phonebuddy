@@ -166,8 +166,10 @@ and the PR's head branch. It blocks on that task's approval, claim, scope and
 dependencies. If main has advanced beyond the tested merge commit, the check
 asks for an updated branch and rerun. A separate advisory Backlog audit retains
 the repository-wide result on PR and main runs; unrelated task or issue drift
-does not block another PR or release. Read its JSON `status` and reconcile
-failures rather than treating an advisory job's green completion as a clean audit.
+does not block another PR or release, including when the audit or artifact
+upload fails. Read its JSON `status` and reconcile failures. A missing report
+is inconclusive and needs a rerun; an advisory job's green completion is not a
+clean-audit assertion.
 The full guard remains required immediately before a worker claims or resumes a
 task. `scripts/check.py` registers the offline structural mode; `--offline`
 never validates a claim or provides live merge/approval evidence. Existing broad

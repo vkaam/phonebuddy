@@ -390,9 +390,14 @@ class CollectionAndCliTests(unittest.TestCase):
             git("switch", "-c", "agent/feature", base)
             with patch("sys.stdout", new_callable=io.StringIO) as output:
                 code = guard.main(["--root", str(root), "--base", "main", "--branch",
-                                   "agent/feature", "--ci-pr", "--offline"])
+                                   "agent/feature", "--ci-pr"])
             self.assertEqual(code, 1)
             self.assertIn("update the branch and rerun CI", output.getvalue())
+            with patch("sys.stdout", new_callable=io.StringIO) as output:
+                code = guard.main(["--root", str(root), "--base", "HEAD", "--branch",
+                                   "agent/feature", "--ci-pr", "--offline"])
+            self.assertEqual(code, 1)
+            self.assertIn("requires live GitHub evidence", output.getvalue())
 
 
 if __name__ == "__main__":

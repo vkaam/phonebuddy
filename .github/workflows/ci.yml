@@ -108,6 +108,7 @@ jobs:
 
   backlog-audit:
     name: Backlog audit (advisory)
+    continue-on-error: true
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
@@ -133,12 +134,17 @@ jobs:
         if: steps.audit.outcome == 'failure'
         run: echo '::warning::Repository-wide Backlog audit needs reconciliation; see retained JSON.'
       - name: Retain repository-wide audit
+        id: upload-audit
         if: always()
+        continue-on-error: true
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: backlog-audit-${{ github.run_id }}-${{ github.run_attempt }}
           path: artifacts/backlog-consistency-audit.json
           retention-days: 14
+      - name: Highlight missing audit artifact
+        if: steps.upload-audit.outcome == 'failure'
+        run: echo '::warning::Backlog audit artifact was not retained; audit evidence is inconclusive.'
 
   build-release-image:
     name: Build immutable release image

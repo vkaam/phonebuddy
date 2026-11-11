@@ -86,7 +86,9 @@ fresh `origin/main` with read-only GitHub access and retains
 branch/PR claim and changed-path scope remain blocking. A separate advisory
 `Backlog audit` job retains the repository-wide result, including unrelated
 task/issue drift; its JSON `status` must be read even when the advisory job
-completes. The local bundle registers `--offline` structural validation; live
+completes. An audit or upload failure cannot stop main promotion; a missing
+report is inconclusive and must be rerun for reconciliation. The local bundle
+registers `--offline` structural validation; live
 claim validation remains an outstanding gate until run separately. Immediately
 before claiming/resuming use the full guard
 command with `--base origin/main --task TASK-ID --branch RECORDED-BRANCH` after

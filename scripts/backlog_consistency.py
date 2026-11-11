@@ -574,6 +574,8 @@ def main(argv=None):
         branch = args.branch or os.environ.get("GITHUB_HEAD_REF") or git(root, "branch", "--show-current").strip()
         if args.ci_pr and args.task:
             raise EvidenceError("--ci-pr and --task serve different validation modes.")
+        if args.ci_pr and args.offline:
+            raise EvidenceError("PR Quality requires live GitHub evidence; --offline cannot validate a claim.")
         if args.ci_pr and git(root, "merge-base", "--is-ancestor", base_sha, "HEAD", optional=True) is None:
             raise EvidenceError("Test merge is behind current main; update the branch and rerun CI.")
         focus = focus_for_branch(tasks, branch) if args.ci_pr else None
