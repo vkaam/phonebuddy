@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-11T18:05:00Z'
-updated_date: '2026-11-11T19:01:00Z'
+updated_date: '2026-11-11T19:17:00Z'
 labels: []
 dependencies: []
 references:
@@ -31,7 +31,7 @@ Issue: https://github.com/vkaam/phonebuddy/issues/105
 Approved revision: 2026-11-11T18:04:24Z; body SHA-256 a8f1aa6aca896b074222f04e010eea6eb2c296d0d6825ceae38933a2abeceecb.
 Approval evidence: The owner requested a low-priority follow-up in Codex on 2026-11-11. The owner approved the split and post-merge verification on 2026-11-11; see https://github.com/vkaam/phonebuddy/issues/105#issuecomment-6804113134.
 Branch: agent/gh-105-duplicate-delivery
-Scope: .github/workflows/azure-deploy.yml; tests/test_deployment_policy.py; tests/test_bicep_ci_boundary.py; backlog/tasks/task-90 - Fix-duplicate-Azure-delivery.md; backlog/tasks/task-92 - Verify-live-duplicate-Azure-delivery.md
+Scope: .github/workflows/azure-deploy.yml; tests/test_deployment_policy.py; scripts/check_bicep.py; tests/test_bicep_ci_boundary.py; backlog/tasks/task-90 - Fix-duplicate-Azure-delivery.md; backlog/tasks/task-92 - Verify-live-duplicate-Azure-delivery.md
 Verify: python3 -B scripts/check.py; python3 -B scripts/check_bicep.py; actionlint .github/workflows/ci.yml .github/workflows/azure-deploy.yml .github/workflows/pr-safety.yml. Live duplicate-delivery verification is assigned to TASK-92 after this fix merges.
 <!-- SECTION:DESCRIPTION:END -->
 
