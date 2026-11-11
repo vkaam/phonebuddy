@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-11T12:57:00Z'
-updated_date: '2026-11-11T13:05:00Z'
+updated_date: '2026-11-11T13:06:00Z'
 labels:
   - infrastructure
   - cicd
@@ -61,4 +61,6 @@ Change control: Further files or Azure RBAC changes require recorded triage and 
 Latest live evidence: run 43022610694 on main merge 12563888 passed source verification, artifact verification, Bicep compile/apply and 100 health requests (0.0% errors, p95 266.375 ms), then failed Log Analytics with exit code 1, category cli_error, error_code null, error_source stderr; candidate revision ca-pb-dev-release-test--0000003 was deactivated. The Bicep source configures azure-monitor with Dedicated routing; official schema docs identify ContainerAppConsoleLogs fields ContainerAppName and Log, matching the current query. The local environment has no Azure login, so root-cause proof must come from safe hosted diagnostics.
 
 Added allowlisted numeric HTTP status extraction from both bounded CLI streams and fixed status-to-category mapping (authentication, authorization, missing resource, query rejection, throttling, timeout and provider error). No raw CLI output is retained. Focused suite passes (18 tests); repository suite passes (131 tests); Bicep checks, actionlint and diff check pass. The exact HTTP status from the live stderr is still unknown and the task remains active pending a main deployment.
+
+Draft PR #100: https://github.com/vkaam/phonebuddy/pull/100, head 6823f95e70d078d31913535412eb461ca9a05f22. Hosted checks and the next main-triggered deployment are pending; this PR adds safe status evidence and does not claim the live query is fixed.
 <!-- SECTION:NOTES:END -->
