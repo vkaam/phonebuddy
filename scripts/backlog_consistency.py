@@ -469,9 +469,7 @@ def validate(tasks, base, repository, live=None, target=None, branch=None, chang
                 fail(tid, "live approval/revision evidence is unavailable")
             elif issue.get("state") == "closed" and not all(
                     completed(peer["id"]) for peer in tasks.values()
-                    if (field(peer, "Issue") == info["issue"]
-                        or field(peer, "Primary issue") == info["issue"]
-                        or info["issue"] in peer["meta"]["references"])):
+                    if (field(peer, "Issue") or field(peer, "Primary issue")) == info["issue"]):
                 fail(tid, "issue is closed before all linked tasks have merged completion")
             elif issue.get("state") not in {"open", "closed"}:
                 fail(tid, "issue state is unavailable")

@@ -255,6 +255,11 @@ class ConsistencyTests(unittest.TestCase):
         result = self.run_guard([completed, unrelated], base, remote, focus=focus)
         self.assertEqual(result["status"], "pass", result)
 
+        contextual = record(83, issue=other_issue)
+        contextual["meta"]["references"].append(ISSUE)
+        result = self.run_guard([completed, contextual], base, remote, focus=focus)
+        self.assertEqual(result["status"], "pass", result)
+
     def test_unmerged_or_unchecked_legacy_status_does_not_complete(self):
         predecessor = record(81, status="In Progress")
         predecessor["meta"]["assignee"] = ["@codex"]

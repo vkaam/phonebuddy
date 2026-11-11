@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-11T18:54:00Z'
-updated_date: '2026-11-11T19:04:00Z'
+updated_date: '2026-11-11T19:06:00Z'
 labels: []
 dependencies: []
 references:
@@ -63,4 +63,6 @@ Draft PR #109 opened at a971550689b293dbe28acfa2bb924602eb7f6d8c. Hosted Quality
 Independent review found archived unfinished tasks were excluded from issue-closure readiness. The guard now includes all linked tasks in the closed-issue check, so archival alone cannot simulate completion; added the closed multi-task regression case.
 
 Second independent review found primary_issue() could throw on unrelated malformed peers during closed-issue validation. Matching now reads issue fields/references without parsing unrelated specifications; added a focused regression with an unrelated malformed archived record.
+
+Third independent review identified contextual issue references being treated as primary ownership. Closed-issue peer matching now uses only the task primary Issue field; a regression verifies a secondary reference cannot block another issue closure.
 <!-- SECTION:NOTES:END -->
