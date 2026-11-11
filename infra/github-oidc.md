@@ -32,6 +32,17 @@ application's single federation and direct/inherited assignments before creating
 Contributor on the matching group. Verify both assignments again after use. It
 creates no client secret.
 
+The automatic dev image-delivery workflow also needs the dev application to
+push images to the dev Azure Container Registry. `Contributor` on the resource
+group does not grant ACR data-plane push access. After reviewing the exact dev
+registry, grant the dev service principal the `AcrPush` role scoped to that
+registry only. This is a one-time Azure RBAC bootstrap by an authorized owner;
+the deployment workflow does not grant roles. The hosting Bicep template can
+create the Container App pull role assignment during bootstrap, but routine CI
+deployments set `managePullRoleAssignment=false` and therefore require no role
+assignment write permission. Verify the registry scope and assignments after
+bootstrap. Do not grant `Owner` or subscription-wide permissions for this path.
+
 ## GitHub repository owner setup
 
 In **Settings → Environments**, restrict both `dev` and `test` to deployment
@@ -42,6 +53,14 @@ must differ.
 Never add a client secret or certificate. Verify the two existing federated
 credentials use the GitHub Actions issuer, Azure token exchange audience and
 repository-ID-qualified subjects, one per application.
+
+For automatic deployment, the `dev` environment must be restricted to branch
+`main` and have the dev application's three secrets configured. The identity
+needs Contributor on `rg-pb-dev-francecentral-foundation` for the Bicep resource
+deployment, plus the registry-scoped `AcrPush` role described above. The
+workflow uses an immutable image artifact from the successful CI run and does
+not rebuild in the Azure job. `test` remains an OIDC smoke-only environment;
+this pilot does not deploy test resources.
 
 ## Verify
 

@@ -38,6 +38,15 @@ monitoring resources stay in France Central. [Static Web Apps assets are globall
 distributed](https://learn.microsoft.com/en-us/azure/static-web-apps/faq), so any later web-front-end residency decision
 requires separate review.
 
+TASK-62 adds the first automatic dev delivery path on protected `main`. The
+workflow builds the synthetic release-test image once, validates and promotes
+the source-bound artifact, deploys the applicable France Central hosting
+resources through Bicep, and requires the existing health and telemetry gate
+before recording a release annotation. It does not deploy the product web app,
+Static Web Apps, or test/prod resources. Until the branch is merged and the
+hosted path succeeds, this describes the implementation; it is not evidence of
+a CI deployment.
+
 Use distinct resource groups, data, secrets, workload identities, deployment
 identities and access assignments for each environment, even if subscriptions
 are shared. No production data or credentials in dev or test. Keep factory
@@ -65,20 +74,24 @@ environment.
    task's scoped acceptance and review material infrastructure and migration
    effects in the PR. Merge early when these gates pass so default-branch
    CI/CD can run. PR jobs have no Azure deployment identity.
-2. After a successful protected-main build, build once and bind immutable
-   artifacts, configuration, migration version, provenance and scan results to
-   that commit. Serialize releases so a later commit cannot overtake an earlier
-   promotion; an incident stop prevents queued releases from proceeding.
-3. In a trusted job, validate Bicep and parameters and run authenticated what-if
-   for each target with its own least-privilege federated identity. Missing,
-   failed, or unexpected material changes stop the release for investigation and
-   a reviewed correction. What-if is not proof of a successful deployment.
-4. Deploy dev, then test, then prod using the same artifact digests and each
-   environment's approved configuration. Each stage must pass its deployment,
-   migration, smoke and observation gates before the next begins. Promotion is
-   automatic after merge; there is no routine manual production approval. An
-   operator may stop the pipeline for an incident; resumption requires resolving
-   the cause and a fresh successful gate, not bypassing it.
+2. On successful protected-main CI, the dev pilot builds the synthetic
+   release-test image once and binds the archive, checksum, source SHA, run ID
+   and attempt to that run's immutable artifact. The trusted release workflow
+   downloads only that run's artifact and verifies its source and checksum
+   before loading it. Deployments serialize with cancellation disabled. A stale
+   source SHA or missing/failed exact-SHA Quality check stops the release.
+3. In the trusted dev job, validate the hosting Bicep and parameters and run
+   authenticated what-if with the dev federated identity. Unexpected material
+   changes stop the release for investigation and a reviewed correction.
+   What-if is not proof of a successful deployment. The job pushes the already
+   built image by digest, then deploys the applicable France Central hosting
+   resources from Bicep.
+4. The dev stage must pass deployment and the existing health and telemetry
+   gate before the release annotation is written. Test and prod are not
+   automatically deployed by this pilot. Each needs its own reviewed inputs,
+   scoped identity, resources and verified health gates before it can be
+   enabled. An operator may stop the pipeline for an incident; resumption
+   requires resolving the cause and a fresh successful gate, not bypassing it.
 5. Record commit, artifacts, parameters, what-if, migration, gate results, times,
    deployment identity, and rollback outcome. No Azure deployment occurs from a
    PR or advisory workflow. Environment protections must enforce branch and
@@ -91,8 +104,10 @@ and keep the failed release stopped or recovered under this policy.
 
 ## Gates and recovery
 
-These are minimum initial release gates, to be implemented for each applicable
-component. A missing metric, insufficient samples, timeout or unavailable test is
+These are minimum initial release gates for each applicable component. The dev
+release-test pilot uses the request and telemetry checks below; its current
+workflow does not exercise migrations or promote test/prod. A missing metric,
+insufficient samples, timeout or unavailable test is
 unknown and fails closed. Do not substitute a green deployment command for health.
 For components not deployed in a release, record why their gate is not applicable.
 
@@ -140,9 +155,11 @@ the promotion gate. Alert rules create Azure Monitor alert state; notification
 recipients and on-call routing are not configured until the environment owner
 assigns approved contacts. Successful gates add a source-bound Application
 Insights deployment annotation with environment, release version, commit and
-workflow reference. The workflow only observes and annotates the existing dev
-deployment; it does not deploy or promote resources. Test dispatch remains
-unavailable until test hosting and telemetry are provisioned and verified.
+workflow reference. The standalone health workflow only observes and annotates
+the existing dev deployment; it does not deploy or promote resources. TASK-62's
+trusted release workflow invokes the same gate after Bicep deployment and writes
+the annotation only on success. Test dispatch remains unavailable until test
+hosting and telemetry are provisioned and verified.
 
 On a failed first release there is no previous healthy artifact: stop, keep the
 service unavailable or isolated, alert the incident owner, and investigate; do
@@ -158,8 +175,12 @@ The deployment operator owns stopping and investigating a failed release; the
 service incident owner coordinates response and communications; the data owner
 authorizes stateful recovery; and the budget owner responds to cost alerts. Named
 people or on-call rotations and escalation contacts are prerequisites for enabling
-each environment. TASK-10 through TASK-13 implement and exercise these controls;
-until then automatic delivery is not enabled.
+each environment. TASK-10 through TASK-13 implement and exercise the broader
+recovery controls; this pilot deactivates only an active Container App revision
+whose `RELEASE_VERSION` matches the failed release after a partial Bicep apply
+or failed post-deploy health gate. If no active candidate revision matches, it
+records that fact and leaves other revisions unchanged. This is not a substitute
+for the full rollback and recovery work in TASK-63 and TASK-64.
 
 ## Data and AI resource controls
 

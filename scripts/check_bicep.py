@@ -347,6 +347,10 @@ def validate_hosting(template):
             or vault.get('enablePurgeProtection') is not True):
         raise ValueError('Vault must use RBAC, disable public access and protect against purge')
     parameters = template['parameters']
+    pull_role = resources['Microsoft.Authorization/roleAssignments']
+    if (parameters.get('managePullRoleAssignment', {}).get('defaultValue') is not True
+            or pull_role.get('condition') != "[parameters('managePullRoleAssignment')]"):
+        raise ValueError('Pull-role assignment must be enabled for privileged bootstrap by default')
     digest = parameters['imageDigest']
     if digest.get('minLength') != 64 or digest.get('maxLength') != 64 or 'defaultValue' in digest:
         raise ValueError('Image digest must be supplied as 64 characters')

@@ -68,10 +68,11 @@ class BicepWhatIfValidationTests(unittest.TestCase):
 
 
 class BicepCiBoundaryTests(unittest.TestCase):
-    def test_azure_identity_is_confined_to_manual_main_workflow(self):
+    def test_azure_identity_is_confined_to_trusted_main_workflows(self):
         root = Path(__file__).resolve().parents[1] / '.github/workflows'
         quality = (root / 'ci.yml').read_text()
         trusted = (root / 'azure-hosting-what-if.yml').read_text()
+        deployment = (root / 'azure-deploy.yml').read_text()
         self.assertNotIn('id-token: write', quality)
         self.assertNotIn('azure/login@', quality)
         self.assertIn('workflow_dispatch:', trusted)
@@ -88,6 +89,42 @@ class BicepCiBoundaryTests(unittest.TestCase):
         self.assertIn('deployStaticSite=false', trusted)
         self.assertIn('--expected-scope', trusted)
         self.assertNotIn('az deployment group create', trusted)
+        self.assertIn("github.event_name == 'push' && github.ref == 'refs/heads/main'", quality)
+        self.assertIn('needs: quality', quality)
+        self.assertIn('docker buildx build', quality)
+        self.assertIn('actions/upload-artifact@', quality)
+        self.assertIn("cancel-in-progress: ${{ github.event_name == 'pull_request' }}", quality)
+        self.assertIn('Image publication is not applicable outside main pushes', quality)
+        self.assertIn("if: github.event_name == 'push' && github.ref == 'refs/heads/main'", quality)
+        self.assertNotIn('pull_request:', deployment)
+        self.assertIn('workflow_run:', deployment)
+        self.assertIn('branches: [main]', deployment)
+        self.assertIn("github.event.workflow_run.event == 'push'", deployment)
+        self.assertIn("github.event.workflow_run.conclusion == 'success'", deployment)
+        self.assertIn('github.event.workflow_run.head_sha', deployment)
+        self.assertIn('scripts/deployment_policy.py verify-current-source', deployment)
+        self.assertIn('actions/download-artifact@', deployment)
+        self.assertIn('run-id: ${{ github.event.workflow_run.id }}', deployment)
+        self.assertIn('environment: dev', deployment)
+        self.assertIn('id-token: write', deployment)
+        self.assertIn('cancel-in-progress: false', deployment)
+        self.assertIn("contains(@, 'release-test')", deployment)
+        self.assertLess(deployment.index('repository_exists='),
+                        deployment.index('existing_tag='))
+        self.assertIn('managePullRoleAssignment=false', deployment)
+        self.assertIn('az deployment group create', deployment)
+        self.assertIn('az containerapp revision deactivate', deployment)
+        self.assertIn('$GITHUB_WORKSPACE/scripts/deployment_policy.py" verify-manifest', deployment)
+        self.assertIn('scripts/deployment_policy.py verify-existing-image', deployment)
+        self.assertIn('scripts/deployment_policy.py recovery-required', deployment)
+        self.assertIn('scripts/deployment_policy.py candidate-revisions', deployment)
+        self.assertIn("steps.recovery-decision.outputs.required == 'true'", deployment)
+        self.assertIn('id: observe', deployment)
+        self.assertIn('No active candidate revision matched', deployment)
+        self.assertLess(deployment.index('Preview the exact Bicep release'),
+                        deployment.index('Apply the reviewed Bicep release'))
+        self.assertLess(deployment.index('Observe the deployed version'),
+                        deployment.index('Record successful release annotation'))
 
     def test_health_gate_is_manual_main_only_and_runs_before_annotation(self):
         root = Path(__file__).resolve().parents[1] / '.github/workflows'
@@ -107,3 +144,9 @@ class BicepCiBoundaryTests(unittest.TestCase):
         self.assertLess(workflow.index('Run bounded readiness'),
                         workflow.index('Record successful release annotation'))
         self.assertNotIn('az deployment', workflow)
+
+    def test_hosting_pull_role_assignment_can_be_prebootstrapped(self):
+        source = (Path(__file__).resolve().parents[1] / 'infra/hosting.bicep').read_text()
+        self.assertIn('param managePullRoleAssignment bool = true', source)
+        self.assertIn("if (managePullRoleAssignment)", source)
+        self.assertIn('dependsOn: managePullRoleAssignment ? [pull] : []', source)

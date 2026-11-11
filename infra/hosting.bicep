@@ -7,6 +7,8 @@ param owner string
 param costCenter string
 @description('Deploy the workload only after its image has been pushed to this registry.')
 param deployWorkload bool = false
+@description('Create the Container App pull-role assignment during a privileged bootstrap deployment.')
+param managePullRoleAssignment bool = true
 @description('Provision the optional Static Web App only where that resource type is available.')
 param deployStaticSite bool = true
 @description('SHA-256 image digest without the sha256: prefix; provide 64 zeroes during bootstrap.')
@@ -57,7 +59,7 @@ resource identity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' 
   tags: tags
 }
 
-resource pull 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+resource pull 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (managePullRoleAssignment) {
   name: guid(registry.id, identity.id, 'acrpull')
   scope: registry
   properties: {
@@ -137,7 +139,7 @@ resource app 'Microsoft.App/containerApps@2023-05-01' = if (deployWorkload) {
       scale: { minReplicas: 0, maxReplicas: 1 }
     }
   }
-  dependsOn: [pull]
+  dependsOn: managePullRoleAssignment ? [pull] : []
 }
 
 resource appDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = if (deployWorkload) {

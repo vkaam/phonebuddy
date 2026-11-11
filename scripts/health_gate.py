@@ -178,6 +178,7 @@ def query_workspace_telemetry(workspace_id, app_name, expected_version, runner=s
         'ContainerAppConsoleLogs '
         f'| where ContainerAppName == {quote(app_name)} '
         '| where TimeGenerated > ago(15m) '
+        '| where Log contains \'"event":"health_request"\' '
         '| extend health=parse_json(substring(Log, indexof(Log, \'{\'))) '
         '| where tostring(health.event) == "health_request" '
         f'| where tostring(health.version) == {quote(expected_version)} '
