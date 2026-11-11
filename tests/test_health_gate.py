@@ -67,6 +67,70 @@ class WorkspaceTelemetryTests(unittest.TestCase):
             'workspace-id', 'app-name', 'release-1', self.runner_for(99, 0))
         self.assertEqual(report['reasons'], ['missing_telemetry'])
 
+    def test_throttled_query_retries_with_bounded_backoff_then_recovers(self):
+        throttled = type('Result', (), {
+            'returncode': 1, 'stdout': '', 'stderr': 'HTTP 429 throttled; query=secret',
+        })()
+        succeeded = type('Result', (), {
+            'returncode': 0,
+            'stdout': json.dumps([{'telemetry_event_count': '100', 'unhealthy_event_count': '0'}]),
+            'stderr': '',
+        })()
+        results = iter([throttled, throttled, succeeded])
+        calls, sleeps = [], []
+
+        def runner(*args, **kwargs):
+            calls.append(args[0])
+            return next(results)
+
+        report = query_workspace_telemetry(
+            'workspace-id', 'app-name', 'release-1', runner, sleeper=sleeps.append)
+        self.assertEqual(report['status'], 'pass')
+        self.assertEqual(len(calls), 3)
+        self.assertEqual(sleeps, [10, 20])
+
+    def test_exhausted_throttle_retries_remain_redacted_dependency_outage(self):
+        calls, sleeps = [], []
+
+        def runner(*args, **kwargs):
+            calls.append(args[0])
+            return type('Result', (), {
+                'returncode': 1, 'stdout': '',
+                'stderr': 'HTTP 429 throttled; query=secret; caller=private',
+            })()
+
+        report = query_workspace_telemetry(
+            'workspace-id', 'app-name', 'release-1', runner, sleeper=sleeps.append)
+        self.assertEqual(report['status'], 'fail')
+        self.assertEqual(report['reasons'], ['dependency_outage'])
+        self.assertEqual(report['diagnostic'], {
+            'operation': 'log_analytics_query', 'category': 'throttled', 'exit_code': 1,
+        })
+        self.assertEqual(len(calls), 4)
+        self.assertEqual(sleeps, [10, 20, 30])
+        self.assertNotIn('secret', json.dumps(report))
+        self.assertNotIn('private', json.dumps(report))
+
+    def test_non_throttle_query_errors_are_not_retried(self):
+        for stderr, category in [('AuthorizationFailed: forbidden', 'authorization_denied'),
+                                 ('Semantic error in query', 'query_rejected')]:
+            with self.subTest(category=category):
+                calls, sleeps = [], []
+
+                def runner(*args, **kwargs):
+                    calls.append(args[0])
+                    return type('Result', (), {
+                        'returncode': 1, 'stdout': '', 'stderr': stderr,
+                    })()
+
+                report = query_workspace_telemetry(
+                    'workspace-id', 'app-name', 'release-1', runner,
+                    sleeper=sleeps.append)
+                self.assertEqual(report['status'], 'fail')
+                self.assertEqual(report['diagnostic']['category'], category)
+                self.assertEqual(len(calls), 1)
+                self.assertEqual(sleeps, [])
+
     def test_workspace_unhealthy_events_and_query_failures_block(self):
         report = query_workspace_telemetry(
             'workspace-id', 'app-name', 'release-1', self.runner_for(100, 1))
