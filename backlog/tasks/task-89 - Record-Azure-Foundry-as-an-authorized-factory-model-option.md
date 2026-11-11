@@ -5,7 +5,7 @@ status: Done
 assignee:
   - '@codex'
 created_date: '2026-11-11T15:42:00Z'
-updated_date: '2026-11-11T16:11:00Z'
+updated_date: '2026-11-11T16:17:00Z'
 labels:
   - factory
   - autonomy
@@ -66,10 +66,12 @@ Completion-record verification: after the branch-local Done commit, final head c
 Review correction: earlier completion notes describe intermediate heads cdb8508 and cfef914. The final PR head reviewed was c46f3a74564387d7b3b9c0e3fb6597831d77bcb1; Quality run 43053671547 and advisory Risk report 43053668472 passed on that head. The immutable release-image applicability check also passed in run 43053671547.
 
 Final evidence correction: PR #104 head 2064f015b6e0deba29cf9e842fca73a7014d5084 passed Quality and immutable-image applicability in run 43055260663 and advisory Risk reporting in run 43055256748. The PR description records that head and those runs. The task-record correction below requires current-head checks before merge.
+
+Current-head correction: the completion-record update is included in PR #104 head c2d5c0a059c44ab9d661d23bd3cd61dfe9779bb2. Quality and immutable-image applicability passed in run 43055947299; advisory Risk passed in run 43055940097. The independent review of this head found no substantive issues; it noted only that the prior final summary had not yet been updated with this CI evidence.
 <!-- SECTION:NOTES:END -->
 
 ## Final Summary
 
 <!-- SECTION:FINAL_SUMMARY:BEGIN -->
-Recorded the owner-approved Azure Foundry option alongside subscription Codex, while preserving the no-paid-OpenAI-API direction and the factory isolation, production-access and enforceable-limit gates. Local repository checks, the 134-test Python suite, offline Backlog validation, and diff checks passed. Hosted Quality (including browser tests), immutable-image applicability, and the advisory Risk report passed on PR #104 head 2064f015b6e0deba29cf9e842fca73a7014d5084 in runs 43055260663 and 43055256748. This task-record correction must receive its own current-head CI before merge. No Foundry runtime or resources were enabled; model selection, isolated factory access, cost/time limits and evidence retention remain unresolved.
+Recorded the owner-approved Azure Foundry option alongside subscription Codex, while preserving the no-paid-OpenAI-API direction and the factory isolation, production-access and enforceable-limit gates. Local repository checks, the 134-test Python suite, offline Backlog validation, and diff checks passed. Hosted Quality including browser tests, live Backlog consistency, Bicep and secret checks, and immutable-image applicability passed on PR #104 head c2d5c0a059c44ab9d661d23bd3cd61dfe9779bb2 in run 43055947299; advisory Risk passed in run 43055940097. Independent review of that head found no substantive issues. No Foundry runtime or resources were enabled; model selection, isolated factory access, cost/time limits and evidence retention remain unresolved.
 <!-- SECTION:FINAL_SUMMARY:END -->
