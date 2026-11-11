@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-02T16:36:00Z'
-updated_date: '2026-11-11T08:45:00Z'
+updated_date: '2026-11-11T09:10:00Z'
 labels:
   - infrastructure
   - cicd
@@ -69,3 +69,9 @@ Spec: Preserve the issue's approved acceptance. Do not broaden scope or weaken r
 <!-- SECTION:PLAN:BEGIN -->
 1. Inspect the current CI, Bicep hosting template, application build, OIDC workflow, health gate, and delivery policy to find the smallest complete main-to-release path consistent with the approved issue. 2. Add a main-only exact-SHA deployment workflow that waits for successful required Quality evidence, builds and identifies immutable application artifacts once, serializes environment releases, deploys applicable Bicep and the same artifact through OIDC, and gates promotion on readiness and telemetry. 3. Add deterministic coverage for stale or failed CI, duplicate and concurrent triggers, immutable artifact promotion, deployment failure, health failure, and recovery behavior within the approved paths. 4. Document required GitHub environment, identity, and repository settings and run the task's local verification commands. 5. Publish a draft PR and verify all hosted checks on its current head; leave live Azure deployment evidence and any unavailable environment prerequisites explicit.
 <!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Draft PR #97: https://github.com/vkaam/phonebuddy/pull/97. The source implementation at ad17d462897dedb0b24979edd9bab3dc47f2edca has hosted Quality, the explicit non-main release-image no-op, and advisory Risk report all passing. Local Bicep baseline, actionlint, focused boundary tests, and diff checks pass; the local browser suite could not launch because libnspr4.so is missing, but the hosted Quality browser suite passed. Remaining delivery gates: review/merge, a configured dev environment and registry-scoped AcrPush role, and a successful health/telemetry gate. Health run 42984895566 passed 100 request probes (0% errors, p95 325ms) but failed closed when the Log Analytics CLI query returned cli_error with zero telemetry rows. No CI Azure deployment has occurred yet.
+<!-- SECTION:NOTES:END -->
