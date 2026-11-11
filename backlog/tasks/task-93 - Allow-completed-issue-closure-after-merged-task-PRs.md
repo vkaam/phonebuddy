@@ -1,11 +1,11 @@
 ---
 id: TASK-93
 title: Allow completed issue closure after merged task PRs
-status: In Progress
+status: Done
 assignee:
   - '@codex'
 created_date: '2026-11-11T18:54:00Z'
-updated_date: '2026-11-11T19:06:00Z'
+updated_date: '2026-11-11T19:09:00Z'
 labels: []
 dependencies: []
 references:
@@ -39,10 +39,10 @@ Triage amendment 2026-11-11: Investigation showed unchanged Done tasks are alrea
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 A task with checked native acceptance and its single merged PR on main has effective completion even when a legacy record still says In Progress; this is reported for cleanup without requiring a second PR.
-- [ ] #2 Unmerged, unchecked or branch-local proposed completion does not satisfy dependencies or permit issue closure.
-- [ ] #3 A multi-task issue remains open while any required task PR is unmerged and can close after every task has effective completion on main.
-- [ ] #4 Regression tests and policy documentation explain the merge-based path, the legacy status warning and separate post-merge live work.
+- [x] #1 A task with checked native acceptance and its single merged PR on main has effective completion even when a legacy record still says In Progress; this is reported for cleanup without requiring a second PR.
+- [x] #2 Unmerged, unchecked or branch-local proposed completion does not satisfy dependencies or permit issue closure.
+- [x] #3 A multi-task issue remains open while any required task PR is unmerged and can close after every task has effective completion on main.
+- [x] #4 Regression tests and policy documentation explain the merge-based path, the legacy status warning and separate post-merge live work.
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -65,4 +65,12 @@ Independent review found archived unfinished tasks were excluded from issue-clos
 Second independent review found primary_issue() could throw on unrelated malformed peers during closed-issue validation. Matching now reads issue fields/references without parsing unrelated specifications; added a focused regression with an unrelated malformed archived record.
 
 Third independent review identified contextual issue references being treated as primary ownership. Closed-issue peer matching now uses only the task primary Issue field; a regression verifies a secondary reference cannot block another issue closure.
+
+Independent final code review at 9864b3af2e79044cfbb59412c966e41b0fed26fb found no remaining blockers and validated AC 1-4. Hosted CI run 43084285789 and advisory audit run 43084285798 both completed successfully. Reviewer independently ran 33 focused tests and diff check. Main CI and Azure deployment from TASK-91 also succeeded on exact SHA 16f2703.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Merge-based evidence now recognizes checked legacy In Progress tasks whose single PR is merged on main, while warning about stale status. Closed issues still require completion of every primary linked task, including archived unfinished peers; secondary references cannot block unrelated issues. Focused 33 and required 140 tests, live guard, independent review and hosted PR checks passed. Unattended reconciliation remains future work.
+<!-- SECTION:FINAL_SUMMARY:END -->
