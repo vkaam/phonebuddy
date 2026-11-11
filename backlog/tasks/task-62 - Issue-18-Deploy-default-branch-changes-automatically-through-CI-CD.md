@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-02T16:36:00Z'
-updated_date: '2026-11-11T09:10:00Z'
+updated_date: '2026-11-11T09:15:00Z'
 labels:
   - infrastructure
   - cicd
@@ -32,7 +32,9 @@ modified_files:
   - .github/workflows/azure-deploy.yml
   - infra/hosting.bicep
   - scripts/check_bicep.py
+  - scripts/health_gate.py
   - tests/test_bicep_ci_boundary.py
+  - tests/test_health_gate.py
   - docs/azure-delivery-policy.md
   - docs/quality-and-delivery.md
   - infra/github-oidc.md
