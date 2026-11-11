@@ -94,6 +94,8 @@ class BicepCiBoundaryTests(unittest.TestCase):
         self.assertIn('docker buildx build', quality)
         self.assertIn('actions/upload-artifact@', quality)
         self.assertIn("cancel-in-progress: ${{ github.event_name == 'pull_request' }}", quality)
+        self.assertIn('Image publication is not applicable outside main pushes', quality)
+        self.assertIn("if: github.event_name == 'push' && github.ref == 'refs/heads/main'", quality)
         self.assertNotIn('pull_request:', deployment)
         self.assertIn('workflow_run:', deployment)
         self.assertIn('branches: [main]', deployment)
