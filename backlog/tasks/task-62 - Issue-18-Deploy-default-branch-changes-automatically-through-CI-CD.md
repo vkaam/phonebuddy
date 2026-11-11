@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-02T16:36:00Z'
-updated_date: '2026-11-11T09:37:00Z'
+updated_date: '2026-11-11T09:44:00Z'
 labels:
   - infrastructure
   - cicd
@@ -77,5 +77,5 @@ Spec: Preserve the issue's approved acceptance. Do not broaden scope or weaken r
 ## Implementation Notes
 
 <!-- SECTION:NOTES:BEGIN -->
-Draft PR #97: https://github.com/vkaam/phonebuddy/pull/97. The existing source through ce0f1ee2daf2f6b77e1cf918cfeb959a0b21e85d passed hosted Quality, the non-main release-image no-op, and advisory Risk report. This follow-up adds executable policy checks for current-main freshness, exact run/attempt artifact provenance, duplicate reuse of only the same locked image, and recovery for partial apply or failed observation; recovery targets only active revisions tagged with the failed release version. The health query filters health_request events before parsing. The required 128-test suite, workflow lint, and diff checks pass locally; Bicep baseline passed on the prior unchanged template. Latest live health run 42984895566 predates the query change and failed closed with Log Analytics cli_error after request probes passed. Current Azure telemetry behavior and CI-driven Bicep deployment remain unverified. Remaining gates are review/merge, dev OIDC settings, registry-scoped AcrPush, then successful main CI deploy and health gate.
+Draft PR #97: https://github.com/vkaam/phonebuddy/pull/97. Current source head b0def7c5fb9b819579a0aa7e316e69d3347f4ef7 passed hosted Quality, the non-main release-image no-op, and advisory Risk report. The required 128-test suite, Bicep baseline, actionlint, and diff checks pass locally. Executable policy tests cover current-main freshness, exact run/attempt artifact provenance, locked-image reuse for duplicate triggers, and recovery decisions; recovery selects only the active revision for the failed source version. The health query filters health_request events before parsing. Latest live health run 42984895566 predates the query change and failed closed with Log Analytics cli_error after request probes passed. Current Azure telemetry behavior and CI-driven Bicep deployment remain unverified. Remaining gates: human review/merge, dev OIDC settings, registry-scoped AcrPush, and a successful main CI deploy and health gate.
 <!-- SECTION:NOTES:END -->
