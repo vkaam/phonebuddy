@@ -113,7 +113,7 @@ reconciliation and an authorized merge controller remain unimplemented.
 
 ## Executable consistency guard
 
-Run the same read-only validator locally and in CI:
+Run the repository-wide read-only audit locally:
 
 ```sh
 git fetch origin
@@ -161,11 +161,23 @@ reference. Archival preserves unfinished status and cannot satisfy dependencies.
 The guard also rejects silently removed identities. Use the Backlog CLI for all
 reconciliation changes; the guard supplies no automatic repair path.
 
-CI runs live validation inside the existing Quality gate using a read-only,
-unprivileged token, retaining its JSON with QA artifacts. `scripts/check.py`
-registers the offline structural mode; `--offline` never validates a claim or
-provides live merge/approval evidence. Existing broad imports may therefore
-appear as warnings in an audit while remaining blocked for execution.
+On a PR, required Quality runs the live guard with `--ci-pr --base origin/main`
+and the PR's head branch. It blocks on that task's approval, claim, scope and
+dependencies. If main has advanced beyond the tested merge commit, the check
+asks for an updated branch and rerun. A separate advisory Backlog audit retains
+the repository-wide result on PR and main runs; unrelated task or issue drift
+does not block another PR or release. Read its JSON `status` and reconcile
+failures rather than treating an advisory job's green completion as a clean audit.
+The full guard remains required immediately before a worker claims or resumes a
+task. `scripts/check.py` registers the offline structural mode; `--offline`
+never validates a claim or provides live merge/approval evidence. Existing broad
+imports may therefore appear as warnings in an audit while remaining blocked
+for execution.
+
+Protected-main Quality runs the full web, dependency and browser checks before
+the exact-source release image is built. The trusted release path still verifies
+successful main Quality, artifact identity and post-deployment health before
+promotion; a failed or missing main check cannot authorize it.
 
 This is a point-in-time consistency gate for human-directed work. Approval text
 is checked for required provenance and revision, not cryptographically attested

@@ -110,6 +110,33 @@ class ConsistencyTests(unittest.TestCase):
         self.assertEqual(result["status"], "pass", result)
         self.assertTrue(result["claim_verified"])
 
+    def test_pr_focus_ignores_unrelated_closed_issue_but_rejects_own_claim(self):
+        other_issue = f"https://github.com/{REPO}/issues/2"
+        own, unrelated = record(), record(81, issue=other_issue)
+        remote = live()
+        remote["issues"][other_issue] = {"state": "closed", "body": "approved intent"}
+        focus = guard.focus_for_branch({own["id"]: own, unrelated["id"]: unrelated}, "agent/task-80")
+        self.assertEqual(focus, {"TASK-80"})
+        scoped = self.run_guard([own, unrelated], remote=remote, branch="agent/task-80",
+                                changed=["scripts/feature-80.py"], focus=focus)
+        self.assertEqual(scoped["status"], "pass", scoped)
+        self.assertFails(self.run_guard([own, unrelated], remote=remote), "TASK-81: issue is closed")
+
+        remote["claims"] = [{"task": "TASK-80", "branch": "agent/task-80", "status": "To Do", "pr": 12}]
+        self.assertFails(self.run_guard([own, unrelated], remote=remote, branch="agent/task-80",
+                                        changed=["scripts/feature-80.py"], focus=focus), "unclaimed To Do")
+
+    def test_pr_focus_includes_dependencies_and_rejects_unapproved_scope(self):
+        dependency, own = record(81), record(deps=("TASK-81",), status="In Progress")
+        own["meta"]["assignee"] = ["@codex"]
+        tasks = {task["id"]: task for task in (own, dependency)}
+        focus = guard.focus_for_branch(tasks, "agent/task-80")
+        self.assertEqual(focus, {"TASK-80", "TASK-81"})
+        result = self.run_guard([own, dependency], branch="agent/task-80",
+                                changed=["outside/scope.py"], focus=focus)
+        self.assertFails(result, "active work lacks default-branch completion")
+        self.assertFails(result, "changed path outside approved scope")
+
     def test_missing_required_execution_metadata(self):
         for marker in ["Issue:", "Approved revision:", "Approval evidence:", "Branch:", "Scope:", "Verify:", "<!-- AC:BEGIN -->"]:
             task = record()
@@ -341,6 +368,31 @@ class CollectionAndCliTests(unittest.TestCase):
             duplicate.write_text(text)
             with self.assertRaisesRegex(guard.EvidenceError, "duplicate native ID"):
                 guard.load_tasks(root)
+
+    def test_pr_mode_reports_main_that_advanced_past_the_test_merge(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+
+            def git(*args):
+                return subprocess.run(["git", *args], cwd=root, capture_output=True, check=True)
+
+            git("init")
+            (root / "fixture.txt").write_text("base\n", encoding="utf-8")
+            git("add", ".")
+            commit = ("-c", "user.name=Test", "-c", "user.email=test@example.invalid",
+                      "-c", "commit.gpgsign=false", "commit")
+            git(*commit, "-m", "base")
+            base = git("rev-parse", "HEAD").stdout.decode().strip()
+            git("switch", "-c", "main")
+            (root / "fixture.txt").write_text("new main\n", encoding="utf-8")
+            git("add", ".")
+            git(*commit, "-m", "main advanced")
+            git("switch", "-c", "agent/feature", base)
+            with patch("sys.stdout", new_callable=io.StringIO) as output:
+                code = guard.main(["--root", str(root), "--base", "main", "--branch",
+                                   "agent/feature", "--ci-pr", "--offline"])
+            self.assertEqual(code, 1)
+            self.assertIn("update the branch and rerun CI", output.getvalue())
 
 
 if __name__ == "__main__":
