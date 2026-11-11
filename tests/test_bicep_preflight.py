@@ -9,7 +9,9 @@ import tempfile
 from unittest.mock import patch
 
 from scripts.check_bicep import (
+    APP_DIAGNOSTIC_SCOPE,
     DATA_PLATFORM_DEPLOYMENT_NAME,
+    ENVIRONMENT_DIAGNOSTIC_SCOPE,
     FOUNDATION_DEPLOYMENT_NAME,
     FOUNDATION_RESOURCE_GROUP_NAME,
     FOUNDATION_RESOURCE_GROUP_OUTPUT,
@@ -23,6 +25,7 @@ from scripts.check_bicep import (
     validate_data_platform,
     validate_what_if,
     validate_quality_evidence,
+    has_expected_diagnostic_scope,
 )
 from scripts.azure_foundations_smoke import configured_location
 
@@ -378,6 +381,22 @@ class FoundationIsolationTests(unittest.TestCase):
             'prod': 'rg-pb-prod-unresolved-foundation',
         })
         self.assertEqual(len(set(names.values())), 3)
+
+    def test_diagnostic_scopes_match_exact_compiled_resource_ids(self):
+        cases = (
+            (ENVIRONMENT_DIAGNOSTIC_SCOPE, ENVIRONMENT_DIAGNOSTIC_SCOPE,
+             "[resourceId('Microsoft.App/managedEnvironmentsFake', format('cae-pb-{0}', parameters('environment')))]",
+             ENVIRONMENT_DIAGNOSTIC_SCOPE.replace('cae-pb-{0}', 'cae-other-{0}')),
+            (APP_DIAGNOSTIC_SCOPE, APP_DIAGNOSTIC_SCOPE,
+             "[resourceId('Microsoft.App/containerAppsFake', format('ca-pb-{0}-release-test', parameters('environment')))]",
+             APP_DIAGNOSTIC_SCOPE.replace('release-test', 'other')),
+        )
+        for expected, valid, wrong_type, wrong_target in cases:
+            with self.subTest(expected=expected):
+                self.assertTrue(has_expected_diagnostic_scope({'scope': valid}, expected))
+                self.assertFalse(has_expected_diagnostic_scope({'scope': wrong_type}, expected))
+                self.assertFalse(has_expected_diagnostic_scope({'scope': wrong_target}, expected))
+                self.assertFalse(has_expected_diagnostic_scope({'scope': 42}, expected))
 
     def test_regionless_or_fixed_resource_group_name_fails(self):
         for name in ('rg-pb-dev-foundation', 'rg-pb-test-westeurope-foundation'):

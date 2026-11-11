@@ -42,6 +42,14 @@ FOUNDATION_RESOURCE_GROUP_OUTPUT_PATTERN = re.compile(
     r"format\('phonebuddy-\{0\}-\{1\}-foundation', parameters\('environment'\), "
     r"parameters\('location'\)\)\), '\d{4}-\d{2}-\d{2}'\)\.outputs\.resourceGroupName\.value\]"
 )
+ENVIRONMENT_DIAGNOSTIC_SCOPE = (
+    "[resourceId('Microsoft.App/managedEnvironments', "
+    "format('cae-pb-{0}', parameters('environment')))]"
+)
+APP_DIAGNOSTIC_SCOPE = (
+    "[resourceId('Microsoft.App/containerApps', "
+    "format('ca-pb-{0}-release-test', parameters('environment')))]"
+)
 
 
 def valid_foundation_resource_group_output(value):
@@ -49,6 +57,11 @@ def valid_foundation_resource_group_output(value):
     return (value == FOUNDATION_RESOURCE_GROUP_OUTPUT
             or isinstance(value, str)
             and FOUNDATION_RESOURCE_GROUP_OUTPUT_PATTERN.fullmatch(value) is not None)
+
+
+def has_expected_diagnostic_scope(resource, expected_scope):
+    """Match the precise compiled resource ID, including resource type and name."""
+    return isinstance(resource, dict) and resource.get('scope') == expected_scope
 
 
 def run(*args):
@@ -395,10 +408,10 @@ def validate_hosting(template):
                            if resource.get('type') == 'Microsoft.Insights/diagnosticSettings']
     environment_diagnostics = next(
         (resource for resource in diagnostic_settings
-         if '/managedEnvironments' in resource.get('scope', '')), None)
+         if has_expected_diagnostic_scope(resource, ENVIRONMENT_DIAGNOSTIC_SCOPE)), None)
     app_diagnostics = next(
         (resource for resource in diagnostic_settings
-         if '/containerApps' in resource.get('scope', '')), None)
+         if has_expected_diagnostic_scope(resource, APP_DIAGNOSTIC_SCOPE)), None)
     environment_log_categories = {
         item.get('category')
         for item in environment_diagnostics.get('properties', {}).get('logs', [])

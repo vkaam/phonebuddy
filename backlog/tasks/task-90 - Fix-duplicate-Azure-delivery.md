@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-11T18:05:00Z'
-updated_date: '2026-11-11T19:33:00Z'
+updated_date: '2026-11-11T19:36:00Z'
 labels: []
 dependencies: []
 references:
@@ -64,4 +64,6 @@ Owner directed removing the strict Bicep CLI version gate because the installed 
 Owner requested removing the exact Bicep version check. scripts/check_bicep.py no longer requires 0.34.44 and accepts the installed 0.49.2, but the full Bicep check then failed its existing compiled logging contract: Console and system logs must route from the Container Apps environment. scripts/check.py also remains failing locally; see local report from the latest run.
 
 Bicep 0.49.2 validation now passes locally with python3.15.exe -B scripts/check_bicep.py. All 36 tests in tests.test_bicep_preflight pass, including checks for both the 2022-09-01 and 2025-04-01 compiler-emitted output API versions and rejection of unrelated references; all 6 tests in tests.test_bicep_ci_boundary pass. Updated docs/quality-and-delivery.md to state CI uses 0.34.44 and 0.49.2 passed locally. The full scripts/check.py baseline still reports failure on this Windows host; python3.15.exe -B scripts/quality.py passes. The live backlog claim guard could not read the GitHub CLI token on this host and did not verify the claim. Hosted CI with Bicep 0.34.44 remains required on the updated PR head.
+
+Independent review found the compiler-compatibility substring check for diagnostic scopes could accept similarly named incorrect resource types. The validator now requires the exact compiler-generated environment and app resource ID expressions, including expected resource names. Added negative tests for wrong types and targets. Re-ran Bicep 0.49.2 baseline validation, all 43 relevant preflight and CI-boundary tests, and repository checks successfully.
 <!-- SECTION:NOTES:END -->
