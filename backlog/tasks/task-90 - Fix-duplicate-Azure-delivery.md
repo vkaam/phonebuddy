@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-11T18:05:00Z'
-updated_date: '2026-11-11T18:24:00Z'
+updated_date: '2026-11-11T18:28:00Z'
 labels: []
 dependencies: []
 references:
@@ -52,4 +52,6 @@ Verify: python3 -B scripts/check.py; python3 -B scripts/check_bicep.py; actionli
 The ACR lookup now requests detailed tag objects before filtering by name. Focused policy and workflow tests pass locally; the behavioral promotion-step test requires Bash and is skipped on this Windows host. Full scripts/check.py failed locally and check_bicep.py could not find Bicep; hosted checks and duplicate-delivery Azure evidence remain required. Independent review identified the missing workflow-level coverage, which is now added but awaits execution in hosted CI.
 
 PR #106 head 5097d99e4edd7608c8f62df07fa1c29ca6232923 passed hosted Quality run 43076192295 attempt 2, including the Linux behavioral tests, actionlint and Bicep validation. An independent agent reviewed that exact tree and found no additional scoped defects; live Azure duplicate-delivery evidence remains outstanding. The current host has no Azure CLI or Docker.
+
+Read-only Azure evidence (2026-11-11): the installed Azure CLI and dev account are available. Against the existing main-source tag 63e88d30f87c392814fb7c859b96724f868285d1, the detailed ACR lookup returned the tag with writeEnabled false; the earlier query without --detail returned no match. A detailed lookup for an absent all-zero tag returned no match. This verifies live query behavior only, not full image reuse or duplicate deployment. Docker remains unavailable on this host.
 <!-- SECTION:NOTES:END -->
