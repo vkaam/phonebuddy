@@ -1,11 +1,11 @@
 ---
 id: TASK-87
 title: Keep workspace analytics out of the pilot release gate
-status: In Progress
+status: Done
 assignee:
   - '@codex'
 created_date: '2026-11-11T13:31:00Z'
-updated_date: '2026-11-11T14:16:00Z'
+updated_date: '2026-11-11T14:54:00Z'
 labels:
   - infrastructure
   - cicd
@@ -72,19 +72,19 @@ Verify: python3 -B scripts/run_required_unittests.py; BICEP=/tmp/bicep python3 -
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 A main release is gated by exact-source CI, Bicep apply, readiness, and at least 100 version-matched HTTP health requests with zero unhealthy responses and within the documented latency/error limits; Log Analytics CLI failure or missing analytics events do not block promotion.
-- [ ] #2 Regression tests prove HTTP health failures still block promotion and trigger candidate-only recovery, while analytics query availability is not a release prerequisite.
-- [ ] #3 Required local and hosted checks pass, and a main-triggered exact-source deployment records Bicep and HTTP health evidence plus a successful release annotation without a required Log Analytics query.
+- [x] #1 A main release is gated by exact-source CI, Bicep apply, readiness, and at least 100 version-matched HTTP health requests with zero unhealthy responses and within the documented latency/error limits; Log Analytics CLI failure or missing analytics events do not block promotion.
+- [x] #2 Regression tests prove HTTP health failures still block promotion and trigger candidate-only recovery, while analytics query availability is not a release prerequisite.
+- [x] #3 Required local and hosted checks pass, and a main-triggered exact-source deployment records Bicep and HTTP health evidence plus a successful release annotation without a required Log Analytics query.
 <!-- AC:END -->
 
 ## Implementation Plan
 
 <!-- SECTION:PLAN:BEGIN -->
-1. Inspect the deployment workflow, health-gate interface, tests and docs to map where Log Analytics is a release prerequisite.
-2. Remove the workspace query from the main deployment decision path while preserving source verification, Bicep apply, readiness, HTTP sample thresholds, error-rate and latency gates, and candidate-only recovery.
-3. Update regression coverage and delivery docs to state exactly which HTTP checks still gate promotion and that workspace analytics is deferred.
-4. Run required unit, Bicep, actionlint, diff and live consistency checks; commit the scoped task branch and open one PR.
-5. After merge, verify a main-triggered source-bound deployment completes Bicep apply, passes the full HTTP observation window, writes its release annotation, and retains evidence.
+1. Inspect the deployment workflow, health-gate interface, tests and docs to locate the Log Analytics release prerequisite.
+2. Remove the workspace query from the main deployment decision path while preserving exact-source verification, Bicep apply, readiness, HTTP thresholds, and candidate-only recovery.
+3. Update regression coverage and delivery docs for HTTP-only release gating.
+4. Keep browser validation required while removing the network-dependent apt install from CI browser setup; verify local, PR and main CI checks.
+5. After merge, verify exact-source Bicep deployment, 100 version-matched HTTP requests, no required analytics query, successful annotation, and retained evidence.
 <!-- SECTION:PLAN:END -->
 
 ## Implementation Notes
@@ -99,4 +99,12 @@ Required local verification after the HTTP-only changes: repository Python suite
 PR #102: https://github.com/vkaam/phonebuddy/pull/102. Branch agent/gh-18-5-http-only-release-health-gate is published with commit 52466ad. PR is ready for review/checks; TASK-87 remains active until hosted main release evidence records passing HTTP health and annotation.
 
 Owner-approved scope amendment added .github/workflows/ci.yml. CI run 43034054328 completed the web install, lint, unit tests and build, then stalled in Playwright --with-deps while apt could not resolve azure.archive.ubuntu.com; the job's 10-minute cap cancelled the step. Updated CI to install only the Chromium headless shell, avoiding network-dependent apt package retries while retaining the required browser test. Hosted validation pending.
+
+Final release evidence (2026-11-11): PR #102 merged as 6f693bd4373b17725aec09d411460408ea72af9e. Main CI run 43037440339 attempt 3 passed; the CI job included web/browser checks, workflow lint, Bicep validation and secret scan. The first post-merge guard run exposed that the merge deleted the active task branch; branch was restored at the merged commit and the rerun passed. Azure release run 43039388142 succeeded on the merged SHA after exact-source artifact verification, Bicep compile/preview/apply. Retained release-evidence artifact 13864429706 contains health-gate.json: status pass, 100 requests over 600 seconds, error_rate 0.0, zero dependency/unhealthy/version-mismatch failures, p95 456.604 ms. Candidate recovery was skipped, Application Insights release annotation succeeded, and the main gate skipped the Log Analytics query. Issue #101 received the deployment evidence at https://github.com/vkaam/phonebuddy/issues/101#issuecomment-6799016390.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Removed Log Analytics from the main release gate while preserving source verification, Bicep, readiness, HTTP health thresholds, and candidate-only recovery. Merged as PR #102 (6f693bd). Main CI run 43037440339 and Azure release run 43039388142 passed. The 10-minute HTTP sample had 100 requests, zero errors/unhealthy/version-mismatched responses, and p95 456.604 ms. Bicep applied successfully, recovery was skipped, release annotation succeeded, and no Log Analytics query was required. CI browser setup also avoids the apt package retry that had timed out.
+<!-- SECTION:FINAL_SUMMARY:END -->
