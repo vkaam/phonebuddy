@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-12T12:20:00Z'
-updated_date: '2026-11-12T12:33:00Z'
+updated_date: '2026-11-12T12:38:00Z'
 labels:
   - infrastructure
   - cicd
@@ -18,6 +18,11 @@ references:
   - .github/workflows/azure-deploy.yml
 modified_files:
   - backlog/tasks/task-95 - Provision-missing-pilot-Static-Web-App.md
+  - infra/hosting.bicep
+  - .github/workflows/azure-deploy.yml
+  - scripts/check_bicep.py
+  - tests/test_bicep_ci_boundary.py
+  - docs/azure-delivery-policy.md
 priority: high
 type: task
 ordinal: 84000
@@ -30,11 +35,11 @@ Need: Issue 15 requires a Static Web App, but the trusted dev release workflow o
 
 Issue: https://github.com/vkaam/phonebuddy/issues/15
 Approved revision: 2026-11-01T09:24:49Z; body SHA-256 3990d679f2058124599c9c0e4d518017736c3f9c5e1b3e238c381d3c7ee7c60d.
-Approval evidence: The owner instructed “Fix the web app in the subscription” in this Codex conversation on 2026-11-12 after the missing Static Web App was disclosed. Location and web-front-end residency approval remain outstanding; do not deploy until resolved.
+Approval evidence: The owner instructed “Fix the web app in the subscription” in this Codex conversation on 2026-11-12 after the missing Static Web App was disclosed. On 2026-11-12 the owner selected West Europe, authorized deployment and requested PR merge, acknowledging globally distributed assets.
 Branch: agent/gh-15-4-static-web-app
 Scope: .github/workflows/azure-deploy.yml; infra/hosting.bicep; scripts/check_bicep.py; tests/test_bicep_ci_boundary.py; tests/test_bicep_preflight.py; docs/azure-delivery-policy.md; backlog/tasks/task-95 - Provision-missing-pilot-Static-Web-App.md
 Verify: From repository root run python3 -B scripts/check.py and python3 -B scripts/check_bicep.py; validate reviewed Bicep and workflow changes, required hosted checks and independent review, then use trusted default-branch CI/CD for authorized pilot deployment and retain resource, location and deployment evidence.
-Spec: Preserve issue-level acceptance. Do not publish application content or alter other environments. The pilot region and residency decision must be approved before deployment; the owner’s TASK-71-only lease exception does not automatically apply to this task.
+Spec: Preserve issue-level acceptance. Do not publish application content or alter other environments. The owner extended the lease exception to this task on 2026-11-12. Azure availability must be resolved before deployment.
 <!-- SECTION:DESCRIPTION:END -->
 
 ## Acceptance Criteria
@@ -54,4 +59,10 @@ Spec: Preserve issue-level acceptance. Do not publish application content or alt
 
 <!-- SECTION:NOTES:BEGIN -->
 2026-11-12: Owner approved extending the one-task lease exception to TASK-95, selected West Europe for the Static Web App, and requested deployment and PR merge. Live claim check passed against origin/main 6e58aa0bc47c8ff56a96834efef882e36e418c8f. PR #114 was temporarily closed to resolve the guard rejection of an open PR with To Do status and will be reopened after this claim is pushed.
+
+2026-11-12: Read-only Azure what-if of the compiled working-tree template with deployStaticSite=true and staticSiteLocation=westeurope failed InvalidTemplateDeployment / RequestDisallowedByAzure: the selected region is currently not accepting new customers. No deployment occurred. Provider metadata lists West Europe as the only European Static Web Apps location in this subscription; no region fallback is authorized. The implementation must remain unmerged until availability is resolved. The requested pre-merge/live-proof split remains pending owner approval.
+
+Implementation in progress: the template accepts a separate Static Web App location while defaulting to the original resource-group location; trusted dev preview and apply explicitly select West Europe. Bicep baseline and 44 focused CI-boundary/preflight tests pass. The required scripts/check.py baseline failed in this Windows environment; hosted checks and independent review remain pending.
+
+Independent preliminary review of the uncommitted implementation found a blocking Azure availability failure: enabling the site now would fail the automatic dev release preview. Review also identified the pre-merge/live-proof circular gate and requested negative location coverage; negative location-binding tests were added and 45 focused tests plus Bicep baseline pass. This preliminary review is not final-head approval.
 <!-- SECTION:NOTES:END -->

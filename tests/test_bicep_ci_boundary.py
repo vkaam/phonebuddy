@@ -2,7 +2,7 @@
 from pathlib import Path
 import unittest
 
-from scripts.check_bicep import validate_what_if
+from scripts.check_bicep import validate_static_site_location, validate_what_if
 
 
 class BicepWhatIfValidationTests(unittest.TestCase):
@@ -68,6 +68,31 @@ class BicepWhatIfValidationTests(unittest.TestCase):
 
 
 class BicepCiBoundaryTests(unittest.TestCase):
+    def test_static_site_location_rejects_wrong_default_or_resource_binding(self):
+        parameters = {'staticSiteLocation': {'defaultValue': "[parameters('location')]"}}
+        site = {'location': "[parameters('staticSiteLocation')]"}
+        validate_static_site_location(parameters, site)
+        for bad_parameters, bad_site in (
+            ({'staticSiteLocation': {'defaultValue': 'westeurope'}}, site),
+            (parameters, {'location': "[parameters('location')]"}),
+            ({}, site),
+        ):
+            with self.subTest(parameters=bad_parameters, site=bad_site):
+                with self.assertRaisesRegex(ValueError, 'Static Web App location'):
+                    validate_static_site_location(bad_parameters, bad_site)
+
+    def test_dev_static_site_location_is_identical_in_preview_and_apply(self):
+        workflow = (Path(__file__).resolve().parents[1] / '.github/workflows/azure-deploy.yml').read_text()
+        preview = workflow.split('      - name: Preview the exact Bicep release', 1)[1].split(
+            '      - name: Apply the reviewed Bicep release', 1)[0]
+        apply = workflow.split('      - name: Apply the reviewed Bicep release', 1)[1].split(
+            '      - name: Verify the exact source image revision is active', 1)[0]
+        for step in (preview, apply):
+            self.assertIn('deployStaticSite=true staticSiteLocation=westeurope', step)
+            self.assertIn('--resource-group "$RESOURCE_GROUP"', step)
+        self.assertIn('RESOURCE_GROUP: rg-pb-dev-francecentral-foundation', workflow)
+        self.assertIn('environment: dev', workflow)
+
     def test_existing_tag_lookup_requests_objects_before_filtering_by_name(self):
         workflow = (Path(__file__).resolve().parents[1] / '.github/workflows/azure-deploy.yml').read_text()
         lookup = workflow.split('existing_tag=$(az acr repository show-tags', 1)[1].split(')', 1)[0]

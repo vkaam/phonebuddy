@@ -11,6 +11,8 @@ param deployWorkload bool = false
 param managePullRoleAssignment bool = true
 @description('Provision the optional Static Web App only where that resource type is available.')
 param deployStaticSite bool = true
+@description('Static Web App region; defaults to the resource group location unless explicitly selected.')
+param staticSiteLocation string = location
 @description('SHA-256 image digest without the sha256: prefix; provide 64 zeroes during bootstrap.')
 @minLength(64)
 @maxLength(64)
@@ -51,7 +53,7 @@ resource vault 'Microsoft.KeyVault/vaults@2023-07-01' = {
 
 resource site 'Microsoft.Web/staticSites@2023-12-01' = if (deployStaticSite) {
   name: 'stapp-pb-${environment}-${suffix}'
-  location: location
+  location: staticSiteLocation
   tags: tags
   sku: { name: 'Free', tier: 'Free' }
   properties: { allowConfigFileUpdates: false }
