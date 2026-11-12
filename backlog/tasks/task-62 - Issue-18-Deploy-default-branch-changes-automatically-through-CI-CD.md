@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-02T16:36:00Z'
-updated_date: '2026-11-12T06:09:00Z'
+updated_date: '2026-11-12T07:18:00Z'
 labels:
   - infrastructure
   - cicd
@@ -80,4 +80,6 @@ Spec: Preserve the issue's approved acceptance. Do not broaden scope or weaken r
 Draft PR #97: https://github.com/vkaam/phonebuddy/pull/97. Current source head b0def7c5fb9b819579a0aa7e316e69d3347f4ef7 passed hosted Quality, the non-main release-image no-op, and advisory Risk report. The required 128-test suite, Bicep baseline, actionlint, and diff checks pass locally. Executable policy tests cover current-main freshness, exact run/attempt artifact provenance, locked-image reuse for duplicate triggers, and recovery decisions; recovery selects only the active revision for the failed source version. The health query filters health_request events before parsing. Latest live health run 42984895566 predates the query change and failed closed with Log Analytics cli_error after request probes passed. Current Azure telemetry behavior and CI-driven Bicep deployment remain unverified. Remaining gates: human review/merge, dev OIDC settings, registry-scoped AcrPush, and a successful main CI deploy and health gate.
 
 Post-merge verification against source 4d4003a87944a47da9240b0e479c043a7f6cef25 confirmed main CI and the first trusted Azure release succeeded. Same-source duplicate attempts 2 and 3 reused locked image sha256:01fc61298e6f9c4893618e2a89c51bc37bfdc2d2dad7491028dac21c1d7b94c3 without rebuilding, but both failed the live HTTP gate (attempt 2: 3 dependency outages / 3% errors; attempt 3: 100 unhealthy responses). Attempt 2 isolated its candidate; attempt 3 found no active candidate, and subsequent read-only probes returned Azure Container App unavailable/404 for /ready and /. The live duplicate-success gate remains unproven; keep TASK-62 open pending remediation and a passing same-source duplicate verification tracked by https://github.com/vkaam/phonebuddy/issues/110.
+
+Post-merge operational evidence on dd5a0cfe420db5897506a48b0c191fc925918c79: main CI run 43170455805 passed; trusted Azure release run 43170616234 attempts 1 and 2 passed the 100-request, 10-window, 600-second gate with 0% errors, no version mismatch or dependency failures, and source-bound retained artifacts. The same locked image digest sha256:fb8824a63cf872a5c2ce546942ea05aa08328ba71cd5d0ae7f94c7323443ef99 was reused by attempt 2 without rebuilding/pushing; workflow output confirms it matched the immutable CI artifact. Failure recovery regression coverage and the Single-mode revision fix merged in PR #112. Issue #18 was updated; finalization is pending independent review and PR #111 merge.
 <!-- SECTION:NOTES:END -->

@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-11T18:34:00Z'
-updated_date: '2026-11-12T06:09:00Z'
+updated_date: '2026-11-12T07:18:00Z'
 labels: []
 dependencies:
   - TASK-90
@@ -52,4 +52,6 @@ Verify: python3 -B scripts/check.py; python3 -B scripts/check_bicep.py; actionli
 
 <!-- SECTION:NOTES:BEGIN -->
 Trusted Azure release run 43160100893 was rerun for the same successful CI source run 43159952812 and main SHA 4d4003a87944a47da9240b0e479c043a7f6cef25. Attempts 2 and 3 both reused the existing locked image digest sha256:01fc61298e6f9c4893618e2a89c51bc37bfdc2d2dad7491028dac21c1d7b94c3 without rebuilding or pushing. Attempt 2 health evidence (artifact 13919595198) failed with 3 dependency outages and 3% errors; recovery deactivated candidate revision ca-pb-dev-release-test--0000010. Attempt 3 evidence (artifact 13919473233) failed with 100 unhealthy responses; recovery found no active candidate revision. A read-only probe after attempt 3 returned Azure Container App unavailable/404 on both /ready and /. No success annotation was written. Incident tracked in issue https://github.com/vkaam/phonebuddy/issues/110. Keep TASK-92 active and TASK-62 open until dev health is restored and a live duplicate delivery passes.
+
+Post-merge verification completed on main commit dd5a0cfe420db5897506a48b0c191fc925918c79. Source CI run 43170455805 attempt 1 succeeded; trusted Azure release run 43170616234 attempts 1 and 2 both passed the exact-source health gate. Both retained run artifacts are source-bound; attempt 2 artifact 13922779430 reports 100 requests, 10 windows/600 seconds, 0 errors, 0 version mismatches, 0 dependency outages and p95 420.635 ms. Attempts 1 and 2 used the identical locked digest sha256:fb8824a63cf872a5c2ce546942ea05aa08328ba71cd5d0ae7f94c7323443ef99. Attempt-2 workflow logs confirm the existing source-SHA image is locked and matches the CI artifact, and its active revision is ca-pb-dev-release-test--43170616234-2. PR #112 merged; issue #105 and #18 progress evidence is posted. TASK-92/TASK-62 completion awaits independent acceptance review and PR #111 reconciliation.
 <!-- SECTION:NOTES:END -->
