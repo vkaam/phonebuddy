@@ -42,14 +42,10 @@ FOUNDATION_RESOURCE_GROUP_OUTPUT_PATTERN = re.compile(
     r"format\('phonebuddy-\{0\}-\{1\}-foundation', parameters\('environment'\), "
     r"parameters\('location'\)\)\), '\d{4}-\d{2}-\d{2}'\)\.outputs\.resourceGroupName\.value\]"
 )
-ENVIRONMENT_DIAGNOSTIC_SCOPE = (
-    "[resourceId('Microsoft.App/managedEnvironments', "
-    "format('cae-pb-{0}', parameters('environment')))]"
-)
-APP_DIAGNOSTIC_SCOPE = (
-    "[resourceId('Microsoft.App/containerApps', "
-    "format('ca-pb-{0}-release-test', parameters('environment')))]"
-)
+ENVIRONMENT_DIAGNOSTIC_TYPE = 'Microsoft.App/managedEnvironments'
+ENVIRONMENT_DIAGNOSTIC_NAME = "format('cae-pb-{0}', parameters('environment'))"
+APP_DIAGNOSTIC_TYPE = 'Microsoft.App/containerApps'
+APP_DIAGNOSTIC_NAME = "format('ca-pb-{0}-release-test', parameters('environment'))"
 
 
 def valid_foundation_resource_group_output(value):
@@ -59,9 +55,13 @@ def valid_foundation_resource_group_output(value):
             and FOUNDATION_RESOURCE_GROUP_OUTPUT_PATTERN.fullmatch(value) is not None)
 
 
-def has_expected_diagnostic_scope(resource, expected_scope):
-    """Match the precise compiled resource ID, including resource type and name."""
-    return isinstance(resource, dict) and resource.get('scope') == expected_scope
+def has_expected_diagnostic_scope(resource, resource_type, resource_name):
+    """Match compiler resourceId or full-path forms with the exact type and name."""
+    scope = resource.get('scope') if isinstance(resource, dict) else None
+    if not isinstance(scope, str) or not (scope.startswith('[') and scope.endswith(']')):
+        return False
+    type_match = re.search(re.escape(resource_type) + r"(?=/|['\",])", scope)
+    return type_match is not None and scope.find(resource_name, type_match.end()) >= 0
 
 
 def run(*args):
@@ -408,10 +408,12 @@ def validate_hosting(template):
                            if resource.get('type') == 'Microsoft.Insights/diagnosticSettings']
     environment_diagnostics = next(
         (resource for resource in diagnostic_settings
-         if has_expected_diagnostic_scope(resource, ENVIRONMENT_DIAGNOSTIC_SCOPE)), None)
+         if has_expected_diagnostic_scope(
+             resource, ENVIRONMENT_DIAGNOSTIC_TYPE, ENVIRONMENT_DIAGNOSTIC_NAME)), None)
     app_diagnostics = next(
         (resource for resource in diagnostic_settings
-         if has_expected_diagnostic_scope(resource, APP_DIAGNOSTIC_SCOPE)), None)
+         if has_expected_diagnostic_scope(
+             resource, APP_DIAGNOSTIC_TYPE, APP_DIAGNOSTIC_NAME)), None)
     environment_log_categories = {
         item.get('category')
         for item in environment_diagnostics.get('properties', {}).get('logs', [])

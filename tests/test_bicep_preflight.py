@@ -9,9 +9,11 @@ import tempfile
 from unittest.mock import patch
 
 from scripts.check_bicep import (
-    APP_DIAGNOSTIC_SCOPE,
+    APP_DIAGNOSTIC_NAME,
+    APP_DIAGNOSTIC_TYPE,
     DATA_PLATFORM_DEPLOYMENT_NAME,
-    ENVIRONMENT_DIAGNOSTIC_SCOPE,
+    ENVIRONMENT_DIAGNOSTIC_NAME,
+    ENVIRONMENT_DIAGNOSTIC_TYPE,
     FOUNDATION_DEPLOYMENT_NAME,
     FOUNDATION_RESOURCE_GROUP_NAME,
     FOUNDATION_RESOURCE_GROUP_OUTPUT,
@@ -384,19 +386,36 @@ class FoundationIsolationTests(unittest.TestCase):
 
     def test_diagnostic_scopes_match_exact_compiled_resource_ids(self):
         cases = (
-            (ENVIRONMENT_DIAGNOSTIC_SCOPE, ENVIRONMENT_DIAGNOSTIC_SCOPE,
-             "[resourceId('Microsoft.App/managedEnvironmentsFake', format('cae-pb-{0}', parameters('environment')))]",
-             ENVIRONMENT_DIAGNOSTIC_SCOPE.replace('cae-pb-{0}', 'cae-other-{0}')),
-            (APP_DIAGNOSTIC_SCOPE, APP_DIAGNOSTIC_SCOPE,
-             "[resourceId('Microsoft.App/containerAppsFake', format('ca-pb-{0}-release-test', parameters('environment')))]",
-             APP_DIAGNOSTIC_SCOPE.replace('release-test', 'other')),
+            (ENVIRONMENT_DIAGNOSTIC_TYPE, ENVIRONMENT_DIAGNOSTIC_NAME,
+             "[resourceId('Microsoft.App/managedEnvironments', "
+             "format('cae-pb-{0}', parameters('environment')))]",
+             "[format('{0}/providers/Microsoft.App/managedEnvironments/{1}', "
+             "resourceGroup().id, format('cae-pb-{0}', parameters('environment')))]",
+             "[resourceId('Microsoft.App/managedEnvironmentsFake', "
+             "format('cae-pb-{0}', parameters('environment')))]",
+             "[resourceId('Microsoft.App/managedEnvironments', "
+             "format('cae-other-{0}', parameters('environment')))]"),
+            (APP_DIAGNOSTIC_TYPE, APP_DIAGNOSTIC_NAME,
+             "[resourceId('Microsoft.App/containerApps', "
+             "format('ca-pb-{0}-release-test', parameters('environment')))]",
+             "[format('{0}/providers/Microsoft.App/containerApps/{1}', "
+             "resourceGroup().id, format('ca-pb-{0}-release-test', parameters('environment')))]",
+             "[resourceId('Microsoft.App/containerAppsFake', "
+             "format('ca-pb-{0}-release-test', parameters('environment')))]",
+             "[resourceId('Microsoft.App/containerApps', "
+             "format('ca-pb-{0}-other', parameters('environment')))]"),
         )
-        for expected, valid, wrong_type, wrong_target in cases:
-            with self.subTest(expected=expected):
-                self.assertTrue(has_expected_diagnostic_scope({'scope': valid}, expected))
-                self.assertFalse(has_expected_diagnostic_scope({'scope': wrong_type}, expected))
-                self.assertFalse(has_expected_diagnostic_scope({'scope': wrong_target}, expected))
-                self.assertFalse(has_expected_diagnostic_scope({'scope': 42}, expected))
+        for resource_type, resource_name, resource_id_form, full_path_form, wrong_type, wrong_target in cases:
+            with self.subTest(resource_type=resource_type):
+                for scope in (resource_id_form, full_path_form):
+                    self.assertTrue(has_expected_diagnostic_scope(
+                        {'scope': scope}, resource_type, resource_name))
+                self.assertFalse(has_expected_diagnostic_scope(
+                    {'scope': wrong_type}, resource_type, resource_name))
+                self.assertFalse(has_expected_diagnostic_scope(
+                    {'scope': wrong_target}, resource_type, resource_name))
+                self.assertFalse(has_expected_diagnostic_scope(
+                    {'scope': 42}, resource_type, resource_name))
 
     def test_regionless_or_fixed_resource_group_name_fails(self):
         for name in ('rg-pb-dev-foundation', 'rg-pb-test-westeurope-foundation'):
