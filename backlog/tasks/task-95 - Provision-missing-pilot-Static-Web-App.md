@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-12T12:20:00Z'
-updated_date: '2026-11-12T14:18:00Z'
+updated_date: '2026-11-12T15:13:00Z'
 labels:
   - infrastructure
   - cicd
@@ -45,9 +45,9 @@ Spec: Preserve issue-level acceptance. Do not publish application content or alt
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 Reviewed Bicep and trusted dev CI/CD configure the Static Web App in East US 2 without changing test or production.
-- [ ] #2 Tests and documentation cover the resource location, deployment behavior and pilot access boundaries; required local and hosted checks pass.
-- [ ] #3 Azure what-if for the approved pilot configuration succeeds within the expected resource group without unexpected or destructive changes.
+- [x] #1 Reviewed Bicep and trusted dev CI/CD configure the Static Web App in East US 2 without changing test or production.
+- [x] #2 Tests and documentation cover the resource location, deployment behavior and pilot access boundaries; focused unit tests and hosted checks pass. Owner-approved local Bicep and browser verification exceptions are recorded in implementation notes.
+- [x] #3 Azure what-if for the approved pilot configuration succeeds within the expected resource group without unexpected or destructive changes.
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -78,4 +78,14 @@ Independent preliminary comparison: all six existing-resource Modify delta objec
 Owner explicitly approved GitHub disclosure; issue #15 was updated at https://github.com/vkaam/phonebuddy/issues/15#issuecomment-6826043733. East US 2 selection and preview evidence are now published on the task branch; final-head checks and independent review remain required.
 
 Independent review at PR head 113142a843c26544ce8730cfaea39bd7f6f43c20 passed Bicep baseline, 45 focused tests and diff check, and compared the East US 2 preview with the prior successful release. The required scripts/check.py baseline independently failed on Windows (phonebuddy-quality-tpt7weol: required test suite failed and npm subprocesses could not launch), so AC 2 and final acceptance remain unmet. Review must be refreshed on the final head.
+
+Owner-approved verification amendment 2026-11-12: The owner directed merge while waiving local Bicep CLI validation and accepting the local browser-suite environment limitation. At PR head a0454ee527b7c41240181db1b6c54d7a5098e974, required unit tests and all local baseline checks except web-browser passed; Playwright Chromium was unavailable, and its temporary install failed with ENOSPC. The separate check_bicep.py command could not run because the Bicep CLI is unavailable. Hosted checks pass. The Bicep CLI and local browser checks are waived for this merge by the owner; TASK-71 retains post-merge live deployment, resource, location, source and health verification.
+
+Independent review of final source at a0454ee527b7c41240181db1b6c54d7a5098e974 found no code-level blockers. East US 2 safe what-if and hosted checks are recorded above; the approved local-check exceptions are explicit.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Configured trusted dev delivery to provision the pilot Static Web App in East US 2 while keeping the workload in France Central. Focused unit tests, Bicep location-boundary tests, hosted checks and the successful East US 2 what-if support the change; local Bicep CLI and browser checks were waived by the owner and the exceptions are recorded above. Independent final-head review found no code-level blockers. TASK-71 owns post-merge deployment, resource readback, location, source and health evidence.
+<!-- SECTION:FINAL_SUMMARY:END -->
