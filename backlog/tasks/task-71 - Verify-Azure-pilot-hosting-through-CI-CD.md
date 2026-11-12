@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-03T17:55:00Z'
-updated_date: '2026-11-12T12:13:00Z'
+updated_date: '2026-11-12T12:16:00Z'
 labels:
   - infrastructure
   - cicd
@@ -62,4 +62,6 @@ Deployment update: run 43176157247 attempt 2 succeeded, including the 600-second
 Repeat deployment: run 43176157247 attempt 3 succeeded on main 6e58aa0bc47c8ff56a96834efef882e36e418c8f and reused CI artifact release-image-43176003060-1 and registry digest sha256:58ae726e33f66d50171668ee9f38b2c1bc237689b7c39bd03cb634b43664d706. Retained artifact release-evidence-43176157247-3 (ID 13942119818, expires 2026-12-12) contains Bicep what-if and deployment, revision and health evidence; its health report passes with 100 requests across 10 windows over 600 seconds, zero errors, version mismatches or dependency outages, and p95 448.659 ms. The Container Apps environment reports succeeded with no infrastructure subnet, consistent with managed public networking. Group-scope and inherited role readback showed one subscription Owner user and one resource-group Contributor service principal, but does not prove all effective administration access. Acceptance remains open pending the Static Web App gap, complete evidence, local baseline and independent review.
 
 Independent agent review of PR head 08f16220491a4b630963b79436a4c7d48eda6769: AC 2 supported by independent HTTPS readiness probe and attempt 3 health artifact; AC 1 unmet because no Static Web App exists and workflow omits it; AC 3 remains unproven because attempt 2 artifact is unavailable and complete effective administration access, isolated hosting baseline cost and cleanup evidence are not established. Independent Bicep check passed; independent local baseline failed on Windows. Review applies to the stated head and must be refreshed for final acceptance.
+
+Additional read-only Azure Cost Management query, 2026-11-12, scoped to the France Central dev resource group, MonthToDate ActualCost grouped by ResourceId: registry EUR 0.355781, three health alert rules EUR 0.254742 combined, workspace EUR 0. No Container App, Container Apps environment, vault, identity or Application Insights row was returned; reporting delay or zero usage cannot be distinguished, so this is not a complete isolated hosting cost baseline. The same query returned unrelated data-service charges, including SQL database EUR 1.136744. Registry-scope inherited RBAC readback returned subscription Owner user, resource-group Contributor service principal and registry AcrPull service principal; vault-scope inherited readback returned the Owner and Contributor only. These listings do not establish group membership, eligible assignments or all effective permissions.
 <!-- SECTION:NOTES:END -->
