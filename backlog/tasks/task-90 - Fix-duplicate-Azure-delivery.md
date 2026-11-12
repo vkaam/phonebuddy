@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-11T18:05:00Z'
-updated_date: '2026-11-12T05:01:00Z'
+updated_date: '2026-11-12T05:03:00Z'
 labels: []
 dependencies: []
 references:
@@ -70,4 +70,6 @@ Independent review found the compiler-compatibility substring check for diagnost
 The first hosted run using Bicep 0.34.44 showed that its full-path scope representation differs from Bicep 0.49.2 resourceId() output. Scope validation now recognizes both expression shapes, requires exact Microsoft.App resource type boundaries and environment-derived resource names, and rejects wrong types/targets. Local 0.49.2 Bicep validation, 43 relevant tests, and repository checks pass; hosted 0.34.44 must be rerun on the latest head.
 
 Hosted CI run 43158391782 passed on head e48e6b365bafecc6b583704eb10b6694b0246fa3. Its Bicep validation step used the CI-pinned Bicep CLI 0.34.44 and passed with the legacy full-path diagnostic scope form. Local Bicep CLI 0.49.2 validation, all 43 scoped tests, and repository checks also pass. The branch includes fetched origin/main 3124b948272a3a8f3dd5a1b6cc8f19e5c4937765.
+
+Follow-up independent review identified that substring matching could accept an unused expected-name argument while the actual format placeholder targeted another name. Scope validation now parses the outer ARM function arguments and verifies the exact target placeholder argument for full-path expressions; regression tests reject this extra-argument case as well as wrong resource types and names. Bicep 0.49.2 validation, all 43 scoped tests, and repository checks pass locally.
 <!-- SECTION:NOTES:END -->

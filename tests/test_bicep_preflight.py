@@ -391,6 +391,8 @@ class FoundationIsolationTests(unittest.TestCase):
              "format('cae-pb-{0}', parameters('environment')))]",
              "[format('{0}/providers/Microsoft.App/managedEnvironments/{1}', "
              "resourceGroup().id, format('cae-pb-{0}', parameters('environment')))]",
+             "[format('{0}/providers/Microsoft.App/managedEnvironments/{1}', "
+             "resourceGroup().id, 'wrong-target', format('cae-pb-{0}', parameters('environment')))]",
              "[resourceId('Microsoft.App/managedEnvironmentsFake', "
              "format('cae-pb-{0}', parameters('environment')))]",
              "[resourceId('Microsoft.App/managedEnvironments', "
@@ -400,12 +402,14 @@ class FoundationIsolationTests(unittest.TestCase):
              "format('ca-pb-{0}-release-test', parameters('environment')))]",
              "[format('{0}/providers/Microsoft.App/containerApps/{1}', "
              "resourceGroup().id, format('ca-pb-{0}-release-test', parameters('environment')))]",
+             "[format('{0}/providers/Microsoft.App/containerApps/{1}', "
+             "resourceGroup().id, 'wrong-target', format('ca-pb-{0}-release-test', parameters('environment')))]",
              "[resourceId('Microsoft.App/containerAppsFake', "
              "format('ca-pb-{0}-release-test', parameters('environment')))]",
              "[resourceId('Microsoft.App/containerApps', "
              "format('ca-pb-{0}-other', parameters('environment')))]"),
         )
-        for resource_type, resource_name, resource_id_form, full_path_form, wrong_type, wrong_target in cases:
+        for resource_type, resource_name, resource_id_form, full_path_form, wrong_extra_argument, wrong_type, wrong_target in cases:
             with self.subTest(resource_type=resource_type):
                 for scope in (resource_id_form, full_path_form):
                     self.assertTrue(has_expected_diagnostic_scope(
@@ -414,6 +418,8 @@ class FoundationIsolationTests(unittest.TestCase):
                     {'scope': wrong_type}, resource_type, resource_name))
                 self.assertFalse(has_expected_diagnostic_scope(
                     {'scope': wrong_target}, resource_type, resource_name))
+                self.assertFalse(has_expected_diagnostic_scope(
+                    {'scope': wrong_extra_argument}, resource_type, resource_name))
                 self.assertFalse(has_expected_diagnostic_scope(
                     {'scope': 42}, resource_type, resource_name))
 

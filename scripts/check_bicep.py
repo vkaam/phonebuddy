@@ -55,13 +55,61 @@ def valid_foundation_resource_group_output(value):
             and FOUNDATION_RESOURCE_GROUP_OUTPUT_PATTERN.fullmatch(value) is not None)
 
 
+def split_arm_function_arguments(expression, function_name):
+    """Split one ARM expression's top-level arguments without splitting nested calls."""
+    prefix = f'{function_name}('
+    if not expression.startswith(prefix) or not expression.endswith(')'):
+        return None
+    body = expression[len(prefix):-1]
+    arguments, start, depth, quoted, index = [], 0, 0, False, 0
+    while index < len(body):
+        character = body[index]
+        if character == "'":
+            if quoted and index + 1 < len(body) and body[index + 1] == "'":
+                index += 2
+                continue
+            quoted = not quoted
+        elif not quoted:
+            if character == '(':
+                depth += 1
+            elif character == ')':
+                depth -= 1
+                if depth < 0:
+                    return None
+            elif character == ',' and depth == 0:
+                arguments.append(body[start:index].strip())
+                start = index + 1
+        index += 1
+    if quoted or depth != 0:
+        return None
+    arguments.append(body[start:].strip())
+    return arguments
+
+
 def has_expected_diagnostic_scope(resource, resource_type, resource_name):
     """Match compiler resourceId or full-path forms with the exact type and name."""
     scope = resource.get('scope') if isinstance(resource, dict) else None
     if not isinstance(scope, str) or not (scope.startswith('[') and scope.endswith(']')):
         return False
-    type_match = re.search(re.escape(resource_type) + r"(?=/|['\",])", scope)
-    return type_match is not None and scope.find(resource_name, type_match.end()) >= 0
+    expression = scope[1:-1]
+    resource_id = split_arm_function_arguments(expression, 'resourceId')
+    if resource_id == [f"'{resource_type}'", resource_name]:
+        return True
+
+    formatted = split_arm_function_arguments(expression, 'format')
+    if not formatted or len(formatted) < 2:
+        return False
+    template_match = re.fullmatch(r"'((?:[^']|'')*)'", formatted[0])
+    if not template_match:
+        return False
+    template = template_match.group(1).replace("''", "'")
+    target_pattern = re.search(
+        rf"/providers/{re.escape(resource_type)}/\{{([0-9]+)\}}$", template)
+    if not target_pattern:
+        return False
+    target_argument = int(target_pattern.group(1))
+    arguments = formatted[1:]
+    return target_argument < len(arguments) and arguments[target_argument] == resource_name
 
 
 def run(*args):
