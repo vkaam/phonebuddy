@@ -6,6 +6,7 @@ import json
 import socket
 from pathlib import Path
 import threading
+import time
 import unittest
 from urllib.error import HTTPError
 from urllib.request import urlopen
@@ -35,6 +36,9 @@ class ReleaseTestContract(unittest.TestCase):
                 self.assertEqual(response.status, 200)
             with self.assertRaises(HTTPError):
                 urlopen(f'http://127.0.0.1:{httpd.server_port}/ready?token=hidden', timeout=5)
+        deadline = time.monotonic() + 2
+        while len(output.getvalue().splitlines()) < 2 and time.monotonic() < deadline:
+            time.sleep(0.01)
         events = [json.loads(line) for line in output.getvalue().splitlines()]
         self.assertEqual([event['event'] for event in events], ['health_request', 'health_request'])
         self.assertEqual([event['version'] for event in events],

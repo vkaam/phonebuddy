@@ -378,11 +378,54 @@ exists; a global coverage percentage alone does not qualify a PR for auto-merge.
 ## CD rollout contract
 
 The [Azure delivery policy](azure-delivery-policy.md) defines environment
-prerequisites, automatic promotion, initial health gates, and recovery. No Azure
-deployment workflow or environment is enabled yet. After protected-main CI,
-the intended pipeline promotes the same immutable artifacts through dev, test,
-and production with separate least-privilege federated identities. Independent
-PR review occurs before merge; routine production approval is not a promotion
-gate. Failed or unknown checks stop promotion. Stateful recovery and gateway
-session draining must follow the policy; artifact rollback alone does not undo
-schema or data changes.
+prerequisites, automatic promotion, health gates, and recovery limits. The
+trusted main workflow deploys the synthetic dev release-test app and the exact
+frontend bundle built by the same successful CI run. The immutable manifest
+binds the source SHA, locked container image digest, frontend bundle digest,
+release configuration, and schema compatibility declaration.
+
+The hosting template creates a private, versioned `release-state` Blob
+container with 30-day Blob and container soft-delete. Before enabling stateful
+promotion, an authorized Azure owner must grant the dev GitHub OIDC service
+principal **Storage Blob Data Contributor** scoped to this container. Its
+existing resource-group Contributor role does not include Blob data access.
+The deployment workflow never creates role assignments or uses storage keys.
+An authorized Azure owner can grant the access after reviewing the resolved
+account and service-principal IDs. Set `AZURE_CLIENT_ID` to the reviewed dev
+client ID before running:
+
+```sh
+STATE_STORAGE=$(az storage account list --resource-group rg-pb-dev-francecentral-foundation \
+  --query "[?tags.purpose=='release-state' && tags.environment=='dev'].name | [0]" --output tsv)
+STATE_STORAGE_ID=$(az storage account show --name "$STATE_STORAGE" \
+  --resource-group rg-pb-dev-francecentral-foundation --query id --output tsv)
+DEV_SP_OBJECT_ID=$(az ad sp show --id "$AZURE_CLIENT_ID" --query id --output tsv)
+az role assignment create --assignee-object-id "$DEV_SP_OBJECT_ID" \
+  --assignee-principal-type ServicePrincipal --role 'Storage Blob Data Contributor' \
+  --scope "$STATE_STORAGE_ID/blobServices/default/containers/release-state"
+```
+
+The workflow snapshots the last-known-good manifest and its ETag before a
+candidate release. It advances the pointer only after the container health gate
+and frontend source-version probe pass. Conditional Blob writes reject stale
+retries; the shared, non-cancelling GitHub concurrency group serializes the
+automatic and manual recovery workflows. A failed candidate receives one
+automatic recovery attempt. Recovery reuses the saved immutable image and
+frontend bundle, recompiles the recorded hosting template, and verifies both
+surfaces. Without a compatible last-known-good release, the candidate is
+isolated and promotion stops with failure evidence.
+
+`infra/release-schema.json` declares the schema version and the versions that
+the release supports. Expand migrations must preserve compatibility with the
+previous app before their schema version is added. Contract migrations and
+destructive infrastructure changes are blocked from automatic recovery. The
+workflows never reverse database migrations or restore a backup over newer
+data.
+
+An authorized operator can dispatch
+[`azure-recover.yml`](../.github/workflows/azure-recover.yml) from protected
+`main`, select an immutable release ID, and provide a reason. The workflow
+checks that the selected app supports the current schema, deploys the original
+image and frontend bundle, verifies them, and retains operator, run, release,
+and outcome evidence. This remains a dev-only path; test and production need
+their own reviewed identities, state, and rollout gates.
