@@ -1,11 +1,11 @@
 ---
 id: TASK-90
 title: Fix duplicate Azure delivery
-status: In Progress
+status: Done
 assignee:
   - '@codex'
 created_date: '2026-11-11T18:05:00Z'
-updated_date: '2026-11-12T05:08:00Z'
+updated_date: '2026-11-12T05:10:00Z'
 labels: []
 dependencies: []
 references:
@@ -39,9 +39,9 @@ Verify: python3 -B scripts/check.py; python3 -B scripts/check_bicep.py; tests/te
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 Duplicate delivery detects and reuses a matching immutable image after verification; writable or mismatched images fail closed.
-- [ ] #2 An absent tag follows the normal publication path, with automated tests covering both lookup paths.
-- [ ] #3 Relevant local and hosted checks pass; the live duplicate-delivery verification is tracked separately in TASK-92.
+- [x] #1 Duplicate delivery detects and reuses a matching immutable image after verification; writable or mismatched images fail closed.
+- [x] #2 An absent tag follows the normal publication path, with automated tests covering both lookup paths.
+- [x] #3 Relevant local and hosted checks pass; the live duplicate-delivery verification is tracked separately in TASK-92.
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -76,4 +76,12 @@ Follow-up independent review identified that substring matching could accept an 
 Hosted run 43158899927 still failed Bicep 0.34.44 scope validation, despite the local 0.49.2 check and 43 tests passing. Added the compiler-emitted scope expressions to the sanitized validation error to identify the exact legacy shape and complete the compatibility fix.
 
 Hosted Bicep 0.34.44 diagnostics show the legacy scope shape is format("Microsoft.App/<resourceType>/{0}", <expected environment name>), with no providers prefix. The parser and regression tests now support that exact type/name placeholder form alongside 0.34 full-path and 0.49.2 resourceId forms. Wrong placeholder arguments remain rejected. Local Bicep 0.49.2 validation and 43 scoped tests pass; latest 0.34.44 hosted rerun is pending.
+
+Final verification: hosted Quality run 43159359422 passed on the current PR head 46994cc, including Bicep 0.34.44, all required repository and workflow checks, and PR task-claim validation. Independent review of 46994cc found no remaining issues. The fetched latest main is 3124b948272a3a8f3dd5a1b6cc8f19e5c4937765 and is an ancestor of the PR branch. Local Bicep 0.49.2, the 43 focused tests, and scripts/quality.py pass. Live duplicate-delivery deployment verification remains in approved follow-up TASK-92.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Fixed duplicate Azure delivery tag detection and verification, removed the exact Bicep CLI version gate, and made compiled Bicep checks accept both CLI 0.34.44 and 0.49.2 output forms. Validation passed locally on 0.49.2 with 43 scoped tests and scripts/quality.py; hosted Quality run 43159359422 passed on PR head 46994cc using 0.34.44. Independent review found no remaining issues. PR #106 is ready to merge. Live duplicate-delivery deployment verification remains tracked in TASK-92 after merge.
+<!-- SECTION:FINAL_SUMMARY:END -->
