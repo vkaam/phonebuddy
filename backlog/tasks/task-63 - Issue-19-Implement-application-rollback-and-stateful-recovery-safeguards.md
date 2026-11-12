@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-02T16:36:00Z'
-updated_date: '2026-11-12T18:26:00Z'
+updated_date: '2026-11-12T18:27:00Z'
 labels:
   - infrastructure
   - cicd
@@ -76,9 +76,7 @@ Implemented immutable SHA/run-scoped release manifests and frontend archives; ad
 
 Local validation: scripts/quality.py passed; scripts/run_required_unittests.py passed (164 tests); scripts/check_bicep.py passed with pinned Bicep 0.34.44; actionlint passed for ci.yml, pr-safety.yml, azure-deploy.yml and azure-recover.yml. scripts/check.py passed all steps except web-browser: Playwright could not find Chromium headless shell. Installing it failed with ENOSPC on the 9.8 GB workspace volume; incomplete files were removed.
 
+Draft PR: https://github.com/vkaam/phonebuddy/pull/118. Hosted checks passed on the final PR head: Quality (including workflow ShellCheck, Bicep, Gitleaks), Repository-wide task and issue drift, Risk report (advisory), and Build immutable release image (not applicable for this PR). An earlier Quality run found ShellCheck findings; these were fixed and the rerun passed.
+
 Outstanding acceptance: hosted Azure failure-injection cases and an authorized manual recovery exercise are not run. No Azure deployment or Blob RBAC assignment was performed; the documented Storage Blob Data Contributor assignment must be applied by the Azure owner before hosted workflows can access release state. Keep TASK-63 In Progress until these gates have evidence.
-
-Draft PR: https://github.com/vkaam/phonebuddy/pull/118. Current head a6e602f. Hosted checks on this head: Quality passed (including workflow ShellCheck, Bicep, and Gitleaks); Repository-wide task and issue drift passed; Risk report (advisory) passed; Build immutable release image passed as not applicable for a PR. The first Quality run caught ShellCheck findings; those were fixed and all checks passed on the updated head.
-
-External acceptance remains open: hosted Azure failure injection and an authorized manual recovery exercise require Azure owner setup and execution. Keep status In Progress.
 <!-- SECTION:NOTES:END -->
