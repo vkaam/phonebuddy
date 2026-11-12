@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-12T12:20:00Z'
-updated_date: '2026-11-12T13:21:00Z'
+updated_date: '2026-11-12T14:16:00Z'
 labels:
   - infrastructure
   - cicd
@@ -74,4 +74,6 @@ Triage amendment 2026-11-12: after the West Europe rejection, the owner directed
 East US 2 source validation: Bicep baseline and 45 focused CI-boundary/preflight tests passed. scripts/check.py failed on Windows in bundle phonebuddy-quality-v44o_spo (required test suite incomplete and npm commands could not be launched). Azure preview proposed the site in eastus2, six existing-resource modifications, six no-change and ten ignored resources. Independent review of those modifications and final hosted checks are pending.
 
 Independent preliminary comparison: all six existing-resource Modify delta objects match retained successful TASK-71 release attempt 3, except the expected revision suffix. This is historical evidence, not proof of future deployment safety; ProviderNoRbac does not verify the deployment identity can create the site. Exact-source deployment, resource readback and health remain required under TASK-71. An attempt to report the selected region and preview details on issue 15 was rejected by automatic approval review; task/issue reconciliation remains incomplete.
+
+Owner explicitly approved GitHub disclosure; issue #15 was updated at https://github.com/vkaam/phonebuddy/issues/15#issuecomment-6826043733. East US 2 selection and preview evidence are now published on the task branch; final-head checks and independent review remain required.
 <!-- SECTION:NOTES:END -->
