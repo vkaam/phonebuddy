@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-03T17:55:00Z'
-updated_date: '2026-11-12T11:58:00Z'
+updated_date: '2026-11-12T12:11:00Z'
 labels:
   - infrastructure
   - cicd
@@ -58,4 +58,6 @@ Pilot verification 2026-11-12: Trusted release run https://github.com/vkaam/phon
 Draft PR: https://github.com/vkaam/phonebuddy/pull/113. Static Web App gap and ongoing deployment were reported on issue #15: https://github.com/vkaam/phonebuddy/issues/15#issuecomment-6822788292.
 
 Deployment update: run 43176157247 attempt 2 succeeded, including the 600-second health gate and exact revision verification; an independent HTTPS /ready probe returned ready=true and version 6e58aa0bc47c8ff56a96834efef882e36e418c8f. Its job log identifies source CI artifact release-image-43176003060-1 and locked registry digest sha256:58ae726e33f66d50171668ee9f38b2c1bc237689b7c39bd03cb634b43664d706. Attempt 3 has started as the authorized repeat. Attempt 2 logged upload of artifact 13941833351, but it became unavailable (HTTP 404) after rerun; do not claim its artifact is retained. Web lint, build and npm audit passed separately; the local Windows full baseline remains failed/incomplete.
+
+Repeat deployment: run 43176157247 attempt 3 succeeded on main 6e58aa0bc47c8ff56a96834efef882e36e418c8f and reused CI artifact release-image-43176003060-1 and registry digest sha256:58ae726e33f66d50171668ee9f38b2c1bc237689b7c39bd03cb634b43664d706. Retained artifact release-evidence-43176157247-3 (ID 13942119818, expires 2026-12-12) contains Bicep what-if and deployment, revision and health evidence; its health report passes with 100 requests across 10 windows over 600 seconds, zero errors, version mismatches or dependency outages, and p95 448.659 ms. The Container Apps environment reports succeeded with no infrastructure subnet, consistent with managed public networking. Group-scope and inherited role readback showed one subscription Owner user and one resource-group Contributor service principal, but does not prove all effective administration access. Acceptance remains open pending the Static Web App gap, complete evidence, local baseline and independent review.
 <!-- SECTION:NOTES:END -->
