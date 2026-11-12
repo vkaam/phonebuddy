@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-03T17:55:00Z'
-updated_date: '2026-11-12T12:16:00Z'
+updated_date: '2026-11-12T12:51:00Z'
 labels:
   - infrastructure
   - cicd
@@ -14,6 +14,8 @@ dependencies:
   - TASK-62
 references:
   - https://github.com/vkaam/phonebuddy/issues/15
+  - TASK-95
+  - https://github.com/vkaam/phonebuddy/pull/114
 modified_files:
   - backlog/tasks/task-71 - Verify-Azure-pilot-hosting-through-CI-CD.md
 priority: high
@@ -64,4 +66,8 @@ Repeat deployment: run 43176157247 attempt 3 succeeded on main 6e58aa0bc47c8ff56
 Independent agent review of PR head 08f16220491a4b630963b79436a4c7d48eda6769: AC 2 supported by independent HTTPS readiness probe and attempt 3 health artifact; AC 1 unmet because no Static Web App exists and workflow omits it; AC 3 remains unproven because attempt 2 artifact is unavailable and complete effective administration access, isolated hosting baseline cost and cleanup evidence are not established. Independent Bicep check passed; independent local baseline failed on Windows. Review applies to the stated head and must be refreshed for final acceptance.
 
 Additional read-only Azure Cost Management query, 2026-11-12, scoped to the France Central dev resource group, MonthToDate ActualCost grouped by ResourceId: registry EUR 0.355781, three health alert rules EUR 0.254742 combined, workspace EUR 0. No Container App, Container Apps environment, vault, identity or Application Insights row was returned; reporting delay or zero usage cannot be distinguished, so this is not a complete isolated hosting cost baseline. The same query returned unrelated data-service charges, including SQL database EUR 1.136744. Registry-scope inherited RBAC readback returned subscription Owner user, resource-group Contributor service principal and registry AcrPull service principal; vault-scope inherited readback returned the Owner and Contributor only. These listings do not establish group membership, eligible assignments or all effective permissions.
+
+2026-11-12 owner-approved split: TASK-95 / PR #114 verifies the Static Web App configuration and safe preview before merge; TASK-71 retains trusted merged-source deployment and live evidence for all issue 15 requirements. TASK-71 must not be finalized until the missing Static Web App work is merged and live proof is collected. Azure rejected the West Europe preview with RequestDisallowedByAzure (region not accepting new customers for this subscription); no Static Web App was deployed.
+
+Native dependency on TASK-95 could not yet be added: the Backlog CLI only resolves task IDs in this working copy and TASK-95 exists on PR #114, not main. Add the dependency after TASK-95 lands; do not treat the reference above as a satisfied dependency.
 <!-- SECTION:NOTES:END -->
