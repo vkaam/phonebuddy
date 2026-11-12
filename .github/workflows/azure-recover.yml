@@ -194,9 +194,11 @@ jobs:
             --expected-scope "$expected_scope"
           python3 -B scripts/release_recovery.py check-what-if \
             --path artifacts/manual-recovery/what-if.json
-          printf 'release_sha=%s\n' "$release_sha" >> "$GITHUB_OUTPUT"
-          printf 'image_digest=%s\n' "$image_digest" >> "$GITHUB_OUTPUT"
-          printf 'static_site_location=%s\n' "$static_site_location" >> "$GITHUB_OUTPUT"
+          {
+            printf 'release_sha=%s\n' "$release_sha"
+            printf 'image_digest=%s\n' "$image_digest"
+            printf 'static_site_location=%s\n' "$static_site_location"
+          } >> "$GITHUB_OUTPUT"
       - name: Deploy the selected immutable application release
         run: |
           set -euo pipefail
@@ -230,6 +232,8 @@ jobs:
             echo 'The selected immutable image is not active.' >&2
             exit 1
           fi
+          test -n "$revision"
+          printf 'Verified active selected release revision %s.\n' "$revision"
       - name: Get the selected Static Web App token
         id: swa-token
         env:

@@ -287,9 +287,11 @@ jobs:
             --schema-compatibility infra/release-schema.json \
             --output artifacts/release-manifest.json
           manifest_blob="$blob_prefix/manifest.json"
-          echo "frontend_blob=$blob_prefix/web.tar.gz" >> "$GITHUB_OUTPUT"
-          echo "manifest_blob=$manifest_blob" >> "$GITHUB_OUTPUT"
-          echo "static_site_name=$static_site_name" >> "$GITHUB_OUTPUT"
+          {
+            echo "frontend_blob=$blob_prefix/web.tar.gz"
+            echo "manifest_blob=$manifest_blob"
+            echo "static_site_name=$static_site_name"
+          } >> "$GITHUB_OUTPUT"
           if [[ -n "$STATE_ACCOUNT" ]]; then
             token=$(az account get-access-token --resource https://storage.azure.com/ \
               --query accessToken --output tsv)
@@ -428,6 +430,7 @@ jobs:
             echo 'No active revision matched the exact release source and image digest.' >&2
             exit 1
           fi
+          test -n "$revision"
           printf 'Verified active source and image revision %s.\n' "$revision"
       - name: Observe the deployed version and HTTP health
         id: observe
@@ -676,15 +679,18 @@ jobs:
             echo 'The recovered immutable image is not active.' >&2
             exit 1
           fi
+          test -n "$revision"
           app_url=$(az resource show --resource-group "$RESOURCE_GROUP" \
             --name "$APP_NAME" --resource-type Microsoft.App/containerApps \
             --query 'properties.configuration.ingress.fqdn' --output tsv)
           python3 -B scripts/health_gate.py --url "https://$app_url" \
             --expected-version "$RECOVERY_RELEASE_SHA" --skip-workspace-telemetry \
             > artifacts/recovery-health-gate.json
-          printf 'recovered=true\n' >> "$GITHUB_OUTPUT"
-          printf 'release_sha=%s\n' "$RECOVERY_RELEASE_SHA" >> "$GITHUB_OUTPUT"
-          printf 'static_site_name=%s\n' "$RECOVERY_STATIC_SITE_NAME" >> "$GITHUB_OUTPUT"
+          {
+            printf 'recovered=true\n'
+            printf 'release_sha=%s\n' "$RECOVERY_RELEASE_SHA"
+            printf 'static_site_name=%s\n' "$RECOVERY_STATIC_SITE_NAME"
+          } >> "$GITHUB_OUTPUT"
       - name: Get the last-known-good Static Web App token
         id: recovery-swa-token
         if: steps.recover-app.outcome == 'success'
