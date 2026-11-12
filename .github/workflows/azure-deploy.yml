@@ -207,6 +207,7 @@ jobs:
           printf '%s\n' "$IMAGE_DIGEST" > artifacts/image-digest.txt
           printf 'succeeded=true\n' >> "$GITHUB_OUTPUT"
       - name: Verify the exact source image revision is active
+        id: verify-revision
         env:
           IMAGE_DIGEST: ${{ steps.image.outputs.image_digest }}
         run: |
@@ -249,12 +250,14 @@ jobs:
         env:
           DEPLOY_OUTCOME: ${{ steps.deploy.outcome }}
           DEPLOY_SUCCEEDED: ${{ steps.deploy.outputs.succeeded }}
+          VERIFY_OUTCOME: ${{ steps.verify-revision.outcome }}
           OBSERVE_OUTCOME: ${{ steps.observe.outcome }}
         run: |
           set -euo pipefail
           python3 -B scripts/deployment_policy.py recovery-required \
             --deploy-outcome "$DEPLOY_OUTCOME" \
             --deploy-succeeded "$DEPLOY_SUCCEEDED" \
+            --verify-outcome "$VERIFY_OUTCOME" \
             --observe-outcome "$OBSERVE_OUTCOME"
       - name: Recover a partial or unhealthy release
         if: always() && steps.recovery-decision.outputs.required == 'true'

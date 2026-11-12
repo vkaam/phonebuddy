@@ -126,13 +126,14 @@ docker() {
 
 class RecoveryPolicyTests(unittest.TestCase):
     def test_partial_apply_or_failed_health_observation_requires_isolation(self):
-        self.assertTrue(recovery_required('failure', '', 'skipped'))
-        self.assertTrue(recovery_required('success', 'true', 'failure'))
+        self.assertTrue(recovery_required('failure', '', 'skipped', 'skipped'))
+        self.assertTrue(recovery_required('success', 'true', 'success', 'failure'))
+        self.assertTrue(recovery_required('success', 'true', 'failure', 'skipped'))
 
     def test_unrelated_failure_or_healthy_observation_does_not_isolate(self):
-        self.assertFalse(recovery_required('skipped', '', 'skipped'))
-        self.assertFalse(recovery_required('success', 'true', 'success'))
-        self.assertFalse(recovery_required('success', 'true', 'skipped'))
+        self.assertFalse(recovery_required('skipped', '', 'skipped', 'skipped'))
+        self.assertFalse(recovery_required('success', 'true', 'success', 'success'))
+        self.assertFalse(recovery_required('success', 'true', 'success', 'skipped'))
 
     def test_recovery_selects_only_active_revision_for_failed_release(self):
         def revision(name, release, active):

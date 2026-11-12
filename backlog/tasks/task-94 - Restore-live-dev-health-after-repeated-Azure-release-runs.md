@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-12T06:13:00Z'
-updated_date: '2026-11-12T06:39:00Z'
+updated_date: '2026-11-12T06:42:00Z'
 labels: []
 dependencies: []
 references:
@@ -19,6 +19,7 @@ references:
   - .github/workflows/azure-deploy.yml
   - tests/test_deployment_policy.py
   - tests/test_bicep_ci_boundary.py
+  - https://github.com/vkaam/phonebuddy/pull/112
 modified_files:
   - >-
     backlog/tasks/task-94 -
@@ -66,4 +67,8 @@ Spec: Preserve the approved issue #18 acceptance criteria. Keep deployment fail-
 
 <!-- SECTION:NOTES:BEGIN -->
 Implementation now gives every trusted Azure workflow attempt a unique Bicep Container Apps revision suffix. The workflow validates an active revision bound to the exact source SHA and locked image digest, and recovery records state without manual revision activation/deactivation. Bicep validation passed with 0.34.44 and 0.49.2. Required unittest suite passed: 147 tests, 0 skipped when Git Bash and a temporary python3 shim were available. Full check.py remains platform-inconclusive on Windows because npm command resolution fails in its subprocess runner; hosted PR checks remain required.
+
+Published draft PR #112 at https://github.com/vkaam/phonebuddy/pull/112 from head de74371e9188ed0d29d7d2858c36f8964c6ea668; origin/main remains an ancestor. Independent review and hosted checks are pending; the PR intentionally remains draft until those gates complete.
+
+Independent review found that exact-revision verification failures skipped recovery evidence. Fixed by passing the verification step outcome into recovery-required; verification failure now triggers recovery even when health observation is skipped. Added a regression test; focused suites pass and the full required unittest suite passes (147, 0 skipped). Independent re-review and updated hosted checks are pending.
 <!-- SECTION:NOTES:END -->
