@@ -179,6 +179,7 @@ jobs:
               managePullRoleAssignment=false \
               deployStaticSite=false imageDigest="$IMAGE_DIGEST" \
               releaseVersion="$RELEASE_SHA" \
+              revisionSuffix="$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" \
             --validation-level ProviderNoRbac \
             --result-format FullResourcePayloads --no-pretty-print \
             --output json > artifacts/what-if.json
@@ -201,9 +202,29 @@ jobs:
               managePullRoleAssignment=false \
               deployStaticSite=false imageDigest="$IMAGE_DIGEST" \
               releaseVersion="$RELEASE_SHA" \
+              revisionSuffix="$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" \
             --output json > artifacts/deployment.json
           printf '%s\n' "$IMAGE_DIGEST" > artifacts/image-digest.txt
           printf 'succeeded=true\n' >> "$GITHUB_OUTPUT"
+      - name: Verify the exact source image revision is active
+        id: verify-revision
+        env:
+          IMAGE_DIGEST: ${{ steps.image.outputs.image_digest }}
+        run: |
+          set -euo pipefail
+          az containerapp revision list --name "$APP_NAME" \
+            --resource-group "$RESOURCE_GROUP" --output json \
+            > artifacts/revisions-before-health.json
+          IFS=$'\t' read -r action revision < <(
+            python3 -B scripts/deployment_policy.py ensure-active-revision \
+              --path artifacts/revisions-before-health.json \
+              --release-version "$RELEASE_SHA" --image-digest "$IMAGE_DIGEST"
+          )
+          if [[ "$action" != active ]]; then
+            echo 'No active revision matched the exact release source and image digest.' >&2
+            exit 1
+          fi
+          printf 'Verified active source and image revision %s.\n' "$revision"
       - name: Observe the deployed version and HTTP health
         id: observe
         env:
@@ -229,38 +250,37 @@ jobs:
         env:
           DEPLOY_OUTCOME: ${{ steps.deploy.outcome }}
           DEPLOY_SUCCEEDED: ${{ steps.deploy.outputs.succeeded }}
+          VERIFY_OUTCOME: ${{ steps.verify-revision.outcome }}
           OBSERVE_OUTCOME: ${{ steps.observe.outcome }}
         run: |
           set -euo pipefail
           python3 -B scripts/deployment_policy.py recovery-required \
             --deploy-outcome "$DEPLOY_OUTCOME" \
             --deploy-succeeded "$DEPLOY_SUCCEEDED" \
+            --verify-outcome "$VERIFY_OUTCOME" \
             --observe-outcome "$OBSERVE_OUTCOME"
-      - name: Isolate a partial or unhealthy release
+      - name: Recover a partial or unhealthy release
         if: always() && steps.recovery-decision.outputs.required == 'true'
+        env:
+          IMAGE_DIGEST: ${{ steps.image.outputs.image_digest }}
         run: |
           set -euo pipefail
           az containerapp revision list --name "$APP_NAME" \
             --resource-group "$RESOURCE_GROUP" --output json \
             > "$RUNNER_TEMP/container-app-revisions.json"
-          python3 -B scripts/deployment_policy.py candidate-revisions \
-            --path "$RUNNER_TEMP/container-app-revisions.json" \
-            --release-version "$RELEASE_SHA" \
-            > "$RUNNER_TEMP/candidate-revisions.txt"
-          mapfile -t candidate_revisions < "$RUNNER_TEMP/candidate-revisions.txt"
-          if [[ ${#candidate_revisions[@]} -eq 0 ]]; then
-            echo 'No active revision for this release was found; existing revisions remain unchanged.'
-            printf 'No active candidate revision matched release %s; no revision was deactivated.\n' \
-              "$RELEASE_SHA" > artifacts/recovery.txt
+          IFS=$'\t' read -r action revision < <(
+            python3 -B scripts/deployment_policy.py recovery-revision-action \
+              --path "$RUNNER_TEMP/container-app-revisions.json" \
+              --release-version "$RELEASE_SHA" --image-digest "$IMAGE_DIGEST"
+          )
+          if [[ "$action" == keep ]]; then
+            printf 'Azure Single mode retained active revision %s; promotion stopped.\n' \
+              "$revision" > artifacts/recovery.txt
           else
-            for revision in "${candidate_revisions[@]}"; do
-              az containerapp revision deactivate --name "$APP_NAME" \
-                --resource-group "$RESOURCE_GROUP" --revision "$revision"
-            done
-            printf 'Deactivated candidate revision(s): %s\n' "${candidate_revisions[*]}" \
+            printf 'No active exact source and image revision was reported; promotion stopped without changing revision state.\n' \
               > artifacts/recovery.txt
           fi
-          echo 'Failed release was isolated where its candidate revision was active; promotion stopped.'
+          echo 'Health-gated promotion stopped; recovery did not activate or deactivate revisions.'
       - name: Record successful release annotation
         if: success()
         run: |
