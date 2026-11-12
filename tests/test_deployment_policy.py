@@ -11,6 +11,8 @@ from scripts.deployment_policy import (
     active_candidate_revision_names,
     existing_image_is_reusable,
     recovery_required,
+    recovery_revision_action,
+    active_revision_action,
     verify_artifact_manifest,
     verify_current_source,
 )
@@ -156,6 +158,64 @@ class RecoveryPolicyTests(unittest.TestCase):
         self.assertEqual(active_candidate_revision_names(revisions, 'missing'), [])
         with self.assertRaisesRegex(ValueError, 'Revision data'):
             active_candidate_revision_names({}, 'candidate-sha')
+
+    def test_inactive_duplicate_is_not_manually_activated(self):
+        def revision(name, release, image, active, created):
+            return {
+                'name': name,
+                'properties': {
+                    'active': active,
+                    'createdTime': created,
+                    'template': {'containers': [{
+                        'image': image,
+                        'env': [{'name': 'RELEASE_VERSION', 'value': release}],
+                    }]},
+                },
+            }
+
+        image = 'registry.example/release-test@sha256:' + 'a' * 64
+        revisions = [
+            revision('older-matching', 'source-sha', image, False, '2026-01-01T00:00:00Z'),
+            revision('newer-matching', 'source-sha', image, False, '2026-01-02T00:00:00Z'),
+            revision('wrong-digest', 'source-sha', image.replace('a' * 64, 'b' * 64),
+                     True, '2026-01-03T00:00:00Z'),
+            revision('wrong-source', 'other-sha', image, False, '2026-01-04T00:00:00Z'),
+        ]
+        self.assertEqual(
+            active_revision_action(revisions, 'source-sha', 'a' * 64),
+            ('missing', ''),
+        )
+        self.assertEqual(
+            recovery_revision_action(revisions, 'source-sha', 'a' * 64),
+            ('none', ''),
+        )
+
+    def test_recovery_keeps_exact_active_image_when_no_fallback_exists(self):
+        revisions = [{
+            'name': 'active-matching',
+            'properties': {
+                'active': True,
+                'createdTime': '2026-01-01T00:00:00Z',
+                'template': {'containers': [{
+                    'image': 'registry.example/release-test@sha256:' + 'a' * 64,
+                    'env': [{'name': 'RELEASE_VERSION', 'value': 'source-sha'}],
+                }]},
+            },
+        }]
+        self.assertEqual(
+            active_revision_action(revisions, 'source-sha', 'a' * 64),
+            ('active', 'active-matching'),
+        )
+        self.assertEqual(
+            recovery_revision_action(revisions, 'source-sha', 'a' * 64),
+            ('keep', 'active-matching'),
+        )
+
+    def test_recovery_does_not_change_unrelated_revisions(self):
+        self.assertEqual(
+            recovery_revision_action([], 'source-sha', 'a' * 64),
+            ('none', ''),
+        )
 
 
 if __name__ == '__main__':

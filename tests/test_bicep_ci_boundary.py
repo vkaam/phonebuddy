@@ -123,16 +123,22 @@ class BicepCiBoundaryTests(unittest.TestCase):
                         deployment.index('existing_tag='))
         self.assertIn('managePullRoleAssignment=false', deployment)
         self.assertIn('az deployment group create', deployment)
-        self.assertIn('az containerapp revision deactivate', deployment)
+        self.assertIn('scripts/deployment_policy.py ensure-active-revision', deployment)
+        self.assertIn('scripts/deployment_policy.py recovery-revision-action', deployment)
+        self.assertNotIn('az containerapp revision activate', deployment)
+        self.assertNotIn('az containerapp revision deactivate', deployment)
+        self.assertIn('revisionSuffix="$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"', deployment)
+        self.assertIn('Verify the exact source image revision is active', deployment)
         self.assertIn('$GITHUB_WORKSPACE/scripts/deployment_policy.py" verify-manifest', deployment)
         self.assertIn('scripts/deployment_policy.py verify-existing-image', deployment)
         self.assertIn('scripts/deployment_policy.py recovery-required', deployment)
-        self.assertIn('scripts/deployment_policy.py candidate-revisions', deployment)
         self.assertIn("steps.recovery-decision.outputs.required == 'true'", deployment)
         self.assertIn('id: observe', deployment)
-        self.assertIn('No active candidate revision matched', deployment)
+        self.assertIn('promotion stopped without changing revision state', deployment)
         self.assertLess(deployment.index('Preview the exact Bicep release'),
                         deployment.index('Apply the reviewed Bicep release'))
+        self.assertLess(deployment.index('Verify the exact source image revision is active'),
+                        deployment.index('Observe the deployed version'))
         self.assertLess(deployment.index('Observe the deployed version'),
                         deployment.index('Record successful release annotation'))
 

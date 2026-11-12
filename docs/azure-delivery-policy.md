@@ -84,7 +84,9 @@ environment.
    changes stop the release for investigation and a reviewed correction.
    What-if is not proof of a successful deployment. The job pushes the already
    built image by digest, then deploys the applicable France Central hosting
-   resources from Bicep.
+   resources from Bicep. Each trusted workflow attempt supplies a unique
+   Container Apps revision suffix, including duplicate-source reruns, so Azure
+   evaluates a fresh revision while the immutable image remains unchanged.
 4. The dev stage must pass deployment and the full HTTP readiness and request-
    health gate before the release annotation is written. The main release path
    does not require a Log Analytics query or workspace event count. Test and prod are not
@@ -189,11 +191,18 @@ service incident owner coordinates response and communications; the data owner
 authorizes stateful recovery; and the budget owner responds to cost alerts. Named
 people or on-call rotations and escalation contacts are prerequisites for enabling
 each environment. TASK-10 through TASK-13 implement and exercise the broader
-recovery controls; this pilot deactivates only an active Container App revision
-whose `RELEASE_VERSION` matches the failed release after a partial Bicep apply
-or failed post-deploy health gate. If no active candidate revision matches, it
-records that fact and leaves other revisions unchanged. This is not a substitute
-for the full rollback and recovery work in TASK-63 and TASK-64.
+recovery controls; this pilot matches a Container App revision by both
+`RELEASE_VERSION` and immutable image digest before health observation. The app
+uses Azure Container Apps Single revision mode. Every trusted workflow attempt
+has a unique revision suffix, and Azure only shifts traffic to the new revision
+after its readiness checks pass. The workflow verifies that the exact source
+and image revision is active before running the HTTP health gate. If deployment
+or health observation fails, recovery stops promotion and records the active
+matching revision when available; it never manually activates or deactivates a
+revision. This preserves Azure's Single-mode traffic behavior and avoids leaving
+the app without an active revision. Each outcome is recorded in retained release
+evidence. This is not a substitute for the full rollback and recovery work in
+TASK-63 and TASK-64.
 
 ## Data and AI resource controls
 
