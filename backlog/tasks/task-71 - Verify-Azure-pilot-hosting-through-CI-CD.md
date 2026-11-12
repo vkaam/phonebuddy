@@ -1,10 +1,11 @@
 ---
 id: TASK-71
 title: Verify Azure pilot hosting through CI CD
-status: To Do
-assignee: []
+status: In Progress
+assignee:
+  - '@codex'
 created_date: '2026-11-03T17:55:00Z'
-updated_date: '2026-11-03T17:56:00Z'
+updated_date: '2026-11-12T11:49:00Z'
 labels:
   - infrastructure
   - cicd
@@ -13,6 +14,8 @@ dependencies:
   - TASK-62
 references:
   - https://github.com/vkaam/phonebuddy/issues/15
+modified_files:
+  - backlog/tasks/task-71 - Verify-Azure-pilot-hosting-through-CI-CD.md
 priority: high
 type: task
 ordinal: 67000
@@ -38,3 +41,17 @@ Spec: TASK-59 implementation and TASK-62 automation must be completed on default
 - [ ] #2 The release-test workload is reachable over HTTPS, returns the expected version and exposes readiness without secrets.
 - [ ] #3 Readback demonstrates scoped runtime access and restricted administration; repeat deployment, cleanup boundaries and baseline cost are evidenced.
 <!-- AC:END -->
+
+## Implementation Plan
+
+<!-- SECTION:PLAN:BEGIN -->
+1. Inspect the approved issue and trusted release configuration and identify source-bound evidence. 2. Execute two authorized pilot deployments through the trusted default-branch workflow and collect source, artifact, health, access, cleanup and cost evidence. 3. Run the declared checks, record evidence and remaining gaps, and publish the scoped PR for independent review and required checks.
+<!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+2026-11-12: Owner explicitly authorized both pilot deployments and a one-task exception to the durable lease requirement for TASK-71 in this Codex conversation. Live eligibility check passed against origin/main 6e58aa0bc47c8ff56a96834efef882e36e418c8f with claim_verified true. This exception does not establish a durable lease.
+
+Pilot verification 2026-11-12: Trusted release run https://github.com/vkaam/phonebuddy/actions/runs/43176157247 attempt 2 is in progress against main 6e58aa0bc47c8ff56a96834efef882e36e418c8f; Bicep apply and exact-source revision verification succeeded, health observation pending. Readback found registry admin disabled, vault public access disabled and RBAC/purge protection enabled, and workload pull identity has AcrPull only at the registry scope. The shared France Central dev group budget reports EUR 1.767225 current monthly spend against EUR 10, not an isolated hosting cost. The group also contains data services and must not be deleted as task cleanup. No Static Web App was found in the subscription; the trusted workflow explicitly sets deployStaticSite=false, so the approved issue requirement remains unmet and needs triage. Local Bicep baseline passed. scripts/check.py failed on Windows due to npm invocation and a skipped Bash test; separate web tests also failed under local Node 26 and require investigation. No acceptance criterion is claimed complete.
+<!-- SECTION:NOTES:END -->
