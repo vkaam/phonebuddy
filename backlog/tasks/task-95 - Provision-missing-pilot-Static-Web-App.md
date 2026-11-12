@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-12T12:20:00Z'
-updated_date: '2026-11-12T12:49:00Z'
+updated_date: '2026-11-12T13:21:00Z'
 labels:
   - infrastructure
   - cicd
@@ -40,12 +40,12 @@ Approval evidence: The owner instructed â€œFix the web app in the subscriptionâ€
 Branch: agent/gh-15-4-static-web-app
 Scope: .github/workflows/azure-deploy.yml; infra/hosting.bicep; scripts/check_bicep.py; tests/test_bicep_ci_boundary.py; tests/test_bicep_preflight.py; docs/azure-delivery-policy.md; backlog/tasks/task-95 - Provision-missing-pilot-Static-Web-App.md
 Verify: From repository root run python3 -B scripts/check.py and python3 -B scripts/check_bicep.py; validate reviewed Bicep and workflow changes, required hosted checks and independent review, and require a successful safe Azure what-if for the selected location. After merge, TASK-71 retains trusted CI/CD deployment and live resource, location and source evidence.
-Spec: Preserve issue-level acceptance. Do not publish application content or alter other environments. The owner extended the lease exception to this task on 2026-11-12. On 2026-11-12 the owner approved the split: TASK-95 verifies deployment configuration before merge, while TASK-71 retains merged-source live deployment proof. Issue-level requirements remain unchanged. Azure availability must be resolved before merge and deployment.
+Spec: Preserve issue-level acceptance. Do not publish application content or alter other environments. The owner extended the lease exception to this task on 2026-11-12. On 2026-11-12 the owner approved the split: TASK-95 verifies deployment configuration before merge, while TASK-71 retains merged-source live deployment proof. Issue-level requirements remain unchanged. After West Europe was rejected, the owner directed the agent to find an available region, deploy there and record it on 2026-11-12. East US 2 passed the subscription what-if preview; the selected Static Web App resource location is East US 2.
 <!-- SECTION:DESCRIPTION:END -->
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 Reviewed Bicep and trusted dev CI/CD configure the Static Web App in West Europe without changing test or production.
+- [ ] #1 Reviewed Bicep and trusted dev CI/CD configure the Static Web App in East US 2 without changing test or production.
 - [ ] #2 Tests and documentation cover the resource location, deployment behavior and pilot access boundaries; required local and hosted checks pass.
 - [ ] #3 Azure what-if for the approved pilot configuration succeeds within the expected resource group without unexpected or destructive changes.
 <!-- AC:END -->
@@ -53,7 +53,7 @@ Spec: Preserve issue-level acceptance. Do not publish application content or alt
 ## Implementation Plan
 
 <!-- SECTION:PLAN:BEGIN -->
-1. Separate the Static Web App location from the France Central workload location and constrain the trusted dev release to the approved West Europe resource. 2. Extend template and workflow verification for the selected location and safe what-if behavior; document the residency and access boundary. 3. Run required checks and obtain independent review, then merge through the permitted path and observe the trusted deployment and resource readback.
+1. Configure the Static Web App in East US 2 while leaving the existing workload in France Central. 2. Review the complete Azure what-if and verify template, tests, and documentation. 3. Run required checks and obtain independent review; merge through the permitted path and verify the resulting deployment under TASK-71.
 <!-- SECTION:PLAN:END -->
 
 ## Implementation Notes
@@ -68,4 +68,10 @@ Implementation in progress: the template accepts a separate Static Web App locat
 Independent preliminary review of the uncommitted implementation found a blocking Azure availability failure: enabling the site now would fail the automatic dev release preview. Review also identified the pre-merge/live-proof circular gate and requested negative location coverage; negative location-binding tests were added and 45 focused tests plus Bicep baseline pass. This preliminary review is not final-head approval.
 
 Triage amendment 2026-11-12: owner explicitly approved moving merged-source live deployment proof to existing TASK-71 after merge; TASK-95 verifies the configuration and safe preview before merge. Issue 15 acceptance is unchanged. Azure West Europe rejection remains a merge blocker.
+
+Triage amendment 2026-11-12: after the West Europe rejection, the owner directed use of an available region and requested recording the selection. East US 2 what-if succeeded with one Static Web App create and six modifications to existing resources; detailed review of those changes remains required. Region is outside Europe and Static Web Apps assets are globally distributed. The actual deployment remains to be verified under TASK-71.
+
+East US 2 source validation: Bicep baseline and 45 focused CI-boundary/preflight tests passed. scripts/check.py failed on Windows in bundle phonebuddy-quality-v44o_spo (required test suite incomplete and npm commands could not be launched). Azure preview proposed the site in eastus2, six existing-resource modifications, six no-change and ten ignored resources. Independent review of those modifications and final hosted checks are pending.
+
+Independent preliminary comparison: all six existing-resource Modify delta objects match retained successful TASK-71 release attempt 3, except the expected revision suffix. This is historical evidence, not proof of future deployment safety; ProviderNoRbac does not verify the deployment identity can create the site. Exact-source deployment, resource readback and health remain required under TASK-71. An attempt to report the selected region and preview details on issue 15 was rejected by automatic approval review; task/issue reconciliation remains incomplete.
 <!-- SECTION:NOTES:END -->

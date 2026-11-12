@@ -88,7 +88,7 @@ class BicepCiBoundaryTests(unittest.TestCase):
         apply = workflow.split('      - name: Apply the reviewed Bicep release', 1)[1].split(
             '      - name: Verify the exact source image revision is active', 1)[0]
         for step in (preview, apply):
-            self.assertIn('deployStaticSite=true staticSiteLocation=westeurope', step)
+            self.assertIn('deployStaticSite=true staticSiteLocation=eastus2', step)
             self.assertIn('--resource-group "$RESOURCE_GROUP"', step)
         self.assertIn('RESOURCE_GROUP: rg-pb-dev-francecentral-foundation', workflow)
         self.assertIn('environment: dev', workflow)

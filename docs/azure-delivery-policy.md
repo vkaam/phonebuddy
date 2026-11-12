@@ -32,9 +32,10 @@ alerts to the owner; they are alerts, not spending caps.
 This explicit location decision follows the Cognitive Services and Foundry
 preflight rejection of Belgium Central and does not permit automatic fallback.
 The TASK-79 health pilot also targets the France Central dev group. Static Web
-Apps is unavailable there for this subscription. On 2026-11-12 the owner chose
-West Europe for the pilot Static Web App; the synthetic Container App and its
-monitoring resources remain in France Central. [Static Web Apps assets are globally
+Apps is unavailable there for this subscription. West Europe also rejected the
+subscription; on 2026-11-12 the owner authorized an available alternative.
+The pilot Static Web App is configured for East US 2; the synthetic Container App
+and its monitoring resources remain in France Central. [Static Web Apps assets are globally
 distributed](https://learn.microsoft.com/en-us/azure/static-web-apps/faq). This
 choice provisions the resource but does not publish product web content.
 
@@ -45,7 +46,7 @@ resources through Bicep, and requires the version-matched HTTP readiness and
 request-health gate before recording a release annotation. Workspace analytics
 are not a prerequisite for this product pilot's main release path. It does not
 publish the product web app or deploy test/prod resources. The trusted dev
-deployment provisions the Static Web App in West Europe.
+deployment provisions the Static Web App in East US 2.
 
 Use distinct resource groups, data, secrets, workload identities, deployment
 identities and access assignments for each environment, even if subscriptions
