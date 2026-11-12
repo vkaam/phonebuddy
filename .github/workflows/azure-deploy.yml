@@ -124,7 +124,7 @@ jobs:
           existing_tag=''
           if [[ "$repository_exists" == true ]]; then
             existing_tag=$(az acr repository show-tags --name "$registry_name" \
-              --repository release-test \
+              --repository release-test --detail \
               --query "[?name=='$RELEASE_SHA'].name | [0]" --output tsv)
           fi
           if [[ -n "$existing_tag" && "$existing_tag" != None ]]; then

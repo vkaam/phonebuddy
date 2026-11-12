@@ -9,10 +9,15 @@ import tempfile
 from unittest.mock import patch
 
 from scripts.check_bicep import (
+    APP_DIAGNOSTIC_NAME,
+    APP_DIAGNOSTIC_TYPE,
     DATA_PLATFORM_DEPLOYMENT_NAME,
+    ENVIRONMENT_DIAGNOSTIC_NAME,
+    ENVIRONMENT_DIAGNOSTIC_TYPE,
     FOUNDATION_DEPLOYMENT_NAME,
     FOUNDATION_RESOURCE_GROUP_NAME,
     FOUNDATION_RESOURCE_GROUP_OUTPUT,
+    valid_foundation_resource_group_output,
     deployment_ready,
     environment_parameters,
     expected_resource_group_names,
@@ -22,6 +27,7 @@ from scripts.check_bicep import (
     validate_data_platform,
     validate_what_if,
     validate_quality_evidence,
+    has_expected_diagnostic_scope,
 )
 from scripts.azure_foundations_smoke import configured_location
 
@@ -339,6 +345,31 @@ def foundation_template(resource_group_name=FOUNDATION_RESOURCE_GROUP_NAME,
 
 
 class FoundationIsolationTests(unittest.TestCase):
+    def test_foundation_output_accepts_compiler_api_versions_and_rejects_other_references(self):
+        compiler_outputs = (
+            FOUNDATION_RESOURCE_GROUP_OUTPUT,
+            FOUNDATION_RESOURCE_GROUP_OUTPUT.replace("2022-09-01", "2025-04-01"),
+        )
+        for output in compiler_outputs:
+            with self.subTest(output=output):
+                self.assertTrue(valid_foundation_resource_group_output(output))
+                template = foundation_template()
+                template['outputs']['resourceGroupName']['value'] = output
+                validate_foundation_isolation(template)
+
+        unsafe_outputs = (
+            FOUNDATION_RESOURCE_GROUP_OUTPUT.replace("2022-09-01", "latest"),
+            FOUNDATION_RESOURCE_GROUP_OUTPUT.replace("phonebuddy-{0}-{1}-foundation", "other-{0}-{1}-deployment"),
+            "[reference('untrusted').outputs.resourceGroupName.value]",
+        )
+        for output in unsafe_outputs:
+            with self.subTest(output=output):
+                self.assertFalse(valid_foundation_resource_group_output(output))
+                template = foundation_template()
+                template['outputs']['resourceGroupName']['value'] = output
+                with self.assertRaisesRegex(ValueError, 'environment resource-group name'):
+                    validate_foundation_isolation(template)
+
     def test_environment_scoped_names_are_distinct(self):
         validate_foundation_isolation(foundation_template())
         names = expected_resource_group_names({
@@ -352,6 +383,57 @@ class FoundationIsolationTests(unittest.TestCase):
             'prod': 'rg-pb-prod-unresolved-foundation',
         })
         self.assertEqual(len(set(names.values())), 3)
+
+    def test_diagnostic_scopes_match_exact_compiled_resource_ids(self):
+        cases = (
+            (ENVIRONMENT_DIAGNOSTIC_TYPE, ENVIRONMENT_DIAGNOSTIC_NAME,
+             "[resourceId('Microsoft.App/managedEnvironments', "
+             "format('cae-pb-{0}', parameters('environment')))]",
+             "[format('{0}/providers/Microsoft.App/managedEnvironments/{1}', "
+             "resourceGroup().id, format('cae-pb-{0}', parameters('environment')))]",
+             "[format('Microsoft.App/managedEnvironments/{0}', "
+             "format('cae-pb-{0}', parameters('environment')))]",
+             "[format('{0}/providers/Microsoft.App/managedEnvironments/{1}', "
+             "resourceGroup().id, 'wrong-target', format('cae-pb-{0}', parameters('environment')))]",
+             "[format('Microsoft.App/managedEnvironments/{0}', 'wrong-target', "
+             "format('cae-pb-{0}', parameters('environment')))]",
+             "[resourceId('Microsoft.App/managedEnvironmentsFake', "
+             "format('cae-pb-{0}', parameters('environment')))]",
+             "[resourceId('Microsoft.App/managedEnvironments', "
+             "format('cae-other-{0}', parameters('environment')))]"),
+            (APP_DIAGNOSTIC_TYPE, APP_DIAGNOSTIC_NAME,
+             "[resourceId('Microsoft.App/containerApps', "
+             "format('ca-pb-{0}-release-test', parameters('environment')))]",
+             "[format('{0}/providers/Microsoft.App/containerApps/{1}', "
+             "resourceGroup().id, format('ca-pb-{0}-release-test', parameters('environment')))]",
+             "[format('Microsoft.App/containerApps/{0}', "
+             "format('ca-pb-{0}-release-test', parameters('environment')))]",
+             "[format('{0}/providers/Microsoft.App/containerApps/{1}', "
+             "resourceGroup().id, 'wrong-target', format('ca-pb-{0}-release-test', parameters('environment')))]",
+             "[format('Microsoft.App/containerApps/{0}', 'wrong-target', "
+             "format('ca-pb-{0}-release-test', parameters('environment')))]",
+             "[resourceId('Microsoft.App/containerAppsFake', "
+             "format('ca-pb-{0}-release-test', parameters('environment')))]",
+             "[resourceId('Microsoft.App/containerApps', "
+             "format('ca-pb-{0}-other', parameters('environment')))]"),
+        )
+        for (resource_type, resource_name, resource_id_form, full_path_form,
+             legacy_type_path_form, wrong_extra_argument, wrong_legacy_extra_argument,
+             wrong_type, wrong_target) in cases:
+            with self.subTest(resource_type=resource_type):
+                for scope in (resource_id_form, full_path_form, legacy_type_path_form):
+                    self.assertTrue(has_expected_diagnostic_scope(
+                        {'scope': scope}, resource_type, resource_name))
+                self.assertFalse(has_expected_diagnostic_scope(
+                    {'scope': wrong_type}, resource_type, resource_name))
+                self.assertFalse(has_expected_diagnostic_scope(
+                    {'scope': wrong_target}, resource_type, resource_name))
+                self.assertFalse(has_expected_diagnostic_scope(
+                    {'scope': wrong_extra_argument}, resource_type, resource_name))
+                self.assertFalse(has_expected_diagnostic_scope(
+                    {'scope': wrong_legacy_extra_argument}, resource_type, resource_name))
+                self.assertFalse(has_expected_diagnostic_scope(
+                    {'scope': 42}, resource_type, resource_name))
 
     def test_regionless_or_fixed_resource_group_name_fails(self):
         for name in ('rg-pb-dev-foundation', 'rg-pb-test-westeurope-foundation'):

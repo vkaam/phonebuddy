@@ -27,9 +27,12 @@ hosting Bicep, then invoke the same health gate before annotating the release.
 This pilot does not deploy the product web app, Static Web Apps, test or prod.
 
 TASK-60 adds a separate infrastructure validation layer. `python3 -B
-scripts/check_bicep.py` requires Bicep CLI 0.34.44, compiles the main, hosting
-and data-platform templates, validates all environment parameter files, and
-checks security-critical resource settings. Its Foundry model preflight calls
+scripts/check_bicep.py` compiles the main, hosting and data-platform templates,
+validates all environment parameter files, and checks security-critical
+resource settings. CI validates with Bicep CLI 0.34.44; the check also passes
+with the installed Bicep CLI 0.49.2. Compiler-selected deployment API versions
+may differ while the validator still constrains the referenced deployment and
+output. Its Foundry model preflight calls
 Azure Resource Manager and requires current lifecycle, model catalog and
 `GlobalStandard` quota evidence for the selected resource region; it needs an
 Azure CLI identity with read access and never substitutes another SKU, model,

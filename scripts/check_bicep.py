@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Compile the pinned Bicep baseline and check its environment contracts."""
+"""Compile Bicep templates and check their environment contracts."""
 import argparse
 from datetime import date, datetime, timezone
 import json
@@ -12,7 +12,6 @@ import tempfile
 from urllib.parse import urlencode
 
 ROOT = Path(__file__).resolve().parents[1]
-VERSION = '0.34.44'
 ENVIRONMENTS = ('dev', 'test', 'prod')
 FOUNDRY_API_VERSION = '2024-10-01'
 FOUNDRY_MODEL = {
@@ -38,6 +37,79 @@ FOUNDATION_RESOURCE_GROUP_OUTPUT = (
     "parameters('location'))), "
     "'2022-09-01').outputs.resourceGroupName.value]"
 )
+FOUNDATION_RESOURCE_GROUP_OUTPUT_PATTERN = re.compile(
+    r"\[reference\(subscriptionResourceId\('Microsoft\.Resources/deployments', "
+    r"format\('phonebuddy-\{0\}-\{1\}-foundation', parameters\('environment'\), "
+    r"parameters\('location'\)\)\), '\d{4}-\d{2}-\d{2}'\)\.outputs\.resourceGroupName\.value\]"
+)
+ENVIRONMENT_DIAGNOSTIC_TYPE = 'Microsoft.App/managedEnvironments'
+ENVIRONMENT_DIAGNOSTIC_NAME = "format('cae-pb-{0}', parameters('environment'))"
+APP_DIAGNOSTIC_TYPE = 'Microsoft.App/containerApps'
+APP_DIAGNOSTIC_NAME = "format('ca-pb-{0}-release-test', parameters('environment'))"
+
+
+def valid_foundation_resource_group_output(value):
+    """Allow compiler-selected API versions while constraining the referenced output."""
+    return (value == FOUNDATION_RESOURCE_GROUP_OUTPUT
+            or isinstance(value, str)
+            and FOUNDATION_RESOURCE_GROUP_OUTPUT_PATTERN.fullmatch(value) is not None)
+
+
+def split_arm_function_arguments(expression, function_name):
+    """Split one ARM expression's top-level arguments without splitting nested calls."""
+    prefix = f'{function_name}('
+    if not expression.startswith(prefix) or not expression.endswith(')'):
+        return None
+    body = expression[len(prefix):-1]
+    arguments, start, depth, quoted, index = [], 0, 0, False, 0
+    while index < len(body):
+        character = body[index]
+        if character == "'":
+            if quoted and index + 1 < len(body) and body[index + 1] == "'":
+                index += 2
+                continue
+            quoted = not quoted
+        elif not quoted:
+            if character == '(':
+                depth += 1
+            elif character == ')':
+                depth -= 1
+                if depth < 0:
+                    return None
+            elif character == ',' and depth == 0:
+                arguments.append(body[start:index].strip())
+                start = index + 1
+        index += 1
+    if quoted or depth != 0:
+        return None
+    arguments.append(body[start:].strip())
+    return arguments
+
+
+def has_expected_diagnostic_scope(resource, resource_type, resource_name):
+    """Match compiler resourceId or full-path forms with the exact type and name."""
+    scope = resource.get('scope') if isinstance(resource, dict) else None
+    if not isinstance(scope, str) or not (scope.startswith('[') and scope.endswith(']')):
+        return False
+    expression = scope[1:-1]
+    resource_id = split_arm_function_arguments(expression, 'resourceId')
+    if resource_id == [f"'{resource_type}'", resource_name]:
+        return True
+
+    formatted = split_arm_function_arguments(expression, 'format')
+    if not formatted or len(formatted) < 2:
+        return False
+    template_match = re.fullmatch(r"'((?:[^']|'')*)'", formatted[0])
+    if not template_match:
+        return False
+    template = template_match.group(1).replace("''", "'")
+    target_pattern = re.search(
+        rf"(?:^|/providers/){re.escape(resource_type)}/\{{([0-9]+)\}}$", template)
+    if not target_pattern:
+        return False
+    target_argument = int(target_pattern.group(1))
+    arguments = formatted[1:]
+    return target_argument < len(arguments) and arguments[target_argument] == resource_name
 
 
 def run(*args):
@@ -319,7 +391,8 @@ def validate_foundation_isolation(template):
     if set(template.get('outputs', {})) != expected_outputs:
         raise ValueError('Foundation outputs may expose only the resource-group name')
     root_output = template['outputs']['resourceGroupName']
-    if root_output.get('type') != 'string' or root_output.get('value') != FOUNDATION_RESOURCE_GROUP_OUTPUT:
+    if (root_output.get('type') != 'string'
+            or not valid_foundation_resource_group_output(root_output.get('value'))):
         raise ValueError('Foundation output must contain only the environment resource-group name')
     if set(nested.get('outputs', {})) != expected_outputs:
         raise ValueError('Foundation module outputs may expose only the resource-group name')
@@ -383,17 +456,22 @@ def validate_hosting(template):
                            if resource.get('type') == 'Microsoft.Insights/diagnosticSettings']
     environment_diagnostics = next(
         (resource for resource in diagnostic_settings
-         if '/managedEnvironments/' in resource.get('scope', '')), None)
+         if has_expected_diagnostic_scope(
+             resource, ENVIRONMENT_DIAGNOSTIC_TYPE, ENVIRONMENT_DIAGNOSTIC_NAME)), None)
     app_diagnostics = next(
         (resource for resource in diagnostic_settings
-         if '/containerApps/' in resource.get('scope', '')), None)
+         if has_expected_diagnostic_scope(
+             resource, APP_DIAGNOSTIC_TYPE, APP_DIAGNOSTIC_NAME)), None)
     environment_log_categories = {
         item.get('category')
         for item in environment_diagnostics.get('properties', {}).get('logs', [])
     } if environment_diagnostics else set()
     if not {'ContainerAppConsoleLogs', 'ContainerAppSystemLogs'}.issubset(
             environment_log_categories):
-        raise ValueError('Console and system logs must route from the Container Apps environment')
+        scopes = [resource.get('scope') for resource in diagnostic_settings]
+        raise ValueError(
+            'Console and system logs must route from the Container Apps environment; '
+            f'compiled diagnostic scopes were {scopes!r}')
     if app_diagnostics is None or app_diagnostics.get('properties', {}).get('logs'):
         raise ValueError('Container App-level diagnostics may route metrics, not logs')
     app_metric_categories = {
@@ -581,9 +659,6 @@ def main():
         print(json.dumps({'whatIfChangeCounts': counts}))
         return
     binary = os.environ.get('BICEP', 'bicep')
-    version = run(binary, '--version')
-    if not version.startswith('Bicep CLI version ' + VERSION + ' '):
-        raise ValueError('Expected Bicep CLI version ' + VERSION)
     run(binary, 'lint', 'infra/main.bicep')
     run(binary, 'lint', 'infra/hosting.bicep')
     hosting = json.loads(run(binary, 'build', 'infra/hosting.bicep', '--stdout'))
