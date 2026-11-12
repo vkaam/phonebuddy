@@ -4,7 +4,7 @@ title: Provision missing pilot Static Web App
 status: To Do
 assignee: []
 created_date: '2026-11-12T12:20:00Z'
-updated_date: '2026-11-12T12:20:00Z'
+updated_date: '2026-11-12T12:23:00Z'
 labels:
   - infrastructure
   - cicd
@@ -12,6 +12,7 @@ dependencies:
   - TASK-59
 references:
   - https://github.com/vkaam/phonebuddy/issues/15
+  - https://github.com/vkaam/phonebuddy/pull/114
 modified_files:
   - backlog/tasks/task-95 - Provision-missing-pilot-Static-Web-App.md
 priority: high
