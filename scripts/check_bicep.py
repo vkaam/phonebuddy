@@ -104,7 +104,7 @@ def has_expected_diagnostic_scope(resource, resource_type, resource_name):
         return False
     template = template_match.group(1).replace("''", "'")
     target_pattern = re.search(
-        rf"/providers/{re.escape(resource_type)}/\{{([0-9]+)\}}$", template)
+        rf"(?:^|/providers/){re.escape(resource_type)}/\{{([0-9]+)\}}$", template)
     if not target_pattern:
         return False
     target_argument = int(target_pattern.group(1))
