@@ -400,6 +400,13 @@ def validate_foundation_isolation(template):
         raise ValueError('Foundation output must resolve to the environment resource group')
 
 
+def validate_static_site_location(parameters, site):
+    """Keep the default unchanged and require the site to use its override."""
+    if (parameters.get('staticSiteLocation', {}).get('defaultValue') != "[parameters('location')]"
+            or site.get('location') != "[parameters('staticSiteLocation')]"):
+        raise ValueError('Static Web App location must default to the workload location and allow an explicit override')
+
+
 def validate_hosting(template):
     """Check security-critical defaults in the compiled pilot template."""
     resources = {r['type']: r for r in template.get('resources', [])}
@@ -442,6 +449,7 @@ def validate_hosting(template):
             or resources['Microsoft.Web/staticSites'].get('condition')
             != "[parameters('deployStaticSite')]"):
         raise ValueError('Static Web App must remain default-on with an explicit opt-out')
+    validate_static_site_location(parameters, resources['Microsoft.Web/staticSites'])
     workspace = resources['Microsoft.OperationalInsights/workspaces']['properties']
     if workspace.get('retentionInDays') != 30:
         raise ValueError('Health telemetry retention must be explicitly bounded to 30 days')
