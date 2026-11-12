@@ -468,7 +468,10 @@ def validate_hosting(template):
     } if environment_diagnostics else set()
     if not {'ContainerAppConsoleLogs', 'ContainerAppSystemLogs'}.issubset(
             environment_log_categories):
-        raise ValueError('Console and system logs must route from the Container Apps environment')
+        scopes = [resource.get('scope') for resource in diagnostic_settings]
+        raise ValueError(
+            'Console and system logs must route from the Container Apps environment; '
+            f'compiled diagnostic scopes were {scopes!r}')
     if app_diagnostics is None or app_diagnostics.get('properties', {}).get('logs'):
         raise ValueError('Container App-level diagnostics may route metrics, not logs')
     app_metric_categories = {
