@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-03T17:55:00Z'
-updated_date: '2026-11-12T11:49:00Z'
+updated_date: '2026-11-12T11:58:00Z'
 labels:
   - infrastructure
   - cicd
@@ -54,4 +54,8 @@ Spec: TASK-59 implementation and TASK-62 automation must be completed on default
 2026-11-12: Owner explicitly authorized both pilot deployments and a one-task exception to the durable lease requirement for TASK-71 in this Codex conversation. Live eligibility check passed against origin/main 6e58aa0bc47c8ff56a96834efef882e36e418c8f with claim_verified true. This exception does not establish a durable lease.
 
 Pilot verification 2026-11-12: Trusted release run https://github.com/vkaam/phonebuddy/actions/runs/43176157247 attempt 2 is in progress against main 6e58aa0bc47c8ff56a96834efef882e36e418c8f; Bicep apply and exact-source revision verification succeeded, health observation pending. Readback found registry admin disabled, vault public access disabled and RBAC/purge protection enabled, and workload pull identity has AcrPull only at the registry scope. The shared France Central dev group budget reports EUR 1.767225 current monthly spend against EUR 10, not an isolated hosting cost. The group also contains data services and must not be deleted as task cleanup. No Static Web App was found in the subscription; the trusted workflow explicitly sets deployStaticSite=false, so the approved issue requirement remains unmet and needs triage. Local Bicep baseline passed. scripts/check.py failed on Windows due to npm invocation and a skipped Bash test; separate web tests also failed under local Node 26 and require investigation. No acceptance criterion is claimed complete.
+
+Draft PR: https://github.com/vkaam/phonebuddy/pull/113. Static Web App gap and ongoing deployment were reported on issue #15: https://github.com/vkaam/phonebuddy/issues/15#issuecomment-6822788292.
+
+Deployment update: run 43176157247 attempt 2 succeeded, including the 600-second health gate and exact revision verification; an independent HTTPS /ready probe returned ready=true and version 6e58aa0bc47c8ff56a96834efef882e36e418c8f. Its job log identifies source CI artifact release-image-43176003060-1 and locked registry digest sha256:58ae726e33f66d50171668ee9f38b2c1bc237689b7c39bd03cb634b43664d706. Attempt 3 has started as the authorized repeat. Attempt 2 logged upload of artifact 13941833351, but it became unavailable (HTTP 404) after rerun; do not claim its artifact is retained. Web lint, build and npm audit passed separately; the local Windows full baseline remains failed/incomplete.
 <!-- SECTION:NOTES:END -->
