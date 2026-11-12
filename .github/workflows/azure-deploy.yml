@@ -177,7 +177,7 @@ jobs:
             --parameters environment=dev owner=PHONEBUDDY-PLATFORM \
               costCenter=PHONEBUDDY-NONPROD deployWorkload=true \
               managePullRoleAssignment=false \
-              deployStaticSite=false imageDigest="$IMAGE_DIGEST" \
+              deployStaticSite=true staticSiteLocation=eastus2 imageDigest="$IMAGE_DIGEST" \
               releaseVersion="$RELEASE_SHA" \
               revisionSuffix="$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" \
             --validation-level ProviderNoRbac \
@@ -200,7 +200,7 @@ jobs:
             --parameters environment=dev owner=PHONEBUDDY-PLATFORM \
               costCenter=PHONEBUDDY-NONPROD deployWorkload=true \
               managePullRoleAssignment=false \
-              deployStaticSite=false imageDigest="$IMAGE_DIGEST" \
+              deployStaticSite=true staticSiteLocation=eastus2 imageDigest="$IMAGE_DIGEST" \
               releaseVersion="$RELEASE_SHA" \
               revisionSuffix="$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" \
             --output json > artifacts/deployment.json
