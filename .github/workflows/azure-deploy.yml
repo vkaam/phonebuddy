@@ -280,7 +280,7 @@ jobs:
           blob_prefix="releases/$RELEASE_SHA/$SOURCE_RUN_ID-$SOURCE_RUN_ATTEMPT"
           python3 -B scripts/release_recovery.py create-manifest \
             --source-sha "$RELEASE_SHA" --run-id "$SOURCE_RUN_ID" \
-            --run-attempt "$SOURCE_RUN_ATTEMPT" --image-digest "$IMAGE_DIGEST" \
+            --run-attempt "$SOURCE_RUN_ATTEMPT" --image-digest "sha256:$IMAGE_DIGEST" \
             --frontend-blob "$blob_prefix/web.tar.gz" \
             --frontend-archive artifacts/web.tar.gz \
             --configuration artifacts/release-configuration.json \
@@ -390,7 +390,7 @@ jobs:
           PY
             python3 -B scripts/release_recovery.py create-manifest \
               --source-sha "$RELEASE_SHA" --run-id "$SOURCE_RUN_ID" \
-              --run-attempt "$SOURCE_RUN_ATTEMPT" --image-digest "$IMAGE_DIGEST" \
+              --run-attempt "$SOURCE_RUN_ATTEMPT" --image-digest "sha256:$IMAGE_DIGEST" \
               --frontend-blob "releases/$RELEASE_SHA/$SOURCE_RUN_ID-$SOURCE_RUN_ATTEMPT/web.tar.gz" \
               --frontend-archive artifacts/web.tar.gz \
               --configuration artifacts/release-configuration.json \
@@ -693,7 +693,7 @@ jobs:
           } >> "$GITHUB_OUTPUT"
       - name: Get the last-known-good Static Web App token
         id: recovery-swa-token
-        if: steps.recover-app.outcome == 'success'
+        if: always() && steps.recover-app.outcome == 'success'
         env:
           RECOVERY_STATIC_SITE_NAME: ${{ steps.recover-app.outputs.static_site_name }}
         run: |
@@ -705,7 +705,7 @@ jobs:
           printf 'token=%s\n' "$token" >> "$GITHUB_OUTPUT"
       - name: Restore immutable last-known-good frontend assets
         id: recover-web
-        if: steps.recovery-swa-token.outcome == 'success'
+        if: always() && steps.recovery-swa-token.outcome == 'success'
         uses: Azure/static-web-apps-deploy@4d27395796ac319302594769cfe812bd207490b1 # v1
         with:
           azure_static_web_apps_api_token: ${{ steps.recovery-swa-token.outputs.token }}

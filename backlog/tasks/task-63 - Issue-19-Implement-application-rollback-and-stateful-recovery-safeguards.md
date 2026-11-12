@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-02T16:36:00Z'
-updated_date: '2026-11-12T18:27:00Z'
+updated_date: '2026-11-12T20:42:00Z'
 labels:
   - infrastructure
   - cicd
@@ -79,4 +79,8 @@ Local validation: scripts/quality.py passed; scripts/run_required_unittests.py p
 Draft PR: https://github.com/vkaam/phonebuddy/pull/118. Hosted checks passed on the final PR head: Quality (including workflow ShellCheck, Bicep, Gitleaks), Repository-wide task and issue drift, Risk report (advisory), and Build immutable release image (not applicable for this PR). An earlier Quality run found ShellCheck findings; these were fixed and the rerun passed.
 
 Outstanding acceptance: hosted Azure failure-injection cases and an authorized manual recovery exercise are not run. No Azure deployment or Blob RBAC assignment was performed; the documented Storage Blob Data Contributor assignment must be applied by the Azure owner before hosted workflows can access release state. Keep TASK-63 In Progress until these gates have evidence.
+
+Addressed both unresolved P1 review findings on PR #118 in .github/workflows/azure-deploy.yml: manifest creation now prefixes the immutable image digest while deployment/configuration keep the unprefixed value; the recovery token and frontend restore conditions now include always() with their prerequisite outcomes. Retaining the task's existing hosted Azure recovery and operator exercise acceptance gates.
+
+Current review follow-up verification passed: actionlint .github/workflows/azure-deploy.yml; python3 -B scripts/run_required_unittests.py (164 tests), using the installed Bash 5 and an isolated Git init.defaultBranch override for the macOS test environment. The first local attempt exposed host Bash 3.2, default-branch and sandbox socket constraints; the adjusted rerun passed.
 <!-- SECTION:NOTES:END -->
