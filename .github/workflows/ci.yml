@@ -118,6 +118,58 @@ jobs:
         with:
           ref: ${{ github.sha }}
           persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        with:
+          node-version: '22.15.1'
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - name: Build and package the exact-source frontend once
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        working-directory: apps/web
+        env:
+          VITE_RELEASE_VERSION: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          mkdir -p public
+          python3 - <<'PY'
+          import json
+          import os
+
+          with open('public/release.json', 'w', encoding='utf-8') as release:
+              json.dump({'version': os.environ['VITE_RELEASE_VERSION']}, release)
+              release.write('\n')
+          PY
+          npm ci
+          npm run build
+          mkdir -p "$RUNNER_TEMP/release-web"
+          tar --sort=name --mtime='UTC 1970-01-01' --owner=0 --group=0 --numeric-owner \
+            -cf - -C dist . | gzip -n > "$RUNNER_TEMP/release-web/web.tar.gz"
+          (cd "$RUNNER_TEMP/release-web" && \
+            sha256sum web.tar.gz > web.tar.gz.sha256)
+          python3 - "$RUNNER_TEMP/release-web/manifest.json" <<'PY'
+          import json
+          import os
+          import sys
+
+          with open(sys.argv[1], 'w', encoding='utf-8') as manifest:
+              json.dump({
+                  'schema_version': 1,
+                  'source_sha': os.environ['GITHUB_SHA'],
+                  'workflow_run_id': int(os.environ['GITHUB_RUN_ID']),
+                  'workflow_run_attempt': int(os.environ['GITHUB_RUN_ATTEMPT']),
+                  'web_archive': 'web.tar.gz',
+              }, manifest, sort_keys=True)
+              manifest.write('\n')
+          PY
+      - name: Retain immutable frontend artifact
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-web-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/release-web/
+          if-no-files-found: error
+          retention-days: 14
       - name: Image publication is not applicable outside main pushes
         if: github.event_name != 'push' || github.ref != 'refs/heads/main'
         run: echo 'No release image is built for this event.'

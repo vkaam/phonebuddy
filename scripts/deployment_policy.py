@@ -42,12 +42,14 @@ def existing_image_is_reusable(write_enabled, local_image_id, remote_image_id):
             and local_image_id == remote_image_id)
 
 
-def recovery_required(deploy_outcome, deploy_succeeded, verify_outcome, observe_outcome):
-    """Record recovery for partial apply, revision verification, or health failure."""
+def recovery_required(deploy_outcome, deploy_succeeded, verify_outcome, observe_outcome,
+                      frontend_outcome='success'):
+    """Record recovery for partial apply or failed application/frontend observation."""
     if deploy_outcome == 'failure':
         return True
     return (deploy_succeeded == 'true'
-            and (verify_outcome == 'failure' or observe_outcome == 'failure'))
+            and (verify_outcome == 'failure' or observe_outcome == 'failure'
+                 or frontend_outcome in {'failure', 'skipped'}))
 
 
 def active_candidate_revision_names(revisions, release_version):
@@ -156,6 +158,7 @@ def main(argv=None):
     recovery.add_argument('--deploy-succeeded', required=True)
     recovery.add_argument('--verify-outcome', required=True)
     recovery.add_argument('--observe-outcome', required=True)
+    recovery.add_argument('--frontend-outcome', default='skipped')
 
     revisions = commands.add_parser('candidate-revisions')
     revisions.add_argument('--path', required=True, type=Path)
@@ -218,7 +221,7 @@ def main(argv=None):
             return 0
         required = recovery_required(
             options.deploy_outcome, options.deploy_succeeded,
-            options.verify_outcome, options.observe_outcome,
+            options.verify_outcome, options.observe_outcome, options.frontend_outcome,
         )
         value = f'required={str(required).lower()}\n'
         output = os.environ.get('GITHUB_OUTPUT')

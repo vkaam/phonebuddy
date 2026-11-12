@@ -108,6 +108,7 @@ class BicepCiBoundaryTests(unittest.TestCase):
         quality = (root / 'ci.yml').read_text()
         trusted = (root / 'azure-hosting-what-if.yml').read_text()
         deployment = (root / 'azure-deploy.yml').read_text()
+        manual_recovery = (root / 'azure-recover.yml').read_text()
         self.assertNotIn('id-token: write', quality)
         self.assertNotIn('azure/login@', quality)
         self.assertIn('workflow_dispatch:', trusted)
@@ -151,15 +152,31 @@ class BicepCiBoundaryTests(unittest.TestCase):
         self.assertIn('scripts/deployment_policy.py ensure-active-revision', deployment)
         self.assertIn('scripts/deployment_policy.py recovery-revision-action', deployment)
         self.assertNotIn('az containerapp revision activate', deployment)
-        self.assertNotIn('az containerapp revision deactivate', deployment)
         self.assertIn('revisionSuffix="$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"', deployment)
         self.assertIn('Verify the exact source image revision is active', deployment)
         self.assertIn('$GITHUB_WORKSPACE/scripts/deployment_policy.py" verify-manifest', deployment)
         self.assertIn('scripts/deployment_policy.py verify-existing-image', deployment)
         self.assertIn('scripts/deployment_policy.py recovery-required', deployment)
+        isolation = deployment.split('      - name: Isolate the failed candidate', 1)[1].split(
+            '      - name: Redeploy the immutable last-known-good', 1)[0]
+        self.assertIn('scripts/deployment_policy.py recovery-revision-action', isolation)
+        self.assertIn('az containerapp revision deactivate', isolation)
+        self.assertIn('--release-version "$RELEASE_SHA" --image-digest "$IMAGE_DIGEST"', isolation)
+        self.assertNotIn('az containerapp revision deactivate', deployment.split(
+            '      - name: Isolate the failed candidate', 1)[0])
+        self.assertNotIn('az containerapp revision activate', deployment)
+        self.assertIn('workflow_dispatch:', manual_recovery)
+        self.assertIn("github.repository == 'vkaam/phonebuddy' && github.ref == 'refs/heads/main'",
+                      manual_recovery)
+        self.assertIn('environment: dev', manual_recovery)
+        self.assertIn('id-token: write', manual_recovery)
+        self.assertIn('group: azure-dev-release', manual_recovery)
+        self.assertIn('manual-decision', manual_recovery)
+        self.assertIn('Storage Blob Data Contributor',
+                      (root.parent.parent / 'docs/quality-and-delivery.md').read_text())
         self.assertIn("steps.recovery-decision.outputs.required == 'true'", deployment)
         self.assertIn('id: observe', deployment)
-        self.assertIn('promotion stopped without changing revision state', deployment)
+        self.assertIn('Failed candidate isolated because no automatic fallback was safe.', deployment)
         self.assertLess(deployment.index('Preview the exact Bicep release'),
                         deployment.index('Apply the reviewed Bicep release'))
         self.assertLess(deployment.index('Verify the exact source image revision is active'),

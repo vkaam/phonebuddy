@@ -1,0 +1,311 @@
+name: Authorized Azure release recovery
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_id:
+        description: 'Immutable release ID: <full source SHA>/<CI run ID>-<attempt>'
+        required: true
+        type: string
+      reason:
+        description: Recovery reason for the retained operator evidence
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: azure-dev-release
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  recover-dev:
+    name: Recover an authorized immutable dev release
+    if: github.repository == 'vkaam/phonebuddy' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    environment: dev
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      RESOURCE_GROUP: rg-pb-dev-francecentral-foundation
+      APP_NAME: ca-pb-dev-release-test
+      RELEASE_ID: ${{ inputs.release_id }}
+      RECOVERY_REASON: ${{ inputs.reason }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: azure/login@a641126d1b8aa4d1fa005f4f92df94a3c4c4c906 # v3.1.0
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: Create operator evidence before making recovery changes
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/manual-recovery
+          python3 - artifacts/manual-recovery/operator-evidence.json <<'PY'
+          import json
+          import os
+          import sys
+          from pathlib import Path
+          evidence = {
+              'operator': os.environ['GITHUB_ACTOR'],
+              'workflow_run_id': int(os.environ['GITHUB_RUN_ID']),
+              'workflow_run_attempt': int(os.environ['GITHUB_RUN_ATTEMPT']),
+              'selected_release_id': os.environ['RELEASE_ID'],
+              'reason': os.environ['RECOVERY_REASON'],
+              'result': 'started',
+          }
+          Path(sys.argv[1]).write_text(json.dumps(evidence, sort_keys=True) + '\n', encoding='utf-8')
+          PY
+      - name: Validate the operator selection and read current state
+        id: state
+        run: |
+          set -euo pipefail
+          if [[ ! "$RELEASE_ID" =~ ^([0-9a-f]{40})/([1-9][0-9]*)-([1-9][0-9]*)$ ]]; then
+            echo 'release_id must be <full-source-sha>/<positive-run-id>-<positive-attempt>.' >&2
+            exit 1
+          fi
+          test -n "$RECOVERY_REASON"
+          printf '%s\n' "$RELEASE_ID" > artifacts/manual-recovery/selected-release-id.txt
+          mapfile -t accounts < <(
+            az storage account list --resource-group "$RESOURCE_GROUP" \
+              --query "[?tags.purpose=='release-state' && tags.environment=='dev'].name" \
+              --output tsv
+          )
+          [[ ${#accounts[@]} -eq 1 ]]
+          state_account=${accounts[0]}
+          token=$(az account get-access-token --resource https://storage.azure.com/ \
+            --query accessToken --output tsv)
+          echo "::add-mask::$token"
+          export AZURE_STORAGE_OAUTH_TOKEN="$token"
+          mkdir -p artifacts/manual-recovery
+          python3 -B scripts/release_recovery.py blob-get \
+            --account "$state_account" --container release-state \
+            --blob "releases/$RELEASE_ID/manifest.json" \
+            --output artifacts/manual-recovery/target-manifest.json
+          python3 -B scripts/release_recovery.py validate \
+            --manifest artifacts/manual-recovery/target-manifest.json
+          python3 -B scripts/release_recovery.py blob-get \
+            --account "$state_account" --container release-state \
+            --blob last-known-good.json --output artifacts/manual-recovery/current-manifest.json \
+            --etag-output artifacts/manual-recovery/current.etag
+          python3 -B scripts/release_recovery.py manual-decision \
+            --target artifacts/manual-recovery/target-manifest.json \
+            --current artifacts/manual-recovery/current-manifest.json \
+            | tee artifacts/manual-recovery/compatibility-decision.txt
+          grep -qx 'eligible=true' artifacts/manual-recovery/compatibility-decision.txt
+          printf 'storage_account=%s\n' "$state_account" >> "$GITHUB_OUTPUT"
+      - name: Verify exact release identity and prepare immutable artifacts
+        id: release
+        env:
+          STATE_ACCOUNT: ${{ steps.state.outputs.storage_account }}
+        run: |
+          set -euo pipefail
+          release_sha=$(sed -E 's#^([0-9a-f]{40})/.*$#\1#' <<< "$RELEASE_ID")
+          test "$(python3 - artifacts/manual-recovery/target-manifest.json <<'PY'
+          import json
+          import sys
+          manifest = json.load(open(sys.argv[1], encoding='utf-8'))
+          print(f"{manifest['source_sha']}/{manifest['workflow_run_id']}-{manifest['workflow_run_attempt']}")
+          PY
+          )" = "$RELEASE_ID"
+          python3 - artifacts/manual-recovery/target-manifest.json \
+            > artifacts/manual-recovery/image-digest.txt <<'PY'
+          import json
+          import sys
+          manifest = json.load(open(sys.argv[1], encoding='utf-8'))
+          print(manifest['image_digest'])
+          PY
+          token=$(az account get-access-token --resource https://storage.azure.com/ \
+            --query accessToken --output tsv)
+          echo "::add-mask::$token"
+          AZURE_STORAGE_OAUTH_TOKEN="$token" python3 -B scripts/release_recovery.py blob-get \
+            --account "$STATE_ACCOUNT" --container release-state \
+            --blob "$(python3 - artifacts/manual-recovery/target-manifest.json <<'PY'
+          import json
+          import sys
+          print(json.load(open(sys.argv[1], encoding='utf-8'))['frontend_blob'])
+          PY
+          )" --output artifacts/manual-recovery/web.tar.gz
+          expected_frontend_sha=$(python3 - artifacts/manual-recovery/target-manifest.json <<'PY'
+          import json
+          import sys
+          print(json.load(open(sys.argv[1], encoding='utf-8'))['frontend_sha256'])
+          PY
+          )
+          printf '%s  %s\n' "$expected_frontend_sha" artifacts/manual-recovery/web.tar.gz \
+            | sha256sum --check
+          mkdir -p artifacts/manual-recovery/web
+          tar --no-same-owner --no-same-permissions -xzf artifacts/manual-recovery/web.tar.gz \
+            -C artifacts/manual-recovery/web
+          git show "$release_sha:infra/hosting.bicep" > "$RUNNER_TEMP/recovery-hosting.bicep"
+          expected_template_sha=$(python3 - artifacts/manual-recovery/target-manifest.json <<'PY'
+          import json
+          import sys
+          print(json.load(open(sys.argv[1], encoding='utf-8'))['configuration']['hosting_template_sha256'])
+          PY
+          )
+          printf '%s  %s\n' "$expected_template_sha" "$RUNNER_TEMP/recovery-hosting.bicep" \
+            | sha256sum --check
+          curl --fail --silent --show-error --location --retry 3 \
+            https://github.com/Azure/bicep/releases/download/v0.34.44/bicep-linux-x64 \
+            -o "$RUNNER_TEMP/bicep"
+          printf '%s  %s\n' \
+            dcc869edf53652303d4822b650d727419eeac33bce80cfb61f8ccc5cd2ccee47 \
+            "$RUNNER_TEMP/bicep" | sha256sum --check
+          chmod +x "$RUNNER_TEMP/bicep"
+          "$RUNNER_TEMP/bicep" build "$RUNNER_TEMP/recovery-hosting.bicep" \
+            --outfile "$RUNNER_TEMP/recovery-hosting.json"
+          image_digest=$(python3 - artifacts/manual-recovery/target-manifest.json <<'PY'
+          import json
+          import sys
+          print(json.load(open(sys.argv[1], encoding='utf-8'))['image_digest'].removeprefix('sha256:'))
+          PY
+          )
+          static_site_location=$(python3 - artifacts/manual-recovery/target-manifest.json <<'PY'
+          import json
+          import sys
+          print(json.load(open(sys.argv[1], encoding='utf-8'))['configuration']['static_site_location'])
+          PY
+          )
+          az deployment group what-if --resource-group "$RESOURCE_GROUP" \
+            --template-file "$RUNNER_TEMP/recovery-hosting.json" \
+            --parameters environment=dev owner=PHONEBUDDY-PLATFORM \
+              costCenter=PHONEBUDDY-NONPROD deployWorkload=true \
+              managePullRoleAssignment=false deployStaticSite=true \
+              staticSiteLocation=eastus2 imageDigest="$image_digest" \
+              releaseVersion="$release_sha" \
+              revisionSuffix="$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT-manual" \
+            --validation-level ProviderNoRbac --result-format FullResourcePayloads \
+            --no-pretty-print --output json > artifacts/manual-recovery/what-if.json
+          expected_scope=$(az group show --name "$RESOURCE_GROUP" --query id --output tsv)
+          python3 -B scripts/check_bicep.py --what-if-result artifacts/manual-recovery/what-if.json \
+            --expected-scope "$expected_scope"
+          python3 -B scripts/release_recovery.py check-what-if \
+            --path artifacts/manual-recovery/what-if.json
+          printf 'release_sha=%s\n' "$release_sha" >> "$GITHUB_OUTPUT"
+          printf 'image_digest=%s\n' "$image_digest" >> "$GITHUB_OUTPUT"
+          printf 'static_site_location=%s\n' "$static_site_location" >> "$GITHUB_OUTPUT"
+      - name: Deploy the selected immutable application release
+        run: |
+          set -euo pipefail
+          az deployment group create \
+            --name "pbdev-manual-recovery-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" \
+            --resource-group "$RESOURCE_GROUP" \
+            --template-file "$RUNNER_TEMP/recovery-hosting.json" \
+            --parameters environment=dev owner=PHONEBUDDY-PLATFORM \
+              costCenter=PHONEBUDDY-NONPROD deployWorkload=true \
+              managePullRoleAssignment=false deployStaticSite=true \
+              staticSiteLocation="${{ steps.release.outputs.static_site_location }}" \
+              imageDigest="${{ steps.release.outputs.image_digest }}" \
+              releaseVersion="${{ steps.release.outputs.release_sha }}" \
+              revisionSuffix="$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT-manual" \
+            --output json > artifacts/manual-recovery/deployment.json
+      - name: Verify the selected immutable image revision is active
+        env:
+          RELEASE_SHA: ${{ steps.release.outputs.release_sha }}
+          IMAGE_DIGEST: ${{ steps.release.outputs.image_digest }}
+        run: |
+          set -euo pipefail
+          az containerapp revision list --name "$APP_NAME" \
+            --resource-group "$RESOURCE_GROUP" --output json \
+            > artifacts/manual-recovery/revisions.json
+          IFS=$'\t' read -r action revision < <(
+            python3 -B scripts/deployment_policy.py ensure-active-revision \
+              --path artifacts/manual-recovery/revisions.json \
+              --release-version "$RELEASE_SHA" --image-digest "$IMAGE_DIGEST"
+          )
+          if [[ "$action" != active ]]; then
+            echo 'The selected immutable image is not active.' >&2
+            exit 1
+          fi
+      - name: Get the selected Static Web App token
+        id: swa-token
+        env:
+          STATE_ACCOUNT: ${{ steps.state.outputs.storage_account }}
+        run: |
+          set -euo pipefail
+          static_site_name=$(python3 - artifacts/manual-recovery/target-manifest.json <<'PY'
+          import json
+          import sys
+          print(json.load(open(sys.argv[1], encoding='utf-8'))['configuration']['static_site_name'])
+          PY
+          )
+          test -n "$static_site_name"
+          token=$(az staticwebapp secrets list --name "$static_site_name" \
+            --resource-group "$RESOURCE_GROUP" --query properties.apiKey --output tsv)
+          test -n "$token"
+          echo "::add-mask::$token"
+          printf 'token=%s\n' "$token" >> "$GITHUB_OUTPUT"
+      - name: Publish the selected immutable frontend release
+        id: web-deploy
+        uses: Azure/static-web-apps-deploy@4d27395796ac319302594769cfe812bd207490b1 # v1
+        with:
+          azure_static_web_apps_api_token: ${{ steps.swa-token.outputs.token }}
+          action: upload
+          app_location: artifacts/manual-recovery/web
+          api_location: ''
+          output_location: ''
+          skip_app_build: true
+      - name: Verify backend and frontend recovery
+        run: |
+          set -euo pipefail
+          app_url=$(az resource show --resource-group "$RESOURCE_GROUP" \
+            --name "$APP_NAME" --resource-type Microsoft.App/containerApps \
+            --query 'properties.configuration.ingress.fqdn' --output tsv)
+          python3 -B scripts/health_gate.py --url "https://$app_url" \
+            --expected-version "${{ steps.release.outputs.release_sha }}" \
+            --skip-workspace-telemetry > artifacts/manual-recovery/health-gate.json
+          static_url='${{ steps.web-deploy.outputs.static_web_app_url }}'
+          curl --fail --silent --show-error --retry 5 --retry-all-errors \
+            --retry-delay 5 "$static_url/release.json" \
+            > artifacts/manual-recovery/frontend-release.json
+          python3 - "${{ steps.release.outputs.release_sha }}" \
+            artifacts/manual-recovery/frontend-release.json <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+          if json.loads(Path(sys.argv[2]).read_text(encoding='utf-8')).get('version') != sys.argv[1]:
+              raise SystemExit('Manual recovery frontend does not match the selected release')
+          PY
+          python3 - artifacts/manual-recovery/operator-evidence.json <<'PY'
+          import json
+          import os
+          import sys
+          from pathlib import Path
+          evidence = {
+              'operator': os.environ['GITHUB_ACTOR'],
+              'workflow_run_id': int(os.environ['GITHUB_RUN_ID']),
+              'workflow_run_attempt': int(os.environ['GITHUB_RUN_ATTEMPT']),
+              'selected_release_id': os.environ['RELEASE_ID'],
+              'reason': os.environ['RECOVERY_REASON'],
+              'result': 'verified',
+          }
+          Path(sys.argv[1]).write_text(json.dumps(evidence, sort_keys=True) + '\n', encoding='utf-8')
+          PY
+          token=$(az account get-access-token --resource https://storage.azure.com/ \
+            --query accessToken --output tsv)
+          echo "::add-mask::$token"
+          AZURE_STORAGE_OAUTH_TOKEN="$token" python3 -B scripts/release_recovery.py \
+            publish-last-good --account "${{ steps.state.outputs.storage_account }}" \
+            --container release-state --manifest artifacts/manual-recovery/target-manifest.json \
+            --expected-etag artifacts/manual-recovery/current.etag
+      - name: Retain immutable manual recovery evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: manual-recovery-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/manual-recovery/
+          if-no-files-found: ignore
+          retention-days: 30

@@ -36,6 +36,41 @@ resource registry 'Microsoft.ContainerRegistry/registries@2023-07-01' = {
   properties: { adminUserEnabled: false }
 }
 
+// Durable release state and immutable frontend bundles. Blob data access is
+// granted separately to the deployment identity at this container scope.
+resource releaseStateStorage 'Microsoft.Storage/storageAccounts@2023-05-01' = {
+  name: 'pb${environment}rel${substring(suffix, 0, 13)}'
+  location: location
+  tags: union(tags, { purpose: 'release-state' })
+  sku: { name: 'Standard_LRS' }
+  kind: 'StorageV2'
+  properties: {
+    accessTier: 'Hot'
+    allowBlobPublicAccess: false
+    allowSharedKeyAccess: false
+    defaultToOAuthAuthentication: true
+    minimumTlsVersion: 'TLS1_2'
+    supportsHttpsTrafficOnly: true
+    publicNetworkAccess: 'Enabled'
+  }
+}
+
+resource releaseStateBlobService 'Microsoft.Storage/storageAccounts/blobServices@2023-05-01' = {
+  parent: releaseStateStorage
+  name: 'default'
+  properties: {
+    isVersioningEnabled: true
+    deleteRetentionPolicy: { enabled: true, days: 30 }
+    containerDeleteRetentionPolicy: { enabled: true, days: 30 }
+  }
+}
+
+resource releaseStateContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-05-01' = {
+  parent: releaseStateBlobService
+  name: 'release-state'
+  properties: { publicAccess: 'None' }
+}
+
 resource vault 'Microsoft.KeyVault/vaults@2023-07-01' = {
   name: 'pb-${environment}-${substring(suffix, 0, 10)}'
   location: location
@@ -158,6 +193,7 @@ resource appDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-previe
     metrics: [{ category: 'AllMetrics', enabled: true }]
   }
 }
+
 
 var telemetryRows = 'ContainerAppConsoleLogs | where ContainerAppName == \'${app.name}\' | where Log contains \'"event":"health_request"\' | extend health=parse_json(substring(Log, indexof(Log, \'{\'))) | where todouble(health.duration_ms) >= 0'
 var missingTelemetryQuery = 'print telemetryCount=toscalar(${telemetryRows} | where TimeGenerated > ago(5m) | count)'

@@ -71,6 +71,14 @@ jobs:
           github-token: ${{ github.token }}
           name: release-image-${{ github.event.workflow_run.id }}-${{ github.event.workflow_run.run_attempt }}
           path: ${{ runner.temp }}/release-image
+      - name: Download the source run's immutable frontend artifact
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          repository: ${{ github.repository }}
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
+          name: release-web-${{ github.event.workflow_run.id }}-${{ github.event.workflow_run.run_attempt }}
+          path: ${{ runner.temp }}/release-web
       - name: Verify artifact identity and integrity
         env:
           EXPECTED_SHA: ${{ github.event.workflow_run.head_sha }}
@@ -84,6 +92,31 @@ jobs:
             --path manifest.json --source-sha "$EXPECTED_SHA" \
             --run-id "$EXPECTED_RUN_ID" --run-attempt "$EXPECTED_RUN_ATTEMPT"
           docker load --input release-test.tar.gz
+      - name: Verify frontend artifact identity and integrity
+        env:
+          EXPECTED_SHA: ${{ github.event.workflow_run.head_sha }}
+          EXPECTED_RUN_ID: ${{ github.event.workflow_run.id }}
+          EXPECTED_RUN_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/release-web"
+          sha256sum --check web.tar.gz.sha256
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          manifest = json.loads(Path('manifest.json').read_text(encoding='utf-8'))
+          expected = {
+              'schema_version': 1,
+              'source_sha': os.environ['EXPECTED_SHA'],
+              'workflow_run_id': int(os.environ['EXPECTED_RUN_ID']),
+              'workflow_run_attempt': int(os.environ['EXPECTED_RUN_ATTEMPT']),
+              'web_archive': 'web.tar.gz',
+          }
+          if manifest != expected:
+              raise SystemExit('Frontend artifact does not match the successful main CI run')
+          PY
       - name: Compile the exact-source Bicep template
         run: |
           set -euo pipefail
@@ -101,6 +134,42 @@ jobs:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: Read the last-known-good release and state version
+        id: prior-state
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          : > artifacts/last-good.etag
+          : > artifacts/last-good.json
+          mapfile -t accounts < <(
+            az storage account list --resource-group "$RESOURCE_GROUP" \
+              --query "[?tags.purpose=='release-state' && tags.environment=='dev'].name" \
+              --output tsv
+          )
+          if [[ ${#accounts[@]} -gt 1 ]]; then
+            echo 'Multiple release-state storage accounts were found.' >&2
+            exit 1
+          fi
+          if [[ ${#accounts[@]} -eq 1 ]]; then
+            state_account=${accounts[0]}
+            token=$(az account get-access-token --resource https://storage.azure.com/ \
+              --query accessToken --output tsv)
+            echo "::add-mask::$token"
+            AZURE_STORAGE_OAUTH_TOKEN="$token" python3 -B scripts/release_recovery.py blob-get \
+              --account "$state_account" --container release-state \
+              --blob last-known-good.json --output artifacts/last-good.json \
+              --etag-output artifacts/last-good.etag --allow-missing
+            if [[ -s artifacts/last-good.json ]]; then
+              python3 -B scripts/release_recovery.py validate --manifest artifacts/last-good.json
+              echo 'available=true' >> "$GITHUB_OUTPUT"
+            else
+              echo 'available=false' >> "$GITHUB_OUTPUT"
+            fi
+            echo "storage_account=$state_account" >> "$GITHUB_OUTPUT"
+          else
+            echo 'available=false' >> "$GITHUB_OUTPUT"
+            echo 'storage_account=' >> "$GITHUB_OUTPUT"
+          fi
       - name: Promote the exact image digest to the scoped Azure registry
         id: image
         run: |
@@ -164,6 +233,77 @@ jobs:
             printf 'registry_server=%s\n' "$registry_server"
             printf 'image_digest=%s\n' "${digest#sha256:}"
           } >> "$GITHUB_OUTPUT"
+      - name: Create immutable release manifest and persist its frontend bundle
+        id: release-manifest
+        env:
+          IMAGE_DIGEST: ${{ steps.image.outputs.image_digest }}
+          STATE_ACCOUNT: ${{ steps.prior-state.outputs.storage_account }}
+        run: |
+          set -euo pipefail
+          mapfile -t sites < <(
+            az staticwebapp list --resource-group "$RESOURCE_GROUP" \
+              --query "[?starts_with(name, 'stapp-pb-dev-')].name" --output tsv
+          )
+          if [[ ${#sites[@]} -gt 1 ]]; then
+            echo 'Multiple dev Static Web Apps were found.' >&2
+            exit 1
+          fi
+          static_site_name=''
+          if [[ ${#sites[@]} -eq 1 ]]; then static_site_name=${sites[0]}; fi
+          mkdir -p artifacts
+          cp "$RUNNER_TEMP/release-web/web.tar.gz" artifacts/web.tar.gz
+          configuration=$(python3 - "$static_site_name" <<'PY'
+          import hashlib
+          import json
+          import os
+          import sys
+          from pathlib import Path
+
+          config = {
+              'environment': 'dev',
+              'resource_group': os.environ['RESOURCE_GROUP'],
+              'container_app': os.environ['APP_NAME'],
+              'static_site_name': sys.argv[1],
+              'static_site_location': 'eastus2',
+              'container_image_digest': os.environ['IMAGE_DIGEST'],
+              'hosting_template_sha256': hashlib.sha256(
+                  Path('infra/hosting.bicep').read_bytes()
+              ).hexdigest(),
+              'release_schema_sha256': hashlib.sha256(
+                  Path('infra/release-schema.json').read_bytes()
+              ).hexdigest(),
+          }
+          print(json.dumps(config, sort_keys=True, separators=(',', ':')))
+          PY
+          )
+          printf '%s\n' "$configuration" > artifacts/release-configuration.json
+          blob_prefix="releases/$RELEASE_SHA/$SOURCE_RUN_ID-$SOURCE_RUN_ATTEMPT"
+          python3 -B scripts/release_recovery.py create-manifest \
+            --source-sha "$RELEASE_SHA" --run-id "$SOURCE_RUN_ID" \
+            --run-attempt "$SOURCE_RUN_ATTEMPT" --image-digest "$IMAGE_DIGEST" \
+            --frontend-blob "$blob_prefix/web.tar.gz" \
+            --frontend-archive artifacts/web.tar.gz \
+            --configuration artifacts/release-configuration.json \
+            --schema-compatibility infra/release-schema.json \
+            --output artifacts/release-manifest.json
+          manifest_blob="$blob_prefix/manifest.json"
+          echo "frontend_blob=$blob_prefix/web.tar.gz" >> "$GITHUB_OUTPUT"
+          echo "manifest_blob=$manifest_blob" >> "$GITHUB_OUTPUT"
+          echo "static_site_name=$static_site_name" >> "$GITHUB_OUTPUT"
+          if [[ -n "$STATE_ACCOUNT" ]]; then
+            token=$(az account get-access-token --resource https://storage.azure.com/ \
+              --query accessToken --output tsv)
+            echo "::add-mask::$token"
+            export AZURE_STORAGE_OAUTH_TOKEN="$token"
+            python3 -B scripts/release_recovery.py blob-put \
+              --account "$STATE_ACCOUNT" --container release-state \
+              --blob "$blob_prefix/web.tar.gz" --file artifacts/web.tar.gz \
+              --create-only --idempotent
+            python3 -B scripts/release_recovery.py blob-put \
+              --account "$STATE_ACCOUNT" --container release-state \
+              --blob "$manifest_blob" --file artifacts/release-manifest.json \
+              --create-only --idempotent
+          fi
       - name: Preview the exact Bicep release
         id: preview
         env:
@@ -186,6 +326,8 @@ jobs:
           expected_scope=$(az group show --name "$RESOURCE_GROUP" --query id --output tsv)
           python3 -B scripts/check_bicep.py \
             --what-if-result artifacts/what-if.json --expected-scope "$expected_scope"
+          python3 -B scripts/release_recovery.py check-what-if \
+            --path artifacts/what-if.json --output artifacts/destructive-change-check.txt
       - name: Apply the reviewed Bicep release
         id: deploy
         env:
@@ -206,6 +348,68 @@ jobs:
             --output json > artifacts/deployment.json
           printf '%s\n' "$IMAGE_DIGEST" > artifacts/image-digest.txt
           printf 'succeeded=true\n' >> "$GITHUB_OUTPUT"
+      - name: Persist the immutable candidate release in Blob Storage
+        id: persist-release
+        if: steps.deploy.outcome == 'success'
+        env:
+          STATE_ACCOUNT: ${{ steps.prior-state.outputs.storage_account }}
+          IMAGE_DIGEST: ${{ steps.image.outputs.image_digest }}
+          MANIFEST_BLOB: ${{ steps.release-manifest.outputs.manifest_blob }}
+          STATIC_SITE_NAME: ${{ steps.release-manifest.outputs.static_site_name }}
+        run: |
+          set -euo pipefail
+          if [[ -z "$STATE_ACCOUNT" ]]; then
+            mapfile -t accounts < <(
+              az storage account list --resource-group "$RESOURCE_GROUP" \
+                --query "[?tags.purpose=='release-state' && tags.environment=='dev'].name" \
+                --output tsv
+            )
+            [[ ${#accounts[@]} -eq 1 ]]
+            STATE_ACCOUNT=${accounts[0]}
+          fi
+          test -n "$STATE_ACCOUNT"
+          if [[ -z "$STATIC_SITE_NAME" ]]; then
+            mapfile -t sites < <(
+              az staticwebapp list --resource-group "$RESOURCE_GROUP" \
+                --query "[?starts_with(name, 'stapp-pb-dev-')].name" --output tsv
+            )
+            [[ ${#sites[@]} -eq 1 ]]
+            STATIC_SITE_NAME=${sites[0]}
+            python3 - artifacts/release-configuration.json "$STATIC_SITE_NAME" <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+
+          path = Path(sys.argv[1])
+          config = json.loads(path.read_text(encoding='utf-8'))
+          config['static_site_name'] = sys.argv[2]
+          path.write_text(json.dumps(config, sort_keys=True, separators=(',', ':')) + '\n',
+                          encoding='utf-8')
+          PY
+            python3 -B scripts/release_recovery.py create-manifest \
+              --source-sha "$RELEASE_SHA" --run-id "$SOURCE_RUN_ID" \
+              --run-attempt "$SOURCE_RUN_ATTEMPT" --image-digest "$IMAGE_DIGEST" \
+              --frontend-blob "releases/$RELEASE_SHA/$SOURCE_RUN_ID-$SOURCE_RUN_ATTEMPT/web.tar.gz" \
+              --frontend-archive artifacts/web.tar.gz \
+              --configuration artifacts/release-configuration.json \
+              --schema-compatibility infra/release-schema.json \
+              --output artifacts/release-manifest.json
+          fi
+          token=$(az account get-access-token --resource https://storage.azure.com/ \
+            --query accessToken --output tsv)
+          echo "::add-mask::$token"
+          export AZURE_STORAGE_OAUTH_TOKEN="$token"
+          blob_prefix="releases/$RELEASE_SHA/$SOURCE_RUN_ID-$SOURCE_RUN_ATTEMPT"
+          python3 -B scripts/release_recovery.py blob-put \
+            --account "$STATE_ACCOUNT" --container release-state \
+            --blob "$blob_prefix/web.tar.gz" --file artifacts/web.tar.gz \
+            --create-only --idempotent
+          python3 -B scripts/release_recovery.py blob-put \
+            --account "$STATE_ACCOUNT" --container release-state \
+            --blob "$MANIFEST_BLOB" --file artifacts/release-manifest.json \
+            --create-only --idempotent
+          printf 'storage_account=%s\n' "$STATE_ACCOUNT" >> "$GITHUB_OUTPUT"
+          printf 'static_site_name=%s\n' "$STATIC_SITE_NAME" >> "$GITHUB_OUTPUT"
       - name: Verify the exact source image revision is active
         id: verify-revision
         env:
@@ -244,6 +448,70 @@ jobs:
             --url "https://$app_url" --expected-version "$RELEASE_SHA" \
             --skip-workspace-telemetry \
             > artifacts/health-gate.json
+      - name: Get the dev Static Web App deployment token
+        id: swa-token
+        if: steps.persist-release.outcome == 'success'
+        env:
+          STATIC_SITE_NAME: ${{ steps.persist-release.outputs.static_site_name }}
+        run: |
+          set -euo pipefail
+          token=$(az staticwebapp secrets list --name "$STATIC_SITE_NAME" \
+            --resource-group "$RESOURCE_GROUP" --query properties.apiKey --output tsv)
+          test -n "$token"
+          echo "::add-mask::$token"
+          printf 'token=%s\n' "$token" >> "$GITHUB_OUTPUT"
+      - name: Extract the verified frontend bundle
+        if: steps.swa-token.outcome == 'success'
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/web-site
+          tar --no-same-owner --no-same-permissions \
+            -xzf artifacts/web.tar.gz -C artifacts/web-site
+      - name: Extract and publish the immutable frontend bundle
+        id: web-deploy
+        if: steps.swa-token.outcome == 'success'
+        uses: Azure/static-web-apps-deploy@4d27395796ac319302594769cfe812bd207490b1 # v1
+        with:
+          azure_static_web_apps_api_token: ${{ steps.swa-token.outputs.token }}
+          action: upload
+          app_location: artifacts/web-site
+          api_location: ''
+          output_location: ''
+          skip_app_build: true
+      - name: Verify the published frontend version
+        id: verify-web
+        if: steps.web-deploy.outcome == 'success'
+        env:
+          STATIC_APP_URL: ${{ steps.web-deploy.outputs.static_web_app_url }}
+        run: |
+          set -euo pipefail
+          test -n "$STATIC_APP_URL"
+          curl --fail --silent --show-error --retry 5 --retry-all-errors \
+            --retry-delay 5 "$STATIC_APP_URL/release.json" \
+            > artifacts/frontend-release.json
+          python3 - "$RELEASE_SHA" artifacts/frontend-release.json <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+
+          release = json.loads(Path(sys.argv[2]).read_text(encoding='utf-8'))
+          if release.get('version') != sys.argv[1]:
+              raise SystemExit('Published frontend does not match the candidate release')
+          PY
+      - name: Advance last-known-good only after both release surfaces pass
+        id: publish-last-good
+        if: success()
+        env:
+          STATE_ACCOUNT: ${{ steps.persist-release.outputs.storage_account }}
+        run: |
+          set -euo pipefail
+          token=$(az account get-access-token --resource https://storage.azure.com/ \
+            --query accessToken --output tsv)
+          echo "::add-mask::$token"
+          AZURE_STORAGE_OAUTH_TOKEN="$token" python3 -B scripts/release_recovery.py \
+            publish-last-good --account "$STATE_ACCOUNT" --container release-state \
+            --manifest artifacts/release-manifest.json --expected-etag artifacts/last-good.etag
+          printf 'advanced=true\n' >> "$GITHUB_OUTPUT"
       - name: Decide whether release recovery is required
         id: recovery-decision
         if: always()
@@ -252,35 +520,216 @@ jobs:
           DEPLOY_SUCCEEDED: ${{ steps.deploy.outputs.succeeded }}
           VERIFY_OUTCOME: ${{ steps.verify-revision.outcome }}
           OBSERVE_OUTCOME: ${{ steps.observe.outcome }}
+          FRONTEND_OUTCOME: ${{ steps.verify-web.outcome }}
         run: |
           set -euo pipefail
           python3 -B scripts/deployment_policy.py recovery-required \
             --deploy-outcome "$DEPLOY_OUTCOME" \
             --deploy-succeeded "$DEPLOY_SUCCEEDED" \
             --verify-outcome "$VERIFY_OUTCOME" \
-            --observe-outcome "$OBSERVE_OUTCOME"
-      - name: Recover a partial or unhealthy release
-        if: always() && steps.recovery-decision.outputs.required == 'true'
+            --observe-outcome "$OBSERVE_OUTCOME" \
+            --frontend-outcome "$FRONTEND_OUTCOME"
+          required=$(awk -F= '$1 == "required" { print $2 }' "$GITHUB_OUTPUT" | tail -n 1)
+          printf 'required=%s\n' "$required" >> "$GITHUB_OUTPUT"
+          if [[ "$required" != true ]]; then
+            printf 'eligible=false\nreason=release_did_not_require_recovery\n' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [[ -s artifacts/last-good.json ]]; then
+            python3 -B scripts/release_recovery.py decide \
+              --candidate artifacts/release-manifest.json \
+              --last-good artifacts/last-good.json --attempt "$GITHUB_RUN_ATTEMPT" \
+              >> "$GITHUB_OUTPUT"
+          else
+            python3 -B scripts/release_recovery.py decide \
+              --candidate artifacts/release-manifest.json --attempt "$GITHUB_RUN_ATTEMPT" \
+              >> "$GITHUB_OUTPUT"
+          fi
+      - name: Alert and stop when automatic recovery is unsafe
+        if: always() && steps.recovery-decision.outputs.required == 'true' && steps.recovery-decision.outputs.eligible != 'true'
+        env:
+          RECOVERY_REASON: ${{ steps.recovery-decision.outputs.reason }}
+        run: |
+          echo "::error::Automatic recovery stopped safely: ${RECOVERY_REASON:-unknown_reason}. Promotion remains failed; see retained release evidence."
+          {
+            echo '## Release recovery stopped'
+            echo
+            echo "Automatic recovery was not eligible: ${RECOVERY_REASON:-unknown_reason}. Promotion remains stopped."
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Isolate the failed candidate when no safe fallback exists
+        if: always() && steps.recovery-decision.outputs.required == 'true' && steps.recovery-decision.outputs.eligible != 'true' && steps.deploy.outcome != 'skipped'
         env:
           IMAGE_DIGEST: ${{ steps.image.outputs.image_digest }}
         run: |
           set -euo pipefail
           az containerapp revision list --name "$APP_NAME" \
             --resource-group "$RESOURCE_GROUP" --output json \
-            > "$RUNNER_TEMP/container-app-revisions.json"
+            > artifacts/revisions-without-fallback.json
           IFS=$'\t' read -r action revision < <(
             python3 -B scripts/deployment_policy.py recovery-revision-action \
-              --path "$RUNNER_TEMP/container-app-revisions.json" \
+              --path artifacts/revisions-without-fallback.json \
               --release-version "$RELEASE_SHA" --image-digest "$IMAGE_DIGEST"
           )
-          if [[ "$action" == keep ]]; then
-            printf 'Azure Single mode retained active revision %s; promotion stopped.\n' \
-              "$revision" > artifacts/recovery.txt
+          if [[ "$action" == keep && -n "$revision" ]]; then
+            az containerapp revision deactivate --name "$APP_NAME" \
+              --resource-group "$RESOURCE_GROUP" --revision "$revision"
+            printf 'isolation=deactivated_candidate\nrevision=%s\n' "$revision" \
+              > artifacts/recovery-isolation.txt
           else
-            printf 'No active exact source and image revision was reported; promotion stopped without changing revision state.\n' \
-              > artifacts/recovery.txt
+            printf 'isolation=no_matching_active_candidate\n' > artifacts/recovery-isolation.txt
           fi
-          echo 'Health-gated promotion stopped; recovery did not activate or deactivate revisions.'
+          echo 'Failed candidate isolated because no automatic fallback was safe.' >> "$GITHUB_STEP_SUMMARY"
+      - name: Redeploy the immutable last-known-good application and verify it
+        id: recover-app
+        if: always() && steps.recovery-decision.outputs.required == 'true' && steps.recovery-decision.outputs.eligible == 'true'
+        env:
+          STATE_ACCOUNT: ${{ steps.persist-release.outputs.storage_account }}
+        run: |
+          set -euo pipefail
+          recovery_values=$(python3 - artifacts/last-good.json <<'PY'
+          import json
+          import sys
+
+          manifest = json.load(open(sys.argv[1], encoding='utf-8'))
+          config = manifest['configuration']
+          values = [
+              manifest['source_sha'],
+              manifest['image_digest'].removeprefix('sha256:'),
+              config['static_site_name'],
+              config['static_site_location'],
+              manifest['frontend_blob'],
+              manifest['frontend_sha256'],
+              config['resource_group'],
+          ]
+          for value in values:
+              if not isinstance(value, str) or '\n' in value or '\r' in value:
+                  raise SystemExit('Invalid recovery manifest field')
+              print(value)
+          PY
+          )
+          mapfile -t recovery_values_array <<< "$recovery_values"
+          [[ ${#recovery_values_array[@]} -eq 7 ]]
+          RECOVERY_RELEASE_SHA=${recovery_values_array[0]}
+          RECOVERY_IMAGE_DIGEST=${recovery_values_array[1]}
+          RECOVERY_STATIC_SITE_NAME=${recovery_values_array[2]}
+          RECOVERY_STATIC_SITE_LOCATION=${recovery_values_array[3]}
+          RECOVERY_FRONTEND_BLOB=${recovery_values_array[4]}
+          RECOVERY_FRONTEND_SHA256=${recovery_values_array[5]}
+          RECOVERY_RESOURCE_GROUP=${recovery_values_array[6]}
+          test "$RESOURCE_GROUP" = "$RECOVERY_RESOURCE_GROUP"
+          git show "$RECOVERY_RELEASE_SHA:infra/hosting.bicep" > "$RUNNER_TEMP/recovery-hosting.bicep"
+          previous_template_sha=$(sha256sum "$RUNNER_TEMP/recovery-hosting.bicep" | cut -d' ' -f1)
+          recorded_template_sha=$(python3 - artifacts/last-good.json <<'PY'
+          import json
+          import sys
+          print(json.load(open(sys.argv[1], encoding='utf-8'))['configuration']['hosting_template_sha256'])
+          PY
+          )
+          test "$previous_template_sha" = "$recorded_template_sha"
+          "$RUNNER_TEMP/bicep" build "$RUNNER_TEMP/recovery-hosting.bicep" \
+            --outfile "$RUNNER_TEMP/recovery-hosting.json"
+          mkdir -p artifacts/recovery-web
+          token=$(az account get-access-token --resource https://storage.azure.com/ \
+            --query accessToken --output tsv)
+          echo "::add-mask::$token"
+          AZURE_STORAGE_OAUTH_TOKEN="$token" python3 -B scripts/release_recovery.py blob-get \
+            --account "$STATE_ACCOUNT" --container release-state --blob "$RECOVERY_FRONTEND_BLOB" \
+            --output artifacts/recovery-web.tar.gz
+          printf '%s  %s\n' "$RECOVERY_FRONTEND_SHA256" artifacts/recovery-web.tar.gz \
+            | sha256sum --check
+          tar --no-same-owner --no-same-permissions \
+            -xzf artifacts/recovery-web.tar.gz -C artifacts/recovery-web
+          az deployment group what-if --resource-group "$RESOURCE_GROUP" \
+            --template-file "$RUNNER_TEMP/recovery-hosting.json" \
+            --parameters environment=dev owner=PHONEBUDDY-PLATFORM \
+              costCenter=PHONEBUDDY-NONPROD deployWorkload=true \
+              managePullRoleAssignment=false deployStaticSite=true \
+              staticSiteLocation="$RECOVERY_STATIC_SITE_LOCATION" imageDigest="$RECOVERY_IMAGE_DIGEST" \
+              releaseVersion="$RECOVERY_RELEASE_SHA" \
+              revisionSuffix="$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT-recovery" \
+            --validation-level ProviderNoRbac --result-format FullResourcePayloads \
+            --no-pretty-print --output json > artifacts/recovery-what-if.json
+          expected_scope=$(az group show --name "$RESOURCE_GROUP" --query id --output tsv)
+          python3 -B scripts/check_bicep.py --what-if-result artifacts/recovery-what-if.json \
+            --expected-scope "$expected_scope"
+          python3 -B scripts/release_recovery.py check-what-if \
+            --path artifacts/recovery-what-if.json
+          az deployment group create --name "pbdev-recovery-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" \
+            --resource-group "$RESOURCE_GROUP" --template-file "$RUNNER_TEMP/recovery-hosting.json" \
+            --parameters environment=dev owner=PHONEBUDDY-PLATFORM \
+              costCenter=PHONEBUDDY-NONPROD deployWorkload=true \
+              managePullRoleAssignment=false deployStaticSite=true \
+              staticSiteLocation="$RECOVERY_STATIC_SITE_LOCATION" imageDigest="$RECOVERY_IMAGE_DIGEST" \
+              releaseVersion="$RECOVERY_RELEASE_SHA" \
+              revisionSuffix="$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT-recovery" \
+            --output json > artifacts/recovery-deployment.json
+          az containerapp revision list --name "$APP_NAME" \
+            --resource-group "$RESOURCE_GROUP" --output json \
+            > artifacts/recovery-revisions.json
+          IFS=$'\t' read -r action revision < <(
+            python3 -B scripts/deployment_policy.py ensure-active-revision \
+              --path artifacts/recovery-revisions.json \
+              --release-version "$RECOVERY_RELEASE_SHA" \
+              --image-digest "$RECOVERY_IMAGE_DIGEST"
+          )
+          if [[ "$action" != active ]]; then
+            echo 'The recovered immutable image is not active.' >&2
+            exit 1
+          fi
+          app_url=$(az resource show --resource-group "$RESOURCE_GROUP" \
+            --name "$APP_NAME" --resource-type Microsoft.App/containerApps \
+            --query 'properties.configuration.ingress.fqdn' --output tsv)
+          python3 -B scripts/health_gate.py --url "https://$app_url" \
+            --expected-version "$RECOVERY_RELEASE_SHA" --skip-workspace-telemetry \
+            > artifacts/recovery-health-gate.json
+          printf 'recovered=true\n' >> "$GITHUB_OUTPUT"
+          printf 'release_sha=%s\n' "$RECOVERY_RELEASE_SHA" >> "$GITHUB_OUTPUT"
+          printf 'static_site_name=%s\n' "$RECOVERY_STATIC_SITE_NAME" >> "$GITHUB_OUTPUT"
+      - name: Get the last-known-good Static Web App token
+        id: recovery-swa-token
+        if: steps.recover-app.outcome == 'success'
+        env:
+          RECOVERY_STATIC_SITE_NAME: ${{ steps.recover-app.outputs.static_site_name }}
+        run: |
+          set -euo pipefail
+          token=$(az staticwebapp secrets list --name "$RECOVERY_STATIC_SITE_NAME" \
+            --resource-group "$RESOURCE_GROUP" --query properties.apiKey --output tsv)
+          test -n "$token"
+          echo "::add-mask::$token"
+          printf 'token=%s\n' "$token" >> "$GITHUB_OUTPUT"
+      - name: Restore immutable last-known-good frontend assets
+        id: recover-web
+        if: steps.recovery-swa-token.outcome == 'success'
+        uses: Azure/static-web-apps-deploy@4d27395796ac319302594769cfe812bd207490b1 # v1
+        with:
+          azure_static_web_apps_api_token: ${{ steps.recovery-swa-token.outputs.token }}
+          action: upload
+          app_location: artifacts/recovery-web
+          api_location: ''
+          output_location: ''
+          skip_app_build: true
+      - name: Verify complete recovery and alert if it fails
+        if: always() && steps.recovery-decision.outputs.required == 'true' && steps.recovery-decision.outputs.eligible == 'true'
+        env:
+          RECOVER_APP_OUTCOME: ${{ steps.recover-app.outcome }}
+          RECOVER_WEB_OUTCOME: ${{ steps.recover-web.outcome }}
+          RECOVERY_RELEASE_SHA: ${{ steps.recover-app.outputs.release_sha }}
+        run: |
+          if [[ "$RECOVER_APP_OUTCOME" != success || "$RECOVER_WEB_OUTCOME" != success ]]; then
+            echo '::error::Automatic recovery failed or was incomplete. Promotion remains stopped; inspect retained evidence and recover manually.'
+            exit 1
+          fi
+          recovery_url='${{ steps.recover-web.outputs.static_web_app_url }}'
+          curl --fail --silent --show-error --retry 5 --retry-all-errors \
+            --retry-delay 5 "$recovery_url/release.json" > artifacts/recovered-frontend-release.json
+          python3 - "$RECOVERY_RELEASE_SHA" artifacts/recovered-frontend-release.json <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+          if json.loads(Path(sys.argv[2]).read_text(encoding='utf-8')).get('version') != sys.argv[1]:
+              raise SystemExit('Recovered frontend does not match the last-known-good release')
+          PY
+          echo 'Verified last-known-good backend and frontend recovery.' >> "$GITHUB_STEP_SUMMARY"
       - name: Record successful release annotation
         if: success()
         run: |
