@@ -1,0 +1,11 @@
+[general]
+enabled=yes
+bindaddr=127.0.0.1
+bindport=8088
+tlsenable=yes
+tlsbindaddr=0.0.0.0:443
+tlscertfile=/run/phonebuddy/certificates/fullchain.pem
+tlsprivatekey=/run/phonebuddy/certificates/privkey.pem
+sessionlimit=100
+session_inactivity=30
+session_keep_alive=30
