@@ -42,11 +42,12 @@ def existing_image_is_reusable(write_enabled, local_image_id, remote_image_id):
             and local_image_id == remote_image_id)
 
 
-def recovery_required(deploy_outcome, deploy_succeeded, observe_outcome):
-    """Isolate only a partial Bicep apply or failed post-deploy observation."""
+def recovery_required(deploy_outcome, deploy_succeeded, verify_outcome, observe_outcome):
+    """Record recovery for partial apply, revision verification, or health failure."""
     if deploy_outcome == 'failure':
         return True
-    return deploy_succeeded == 'true' and observe_outcome == 'failure'
+    return (deploy_succeeded == 'true'
+            and (verify_outcome == 'failure' or observe_outcome == 'failure'))
 
 
 def active_candidate_revision_names(revisions, release_version):
@@ -75,6 +76,66 @@ def active_candidate_revision_names(revisions, release_version):
     return sorted(candidates)
 
 
+def matching_revision_names(revisions, release_version, image_digest):
+    """Return revisions bound to both the release source and immutable image."""
+    if not isinstance(revisions, list) or not release_version or not image_digest:
+        raise ValueError('Revision data, release version, and image digest are required')
+    expected_image_suffix = f'@sha256:{image_digest}'
+    candidates = []
+    for revision in revisions:
+        if not isinstance(revision, dict):
+            continue
+        properties = revision.get('properties')
+        name = revision.get('name')
+        template = properties.get('template') if isinstance(properties, dict) else None
+        containers = template.get('containers') if isinstance(template, dict) else None
+        if not isinstance(name, str) or not name or not isinstance(containers, list):
+            continue
+        matches = False
+        for container in containers:
+            if not isinstance(container, dict) or not isinstance(container.get('env'), list):
+                continue
+            version_matches = any(
+                isinstance(item, dict) and item.get('name') == 'RELEASE_VERSION'
+                and item.get('value') == release_version for item in container['env']
+            )
+            image = container.get('image')
+            if version_matches and isinstance(image, str) and image.endswith(expected_image_suffix):
+                matches = True
+                break
+        if matches:
+            candidates.append((str(properties.get('createdTime', '')), name,
+                               properties.get('active') is True))
+    return [name for _, name, _ in sorted(candidates, reverse=True)]
+
+
+def active_matching_revision_names(revisions, release_version, image_digest):
+    """Return only active revisions with the exact source and immutable image."""
+    matching = set(matching_revision_names(revisions, release_version, image_digest))
+    return sorted(
+        revision['name'] for revision in revisions
+        if isinstance(revision, dict) and revision.get('name') in matching
+        and isinstance(revision.get('properties'), dict)
+        and revision['properties'].get('active') is True
+    )
+
+
+def active_revision_action(revisions, release_version, image_digest):
+    """Require an active revision bound to the exact source and image."""
+    active = active_matching_revision_names(revisions, release_version, image_digest)
+    if active:
+        return 'active', active[0]
+    return 'missing', ''
+
+
+def recovery_revision_action(revisions, release_version, image_digest):
+    """Report the exact active revision without changing Single-mode traffic."""
+    active = active_matching_revision_names(revisions, release_version, image_digest)
+    if active:
+        return 'keep', active[0]
+    return 'none', ''
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest='command', required=True)
@@ -93,11 +154,22 @@ def main(argv=None):
     recovery = commands.add_parser('recovery-required')
     recovery.add_argument('--deploy-outcome', required=True)
     recovery.add_argument('--deploy-succeeded', required=True)
+    recovery.add_argument('--verify-outcome', required=True)
     recovery.add_argument('--observe-outcome', required=True)
 
     revisions = commands.add_parser('candidate-revisions')
     revisions.add_argument('--path', required=True, type=Path)
     revisions.add_argument('--release-version', required=True)
+
+    ensure_revision = commands.add_parser('ensure-active-revision')
+    ensure_revision.add_argument('--path', required=True, type=Path)
+    ensure_revision.add_argument('--release-version', required=True)
+    ensure_revision.add_argument('--image-digest', required=True)
+
+    recovery_plan = commands.add_parser('recovery-revision-action')
+    recovery_plan.add_argument('--path', required=True, type=Path)
+    recovery_plan.add_argument('--release-version', required=True)
+    recovery_plan.add_argument('--image-digest', required=True)
 
     source = commands.add_parser('verify-current-source')
     source.add_argument('--release-sha', required=True)
@@ -126,12 +198,27 @@ def main(argv=None):
             for name in result:
                 print(name)
             return 0
+        if options.command == 'ensure-active-revision':
+            revisions_data = json.loads(options.path.read_text(encoding='utf-8'))
+            action, name = active_revision_action(
+                revisions_data, options.release_version, options.image_digest,
+            )
+            print(f'{action}\t{name}')
+            return 0
+        if options.command == 'recovery-revision-action':
+            action, name = recovery_revision_action(
+                json.loads(options.path.read_text(encoding='utf-8')),
+                options.release_version, options.image_digest,
+            )
+            print(f'{action}\t{name}')
+            return 0
         if options.command == 'verify-current-source':
             verify_current_source(options.release_sha, options.main_sha)
             print('Release source is the current main commit')
             return 0
         required = recovery_required(
-            options.deploy_outcome, options.deploy_succeeded, options.observe_outcome,
+            options.deploy_outcome, options.deploy_succeeded,
+            options.verify_outcome, options.observe_outcome,
         )
         value = f'required={str(required).lower()}\n'
         output = os.environ.get('GITHUB_OUTPUT')

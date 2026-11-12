@@ -18,6 +18,10 @@ param imageDigest string
 @description('Nonempty version returned by the readiness endpoint.')
 @minLength(1)
 param releaseVersion string
+@description('Unique lowercase alphanumeric and hyphen suffix for this trusted deployment attempt.')
+@minLength(1)
+@maxLength(63)
+param revisionSuffix string
 
 var suffix = uniqueString(subscription().id, resourceGroup().id)
 var tags = { environment: environment, service: 'phonebuddy', owner: owner, costCenter: costCenter }
@@ -129,6 +133,7 @@ resource app 'Microsoft.App/containerApps@2023-05-01' = if (deployWorkload) {
       registries: [{ server: registry.properties.loginServer, identity: identity.id }]
     }
     template: {
+      revisionSuffix: revisionSuffix
       containers: [{
         name: 'release-test'
         image: '${registry.properties.loginServer}/release-test@sha256:${imageDigest}'
