@@ -217,6 +217,9 @@ class AzureBlobStore:
             if error.code == 412:
                 error.close()
                 raise ReleaseStateError('Release state changed concurrently; refusing stale update') from error
+            if error.code == 409 and error.headers.get('x-ms-error-code') == 'BlobAlreadyExists':
+                error.close()
+                raise ReleaseStateError('Release blob already exists') from error
             error.close()
             raise ReleaseStateError(f'Azure Blob request failed with HTTP {error.code}') from error
         except (TimeoutError, URLError) as error:
@@ -363,7 +366,8 @@ def main(argv=None):
                           else 'application/octet-stream')
             except ReleaseStateError as error:
                 if not (options.create_only and options.idempotent
-                        and 'changed concurrently' in str(error)):
+                        and str(error) in ('Release state changed concurrently; refusing stale update',
+                                           'Release blob already exists')):
                     raise
                 existing, _etag = store.get(options.blob)
                 if existing != body:

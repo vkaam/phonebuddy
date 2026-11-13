@@ -301,10 +301,12 @@ jobs:
               --account "$STATE_ACCOUNT" --container release-state \
               --blob "$blob_prefix/web.tar.gz" --file artifacts/web.tar.gz \
               --create-only --idempotent
-            python3 -B scripts/release_recovery.py blob-put \
-              --account "$STATE_ACCOUNT" --container release-state \
-              --blob "$manifest_blob" --file artifacts/release-manifest.json \
-              --create-only --idempotent
+            if [[ -n "$static_site_name" ]]; then
+              python3 -B scripts/release_recovery.py blob-put \
+                --account "$STATE_ACCOUNT" --container release-state \
+                --blob "$manifest_blob" --file artifacts/release-manifest.json \
+                --create-only --idempotent
+            fi
           fi
       - name: Preview the exact Bicep release
         id: preview
