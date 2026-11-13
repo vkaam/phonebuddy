@@ -36,17 +36,20 @@ Apps is unavailable there for this subscription. West Europe also rejected the
 subscription; on 2026-11-12 the owner authorized an available alternative.
 The pilot Static Web App is configured for East US 2; the synthetic Container App
 and its monitoring resources remain in France Central. [Static Web Apps assets are globally
-distributed](https://learn.microsoft.com/en-us/azure/static-web-apps/faq). This
-choice provisions the resource but does not publish product web content.
+distributed](https://learn.microsoft.com/en-us/azure/static-web-apps/faq).
+The dev preview uses its default HTTPS hostname.
 
 TASK-62 adds the first automatic dev delivery path on protected `main`. The
 workflow builds the synthetic release-test image once, validates and promotes
 the source-bound artifact, deploys the applicable France Central hosting
 resources through Bicep, and requires the version-matched HTTP readiness and
 request-health gate before recording a release annotation. Workspace analytics
-are not a prerequisite for this product pilot's main release path. It does not
-publish the product web app or deploy test/prod resources. The trusted dev
-deployment provisions the Static Web App in East US 2.
+are not a prerequisite for this product pilot's main release path. The same
+trusted dev release deploys the source-bound web artifact to the Static Web App
+in East US 2 and verifies its release metadata. Later successful main releases
+update it; test and production are not deployed by this workflow. The web shell
+is a preview without calling, authentication, or backend integration; it needs
+no API endpoint. Public browser configuration must never contain secrets.
 
 Use distinct resource groups, data, secrets, workload identities, deployment
 identities and access assignments for each environment, even if subscriptions
