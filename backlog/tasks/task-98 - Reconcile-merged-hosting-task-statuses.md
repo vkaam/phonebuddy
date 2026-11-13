@@ -1,11 +1,11 @@
 ---
 id: TASK-98
 title: Reconcile merged hosting task statuses
-status: In Progress
+status: Done
 assignee:
   - '@codex'
 created_date: '2026-11-13T06:53:00Z'
-updated_date: '2026-11-13T07:00:00Z'
+updated_date: '2026-11-13T07:02:00Z'
 labels: []
 dependencies: []
 references:
@@ -37,8 +37,8 @@ Spec: Preserve existing acceptance and evidence. Keep issue 15 and TASK-71 open 
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 TASK-75 and TASK-95 reflect their verified merged completion while preserving evidence and checked acceptance.
-- [ ] #2 Incomplete hosting verification remains open; live consistency audit and required checks pass.
+- [x] #1 TASK-75 and TASK-95 reflect their verified merged completion while preserving evidence and checked acceptance.
+- [x] #2 Incomplete hosting verification remains open; live consistency audit and required checks pass.
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -51,4 +51,12 @@ Spec: Preserve existing acceptance and evidence. Keep issue 15 and TASK-71 open 
 
 <!-- SECTION:NOTES:BEGIN -->
 2026-11-13: Owner approved a one-task exception to the unavailable durable lease service. Live claim check passed with claim_verified true against main 46c0ee881a5294424a5474d08b633d38eaa464d0; PR 123 was temporarily closed to satisfy the unclaimed PR guard and will be reopened after the claim is pushed.
+
+Independent agent /root/status_review verified merged PRs #81 and #114, checked acceptance and no blocking findings at head 50e350f28b0fdac16ec29132352762b4a185b7a1. Live audit passed without warnings; local baseline passed in phonebuddy-quality-m8hvl42u using modern Bash and temporary init.defaultBranch=master; hosted Quality run 43382614841 and Backlog audit run 43382614856 passed. TASK-71 and issue 15 remain open.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Corrected TASK-75 and TASK-95 to Done based on their merged PRs and checked acceptance; preserved their evidence and left unfinished hosting verification open. Live consistency audit, local baseline and hosted checks passed; independent review found no blocking findings.
+<!-- SECTION:FINAL_SUMMARY:END -->
