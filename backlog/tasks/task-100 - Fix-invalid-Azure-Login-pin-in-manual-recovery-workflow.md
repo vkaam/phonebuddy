@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-13T11:52:00Z'
-updated_date: '2026-11-13T11:57:00Z'
+updated_date: '2026-11-13T11:58:00Z'
 labels:
   - cicd
 dependencies: []
@@ -58,4 +58,6 @@ Verify: python3 -B scripts/run_required_unittests.py; actionlint .github/workflo
 Corrected the manual workflow pin to the resolvable Azure Login commit used by azure-deploy.yml and added a regression test requiring a single full 40-character pin in both workflows and exact equality. The failed run was confirmed to stop at runner setup before checkout or Azure login.
 
 Local verification passed: python3 -B scripts/run_required_unittests.py (178 tests); python3 -B scripts/quality.py; actionlint .github/workflows/ci.yml .github/workflows/pr-safety.yml .github/workflows/azure-recover.yml; GitHub API lookup confirmed the pinned commit exists. The hosted manual recovery dispatch remains pending merge.
+
+Draft PR: https://github.com/vkaam/phonebuddy/pull/126. The hosted-main manual recovery acceptance criterion remains pending because this protected workflow only runs on main. Keep TASK-100 In Progress until a post-merge manual recovery completes and its evidence artifact is retained.
 <!-- SECTION:NOTES:END -->
