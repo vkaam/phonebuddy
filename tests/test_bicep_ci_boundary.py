@@ -156,6 +156,11 @@ class BicepCiBoundaryTests(unittest.TestCase):
         self.assertIn('Verify the exact source image revision is active', deployment)
         self.assertIn('$GITHUB_WORKSPACE/scripts/deployment_policy.py" verify-manifest', deployment)
         self.assertIn('scripts/deployment_policy.py verify-existing-image', deployment)
+        manifest_step = deployment.split('      - name: Create immutable release manifest', 1)[1].split(
+            '      - name: Preview the exact Bicep release', 1)[0]
+        self.assertIn('if [[ -n "$static_site_name" ]]; then\n'
+                      '              python3 -B scripts/release_recovery.py blob-put', manifest_step)
+        self.assertIn('--blob "$manifest_blob" --file artifacts/release-manifest.json', manifest_step)
         self.assertIn('scripts/deployment_policy.py recovery-required', deployment)
         isolation = deployment.split('      - name: Isolate the failed candidate', 1)[1].split(
             '      - name: Redeploy the immutable last-known-good', 1)[0]

@@ -1,13 +1,18 @@
 """Exercise immutable release-state and automatic-recovery policies."""
 import io
+import os
+import tempfile
 import unittest
+from pathlib import Path
 from urllib.error import HTTPError
+from unittest.mock import patch
 
 from scripts.release_recovery import (
     AzureBlobStore,
     ReleaseStateError,
     has_destructive_infrastructure_change,
     manual_recovery_decision,
+    main,
     recovery_decision,
     validate_manifest,
 )
@@ -167,6 +172,37 @@ class _Response:
 
 
 class BlobStoreTests(unittest.TestCase):
+    def test_existing_blob_conflict_is_distinguished_from_other_conflicts(self):
+        for code, message in [('BlobAlreadyExists', 'Release blob already exists'),
+                              ('LeaseIdMissing', 'HTTP 409')]:
+            with self.subTest(code=code):
+                def opener(_request, timeout):
+                    raise HTTPError('https://example.test', 409, 'conflict',
+                                    {'x-ms-error-code': code}, io.BytesIO())
+                store = AzureBlobStore('pbdevstate123', 'release-state', 'token', opener)
+                with self.assertRaisesRegex(ReleaseStateError, message):
+                    store.put('release', b'data', create_only=True)
+
+    def test_idempotent_create_compares_existing_content_and_fails_closed(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'bundle'
+            path.write_bytes(b'candidate')
+            args = ['blob-put', '--account', 'pbdevstate123', '--container', 'release-state',
+                    '--blob', 'release', '--file', str(path), '--create-only', '--idempotent']
+            for error, existing, expected in [
+                ('Release blob already exists', b'candidate', 0),
+                ('Release blob already exists', b'different', 1),
+                ('Azure Blob request failed with HTTP 409', b'candidate', 1),
+                ('Release state changed concurrently; refusing stale update', b'candidate', 0),
+            ]:
+                with self.subTest(error=error, existing=existing):
+                    with patch.dict(os.environ, {'AZURE_STORAGE_OAUTH_TOKEN': 'token'}), \
+                         patch('scripts.release_recovery.AzureBlobStore') as factory:
+                        factory.return_value.put.side_effect = ReleaseStateError(error)
+                        factory.return_value.get.return_value = (existing, 'etag')
+                        self.assertEqual(main(args), expected)
+                        self.assertEqual(factory.return_value.get.called, 'HTTP 409' not in error)
+
     def test_get_returns_payload_and_etag(self):
         calls = []
 
