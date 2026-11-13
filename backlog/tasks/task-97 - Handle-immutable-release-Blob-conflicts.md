@@ -1,11 +1,11 @@
 ---
 id: TASK-97
 title: Handle immutable release Blob conflicts
-status: In Progress
+status: Done
 assignee:
   - '@codex'
 created_date: '2026-11-13T06:11:00Z'
-updated_date: '2026-11-13T06:15:00Z'
+updated_date: '2026-11-13T06:26:00Z'
 labels: []
 dependencies: []
 references:
@@ -40,9 +40,9 @@ Spec: Preserve conditional writes, reject differing content and unrelated confli
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 Repeated immutable Blob writes accept existing identical content for the observed Azure conflict without overwriting it, including first-release bootstrap.
-- [ ] #2 Differing content and unrelated Blob conflicts remain failures, with meaningful regression tests.
-- [ ] #3 Required local checks and hosted PR checks pass; independent review covers the final change.
+- [x] #1 Repeated immutable Blob writes accept existing identical content for Azure BlobAlreadyExists without overwriting it, including first-release bootstrap.
+- [x] #2 Differing content and unrelated Blob conflicts remain failures, with meaningful regression tests.
+- [x] #3 Required local checks and hosted PR checks pass; independent review covers the final change.
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -57,4 +57,12 @@ Spec: Preserve conditional writes, reject differing content and unrelated confli
 Live claim check passed against main 7d46f867; the owner approved a one-task lease exception and independent review. Scoped tests passed (24); actionlint passed. Full local baseline passed at /private/var/folders/zs/9bq4j3rx3wng_vzz52w8hrf80000gn/T/phonebuddy-quality-wx04ql3d/report.json with modern Bash and temporary init.defaultBranch=master. Preliminary independent review found no code-level blockers; Azure 409 provider code remains unobserved and post-merge deployment must verify the fix.
 
 Draft PR #121 published from db4c06f; hosted checks and final-head independent review pending.
+
+Triage amendment 2026-11-13: owner approved verifying BlobAlreadyExists handling before merge and retaining issue 120 for post-merge automatic deployment and live health proof; the failed run did not retain the provider error code. Issue-level acceptance remains unchanged. Independent reviewer /root/independent_review reviewed head 763e927f37d7d39c6da8f064394f8fdd9d394a42 and found no blocking code findings; focused 24 tests passed. Required hosted Quality run 43377467368 passed at that head.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Handle Azure BlobAlreadyExists on create-only idempotent writes by comparing immutable content, retain failure for mismatched content and other conflicts, and defer a bootstrap manifest until the Static Web App identity is known. Focused tests, full local baseline, actionlint, hosted Quality, and independent review passed. Issue 120 retains live post-merge deployment and health proof under the owner-approved verification split.
+<!-- SECTION:FINAL_SUMMARY:END -->
