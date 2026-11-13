@@ -1,5 +1,6 @@
 """Protect the Azure credential boundary in the Bicep validation workflows."""
 from pathlib import Path
+import re
 import unittest
 
 from scripts.check_bicep import validate_static_site_location, validate_what_if
@@ -68,6 +69,19 @@ class BicepWhatIfValidationTests(unittest.TestCase):
 
 
 class BicepCiBoundaryTests(unittest.TestCase):
+    def test_manual_recovery_uses_the_trusted_azure_login_commit(self):
+        workflow_dir = Path(__file__).resolve().parents[1] / '.github/workflows'
+        pins = {}
+        for name in ('azure-deploy.yml', 'azure-recover.yml'):
+            text = (workflow_dir / name).read_text()
+            matches = re.findall(
+                r'^\s*-\s*uses:\s*azure/login@([0-9a-f]{40})(?:\s+#.*)?$',
+                text, re.MULTILINE,
+            )
+            self.assertEqual(len(matches), 1, f'{name} must pin one full Azure Login commit')
+            pins[name] = matches[0]
+        self.assertEqual(pins['azure-recover.yml'], pins['azure-deploy.yml'])
+
     def test_static_site_location_rejects_wrong_default_or_resource_binding(self):
         parameters = {'staticSiteLocation': {'defaultValue': "[parameters('location')]"}}
         site = {'location': "[parameters('staticSiteLocation')]"}
