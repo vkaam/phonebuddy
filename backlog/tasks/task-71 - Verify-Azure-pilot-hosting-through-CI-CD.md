@@ -1,10 +1,11 @@
 ---
 id: TASK-71
 title: Verify Azure pilot hosting through CI CD
-status: To Do
-assignee: []
+status: In Progress
+assignee:
+  - '@codex'
 created_date: '2026-11-03T17:55:00Z'
-updated_date: '2026-11-03T17:56:00Z'
+updated_date: '2026-11-12T12:51:00Z'
 labels:
   - infrastructure
   - cicd
@@ -13,6 +14,10 @@ dependencies:
   - TASK-62
 references:
   - https://github.com/vkaam/phonebuddy/issues/15
+  - TASK-95
+  - https://github.com/vkaam/phonebuddy/pull/114
+modified_files:
+  - backlog/tasks/task-71 - Verify-Azure-pilot-hosting-through-CI-CD.md
 priority: high
 type: task
 ordinal: 67000
@@ -38,3 +43,31 @@ Spec: TASK-59 implementation and TASK-62 automation must be completed on default
 - [ ] #2 The release-test workload is reachable over HTTPS, returns the expected version and exposes readiness without secrets.
 - [ ] #3 Readback demonstrates scoped runtime access and restricted administration; repeat deployment, cleanup boundaries and baseline cost are evidenced.
 <!-- AC:END -->
+
+## Implementation Plan
+
+<!-- SECTION:PLAN:BEGIN -->
+1. Inspect the approved issue and trusted release configuration and identify source-bound evidence. 2. Execute two authorized pilot deployments through the trusted default-branch workflow and collect source, artifact, health, access, cleanup and cost evidence. 3. Run the declared checks, record evidence and remaining gaps, and publish the scoped PR for independent review and required checks.
+<!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+2026-11-12: Owner explicitly authorized both pilot deployments and a one-task exception to the durable lease requirement for TASK-71 in this Codex conversation. Live eligibility check passed against origin/main 6e58aa0bc47c8ff56a96834efef882e36e418c8f with claim_verified true. This exception does not establish a durable lease.
+
+Pilot verification 2026-11-12: Trusted release run https://github.com/vkaam/phonebuddy/actions/runs/43176157247 attempt 2 is in progress against main 6e58aa0bc47c8ff56a96834efef882e36e418c8f; Bicep apply and exact-source revision verification succeeded, health observation pending. Readback found registry admin disabled, vault public access disabled and RBAC/purge protection enabled, and workload pull identity has AcrPull only at the registry scope. The shared France Central dev group budget reports EUR 1.767225 current monthly spend against EUR 10, not an isolated hosting cost. The group also contains data services and must not be deleted as task cleanup. No Static Web App was found in the subscription; the trusted workflow explicitly sets deployStaticSite=false, so the approved issue requirement remains unmet and needs triage. Local Bicep baseline passed. scripts/check.py failed on Windows due to npm invocation and a skipped Bash test; separate web tests also failed under local Node 26 and require investigation. No acceptance criterion is claimed complete.
+
+Draft PR: https://github.com/vkaam/phonebuddy/pull/113. Static Web App gap and ongoing deployment were reported on issue #15: https://github.com/vkaam/phonebuddy/issues/15#issuecomment-6822788292.
+
+Deployment update: run 43176157247 attempt 2 succeeded, including the 600-second health gate and exact revision verification; an independent HTTPS /ready probe returned ready=true and version 6e58aa0bc47c8ff56a96834efef882e36e418c8f. Its job log identifies source CI artifact release-image-43176003060-1 and locked registry digest sha256:58ae726e33f66d50171668ee9f38b2c1bc237689b7c39bd03cb634b43664d706. Attempt 3 has started as the authorized repeat. Attempt 2 logged upload of artifact 13941833351, but it became unavailable (HTTP 404) after rerun; do not claim its artifact is retained. Web lint, build and npm audit passed separately; the local Windows full baseline remains failed/incomplete.
+
+Repeat deployment: run 43176157247 attempt 3 succeeded on main 6e58aa0bc47c8ff56a96834efef882e36e418c8f and reused CI artifact release-image-43176003060-1 and registry digest sha256:58ae726e33f66d50171668ee9f38b2c1bc237689b7c39bd03cb634b43664d706. Retained artifact release-evidence-43176157247-3 (ID 13942119818, expires 2026-12-12) contains Bicep what-if and deployment, revision and health evidence; its health report passes with 100 requests across 10 windows over 600 seconds, zero errors, version mismatches or dependency outages, and p95 448.659 ms. The Container Apps environment reports succeeded with no infrastructure subnet, consistent with managed public networking. Group-scope and inherited role readback showed one subscription Owner user and one resource-group Contributor service principal, but does not prove all effective administration access. Acceptance remains open pending the Static Web App gap, complete evidence, local baseline and independent review.
+
+Independent agent review of PR head 08f16220491a4b630963b79436a4c7d48eda6769: AC 2 supported by independent HTTPS readiness probe and attempt 3 health artifact; AC 1 unmet because no Static Web App exists and workflow omits it; AC 3 remains unproven because attempt 2 artifact is unavailable and complete effective administration access, isolated hosting baseline cost and cleanup evidence are not established. Independent Bicep check passed; independent local baseline failed on Windows. Review applies to the stated head and must be refreshed for final acceptance.
+
+Additional read-only Azure Cost Management query, 2026-11-12, scoped to the France Central dev resource group, MonthToDate ActualCost grouped by ResourceId: registry EUR 0.355781, three health alert rules EUR 0.254742 combined, workspace EUR 0. No Container App, Container Apps environment, vault, identity or Application Insights row was returned; reporting delay or zero usage cannot be distinguished, so this is not a complete isolated hosting cost baseline. The same query returned unrelated data-service charges, including SQL database EUR 1.136744. Registry-scope inherited RBAC readback returned subscription Owner user, resource-group Contributor service principal and registry AcrPull service principal; vault-scope inherited readback returned the Owner and Contributor only. These listings do not establish group membership, eligible assignments or all effective permissions.
+
+2026-11-12 owner-approved split: TASK-95 / PR #114 verifies the Static Web App configuration and safe preview before merge; TASK-71 retains trusted merged-source deployment and live evidence for all issue 15 requirements. TASK-71 must not be finalized until the missing Static Web App work is merged and live proof is collected. Azure rejected the West Europe preview with RequestDisallowedByAzure (region not accepting new customers for this subscription); no Static Web App was deployed.
+
+Native dependency on TASK-95 could not yet be added: the Backlog CLI only resolves task IDs in this working copy and TASK-95 exists on PR #114, not main. Add the dependency after TASK-95 lands; do not treat the reference above as a satisfied dependency.
+<!-- SECTION:NOTES:END -->
