@@ -135,6 +135,11 @@ class RecoveryPolicyTests(unittest.TestCase):
         self.assertFalse(recovery_required('success', 'true', 'success', 'success'))
         self.assertFalse(recovery_required('success', 'true', 'success', 'skipped'))
 
+    def test_missing_or_failed_frontend_deployment_requires_recovery(self):
+        self.assertTrue(recovery_required('success', 'true', 'success', 'success', 'failure'))
+        self.assertTrue(recovery_required('success', 'true', 'success', 'success', 'skipped'))
+        self.assertFalse(recovery_required('success', 'true', 'success', 'success', 'success'))
+
     def test_recovery_selects_only_active_revision_for_failed_release(self):
         def revision(name, release, active):
             return {

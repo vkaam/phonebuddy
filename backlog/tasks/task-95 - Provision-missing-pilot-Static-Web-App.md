@@ -1,11 +1,11 @@
 ---
 id: TASK-95
 title: Provision missing pilot Static Web App
-status: In Progress
+status: Done
 assignee:
   - '@codex'
 created_date: '2026-11-12T12:20:00Z'
-updated_date: '2026-11-12T15:13:00Z'
+updated_date: '2026-11-13T06:59:00Z'
 labels:
   - infrastructure
   - cicd
@@ -82,6 +82,8 @@ Independent review at PR head 113142a843c26544ce8730cfaea39bd7f6f43c20 passed Bi
 Owner-approved verification amendment 2026-11-12: The owner directed merge while waiving local Bicep CLI validation and accepting the local browser-suite environment limitation. At PR head a0454ee527b7c41240181db1b6c54d7a5098e974, required unit tests and all local baseline checks except web-browser passed; Playwright Chromium was unavailable, and its temporary install failed with ENOSPC. The separate check_bicep.py command could not run because the Bicep CLI is unavailable. Hosted checks pass. The Bicep CLI and local browser checks are waived for this merge by the owner; TASK-71 retains post-merge live deployment, resource, location, source and health verification.
 
 Independent review of final source at a0454ee527b7c41240181db1b6c54d7a5098e974 found no code-level blockers. East US 2 safe what-if and hosted checks are recorded above; the approved local-check exceptions are explicit.
+
+2026-11-13 reconciliation: PR #114 merged as 6540241850965ddb175922c69ac91d10162d2c23 with checked acceptance; status corrected under TASK-98. TASK-71 and issue #15 remain open.
 <!-- SECTION:NOTES:END -->
 
 ## Final Summary

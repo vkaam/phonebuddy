@@ -1,11 +1,11 @@
 ---
 id: TASK-75
 title: Reconcile TASK-59 completion after merge
-status: In Progress
+status: Done
 assignee:
   - '@codex'
 created_date: '2026-11-03T19:44:00Z'
-updated_date: '2026-11-03T19:56:00Z'
+updated_date: '2026-11-13T06:59:00Z'
 labels:
   - infrastructure
   - cicd
@@ -67,4 +67,6 @@ Hosted Quality run 41706429563 and advisory Risk run 41706425806 passed on head 
 Final-head Quality run 41706884615 failed because the global consistency guard reports TASK-74 issue is closed or live approval/revision evidence is unavailable. Issue #14 was closed by the owner at 2026-11-03T19:48:48Z while TASK-74 remains To Do on main and PR #80 remains open. This is unrelated to TASK-59 source; reconciliation requires resolving the issue #14/TASK-74 state rather than bypassing the guard. TASK-75 remains In Progress.
 
 Owner explicitly selected reopening issue #14 to resolve the PR #81 consistency blocker. Reopened issue #14 on 2026-11-03 after preserving its body and acceptance criteria; this is the only approved change to TASK-74/PR #80 state and does not assert their acceptance. Re-run final-head Quality and advisory checks; independent review remains required before merge.
+
+2026-11-13 reconciliation: PR #81 merged as 0ccbbb34b4adb1882f2ebad357d339177392cc93 with checked acceptance; status corrected under TASK-98. TASK-71 and issue #15 remain open.
 <!-- SECTION:NOTES:END -->
