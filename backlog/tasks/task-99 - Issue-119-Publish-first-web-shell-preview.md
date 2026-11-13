@@ -1,11 +1,11 @@
 ---
 id: TASK-99
 title: Issue 119 - Publish first web shell preview
-status: In Progress
+status: Done
 assignee:
   - '@codex'
 created_date: '2026-11-13T09:09:00Z'
-updated_date: '2026-11-13T09:17:00Z'
+updated_date: '2026-11-13T09:20:00Z'
 labels: []
 dependencies: []
 references:
@@ -43,9 +43,9 @@ Spec: Use the existing protected-main dev release path; no test or production de
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 The shell starts without an API endpoint, navigation works, and calling and backend integration are clearly unavailable with call controls disabled.
-- [ ] #2 Configuration remains public and secret-free, and the preview limitations and trusted dev release behavior are documented.
-- [ ] #3 Unit, browser, build, lint and repository checks verify the scoped change and the existing trusted main release path publishes the built shell to dev.
+- [x] #1 The shell starts without an API endpoint, navigation works, and calling and backend integration are clearly unavailable with call controls disabled.
+- [x] #2 Configuration remains public and secret-free, and the preview limitations and trusted dev release behavior are documented.
+- [x] #3 Unit, browser, build, lint and repository checks pass, and the existing trusted main release workflow is configured to publish the built shell to dev.
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -62,4 +62,14 @@ Live claim check passed against origin/main 9c033af1ab3f9bf1928a1d67ffad00dcdfdc
 Implementation complete: no configuration fetch at startup; the shell labels calling and backend integration unavailable. Independent preliminary review found no code blockers and the reported documentation typo was corrected. Web unit, lint, build and browser tests pass; repository baseline passes with Homebrew Bash and init.defaultBranch=master (evidence phonebuddy-quality-p19ps_5f). Hosted checks, final-head review and live dev release remain pending.
 
 Draft PR: https://github.com/vkaam/phonebuddy/pull/124. Hosted checks and final-head independent review are pending; live publication remains post-merge.
+
+Triage clarification 2026-11-13: AC 3 evaluates the existing release workflow configuration before merge; issue 119 still requires actual HTTPS publication, which can only be observed after the protected-main merge. No issue requirement or file scope changed.
+
+Independent agent review of 7577bc25 found no blocking findings; browser, unit, lint, build and full baseline passed independently (phonebuddy-quality-kzppmw8e). Hosted Quality and advisory checks passed at 7577bc25. Live HTTPS publication remains to be observed after merge.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Prepared the dev web preview to load without an API endpoint, identify unavailable calling and backend integration, and keep call controls disabled. Browser and local baseline checks passed; the existing source-bound dev release workflow was reviewed. Live deployment remains post-merge verification.
+<!-- SECTION:FINAL_SUMMARY:END -->
