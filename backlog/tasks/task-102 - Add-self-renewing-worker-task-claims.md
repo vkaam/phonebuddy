@@ -1,11 +1,11 @@
 ---
 id: TASK-102
 title: Add self-renewing worker task claims
-status: In Progress
+status: Done
 assignee:
   - '@codex'
 created_date: '2026-11-14T11:49:00Z'
-updated_date: '2026-11-14T14:14:00Z'
+updated_date: '2026-11-14T14:24:00Z'
 labels: []
 dependencies:
   - TASK-101
@@ -37,10 +37,10 @@ Depends on merged and completed TASK-101. Worker-held claims are cooperative and
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 A worker acquires a task-specific Blob lease before task work; a competing claimant is rejected while it remains active.
-- [ ] #2 The worker renews throughout execution, releases on clean completion or shutdown, and stops task work and publishing when ownership is lost or uncertain.
-- [ ] #3 After expiry, a replacement can acquire the task and must reconcile existing task, branch and PR state before resuming; retry and interruption fail closed.
-- [ ] #4 Automated tests cover contention, renewal failure, release, expiry and recovery, and operating documentation explains credentials, renewal, takeover and the cooperative enforcement limitation.
+- [x] #1 A worker acquires a task-specific Blob lease before task work; a competing claimant is rejected while it remains active.
+- [x] #2 The worker renews throughout execution, releases on clean completion or shutdown, and stops task work and publishing when ownership is lost or uncertain.
+- [x] #3 After expiry, a replacement can acquire the task and must reconcile existing task, branch and PR state before resuming; retry and interruption fail closed.
+- [x] #4 Automated tests cover contention, renewal failure, release, expiry and recovery, and operating documentation explains credentials, renewal, takeover and the cooperative enforcement limitation.
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -72,4 +72,14 @@ PR 130 was reopened as the TASK-102 implementation PR on the synchronized branch
 Independent committed-head review 9b547821261b752518a1e87c4ac212859889fb41 reproduced an ordinary child surviving supervisor SIGKILL. Added an independently armed watchdog and paused bootstrap to stop the process group on supervisor death, with a crash regression; final review remains pending.
 
 Watchdog reworked after further independent review: it is the process-group leader, starts an isolated paused worker, kills the group on any watchdog exit or supervisor loss, and avoids signaling a reaped group twice. Startup-hook, broken-pipe, supervisor-crash and cleanup regressions pass. Final committed-head review and hosted checks remain pending.
+
+The manually held lease expired before the end-to-end handover test; implementation was paused, and the actual TASK-102 wrapper invocation then acquired the lease, passed live reconciliation, renewed during a harmless 22-second command and released successfully. The manual lease was reacquired afterward and the fresh live consistency check passed with claim_verified true. No competing claim was observed. Final review must cover this evidence.
+
+Independent agent worker_review validated scoped acceptance at e3a866a5d522736c6455fd681481ceb3f39a95ad with no blocking findings and independently passed all 30 focused tests and diff check. Full local baseline and hosted checks passed. Actual TASK-102 end-to-end acquisition, reconciliation, renewal, command and release were subsequently verified live. Final task-record head requires independent revalidation and hosted checks.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Implemented cooperative, self-renewing worker task claims with live preflight reconciliation, bounded failure handling, a process-group watchdog and fail-closed cleanup. Tests and real Azure checks cover contention, renewal, release, expiry, takeover, supervisor crash and task reconciliation. The mechanism does not enforce GitHub publishing fencing or protect against escaped processes or simultaneous watchdog failure.
+<!-- SECTION:FINAL_SUMMARY:END -->
