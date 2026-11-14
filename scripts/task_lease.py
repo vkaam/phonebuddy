@@ -1,5 +1,7 @@
 """Azure Blob-backed task leases. Publishing must be fenced separately."""
+import ctypes
 import json
+import sys
 from email.utils import formatdate
 import re
 import time
@@ -12,6 +14,25 @@ from urllib.request import Request, urlopen
 
 class LeaseError(RuntimeError):
     """Lease ownership cannot be established with certainty."""
+
+
+def suspend_aware_time():
+    """Elapsed seconds including system suspend; fail closed on unsupported hosts."""
+    if sys.platform == 'darwin':
+        class Timebase(ctypes.Structure):
+            _fields_ = [('numer', ctypes.c_uint32), ('denom', ctypes.c_uint32)]
+        try:
+            lib = ctypes.CDLL('/usr/lib/libSystem.B.dylib')
+            lib.mach_continuous_time.restype = ctypes.c_uint64
+            info = Timebase()
+            if lib.mach_timebase_info(ctypes.byref(info)) != 0 or not info.denom:
+                raise LeaseError('suspend-aware clock unavailable')
+            return lib.mach_continuous_time() * info.numer / info.denom / 1_000_000_000
+        except (OSError, AttributeError) as error:
+            raise LeaseError('suspend-aware clock unavailable') from error
+    if hasattr(time, 'CLOCK_BOOTTIME'):
+        return time.clock_gettime(time.CLOCK_BOOTTIME)
+    raise LeaseError('suspend-aware clock unavailable')
 
 
 class BlobError(LeaseError):
@@ -76,13 +97,16 @@ class Lease:
     generation: int
     duration: int
     deadline: float
-    clock: object = time.monotonic
+    clock: object = suspend_aware_time
     valid: bool = True
 
     def _check(self):
-        if not self.valid or self.clock() >= self.deadline:
+        try:
+            if not self.valid or self.clock() >= self.deadline:
+                raise LeaseError('lease expired or ownership uncertain')
+        except Exception:
             self.valid = False
-            raise LeaseError('lease expired or ownership uncertain')
+            raise
 
     def renew(self):
         self._check()
@@ -102,7 +126,7 @@ class Lease:
         self.store.lease_action(self.task, self.lease_id, 'release')
 
 
-def acquire(store, task, duration=60, clock=time.monotonic):
+def acquire(store, task, duration=60, clock=suspend_aware_time):
     if not re.fullmatch(r'TASK-[1-9][0-9]*', task):
         raise ValueError('invalid task ID')
     if not isinstance(duration, int) or isinstance(duration, bool) or not 15 <= duration <= 60:

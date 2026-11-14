@@ -1,9 +1,9 @@
 import threading
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 from urllib.error import HTTPError
 import unittest
 
-from scripts.task_lease import BlobStore, LeaseError, acquire
+from scripts.task_lease import BlobStore, LeaseError, acquire, suspend_aware_time
 
 
 class Clock:
@@ -78,6 +78,32 @@ class LeaseTests(unittest.TestCase):
             first.renew()
         with self.assertRaises(LeaseError):
             first.release()
+
+    def test_sleep_elapsed_invalidates_old_holder(self):
+        lease = self.acquire()
+        # The lease clock advances during suspend even if monotonic is frozen.
+        with patch('scripts.task_lease.time.monotonic', return_value=0):
+            self.clock.now = 16
+            with self.assertRaises(LeaseError):
+                lease.renew()
+        self.assertFalse(lease.valid)
+
+    def test_darwin_clock_uses_continuous_time(self):
+        library = Mock()
+        library.mach_continuous_time.return_value = 8_000_000_000
+        def set_timebase(info):
+            info._obj.numer = 1
+            info._obj.denom = 1
+            return 0
+        library.mach_timebase_info.side_effect = set_timebase
+        with patch('scripts.task_lease.sys.platform', 'darwin'), \
+             patch('scripts.task_lease.ctypes.CDLL', return_value=library), \
+             patch('scripts.task_lease.time.monotonic', return_value=0):
+            self.assertEqual(suspend_aware_time(), 8)
+            library.mach_continuous_time.assert_called_once()
+
+    def test_platform_clock_is_available(self):
+        self.assertGreaterEqual(suspend_aware_time(), 0)
 
     def test_renewal_failure_invalidates_holder(self):
         lease = self.acquire()

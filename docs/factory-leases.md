@@ -29,8 +29,8 @@ they do not preserve monotonicity automatically. Protect the account from deleti
 ## Lifecycle
 
 Supply `BlobStore` a token provider callable and call `acquire(store, 'TASK-123')`.
-The returned in-memory lease has a unique lease ID, a generation and a monotonic
-local deadline. Renew well before the 15–60 second duration expires. Failed or
+The returned in-memory lease has a unique lease ID, a generation and a suspend-aware
+local deadline (macOS continuous time or Linux boot time); unsupported hosts fail closed. Renew well before the 15–60 second duration expires. Failed or
 late renewal invalidates the handle; stop work that depends on ownership and
 reconcile task, branch and PR state before reacquiring. Release when finished.
 Lease IDs are credentials: do not expose them to workers or logs. A failed or
