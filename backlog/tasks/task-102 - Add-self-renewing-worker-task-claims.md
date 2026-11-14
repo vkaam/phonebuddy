@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-14T11:49:00Z'
-updated_date: '2026-11-14T14:03:00Z'
+updated_date: '2026-11-14T14:04:00Z'
 labels: []
 dependencies:
   - TASK-101
@@ -66,4 +66,6 @@ TASK-102 acquired an exclusive Blob lease; live claim guard passed with claim_ve
 Independent review of the initial wrapper identified cleanup, bounded-preflight, split-namespace, branch recheck and loss/shutdown edge cases. The implementation was revised to fail closed, terminate and verify the process group, bind to the approved storage namespace, bound preflight and recheck the branch. Final committed-head review remains required.
 
 Live Azure verification on the reserved synthetic task confirmed that an unknown task is rejected before the worker runs, and that the supervisor renews and releases a real Blob lease around a harmless command. Independent review findings have been addressed in scope; final-head independent review remains pending.
+
+PR 130 was reopened as the TASK-102 implementation PR on the synchronized branch. Current implementation and live synthetic-blob checks are recorded there; committed-head independent review and hosted checks are pending.
 <!-- SECTION:NOTES:END -->
