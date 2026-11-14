@@ -14,6 +14,13 @@ class LeaseError(RuntimeError):
     """Lease ownership cannot be established with certainty."""
 
 
+class BlobError(LeaseError):
+    def __init__(self, status, code):
+        self.status = status
+        self.code = code
+        super().__init__(f"storage rejected operation ({status}, {code})")
+
+
 class BlobStore:
     """Minimal Azure Blob REST adapter. Token provider must return an Entra token."""
 
@@ -35,17 +42,16 @@ class BlobStore:
             with urlopen(Request(url, data=body, headers=request_headers, method=method), timeout=self.timeout) as response:
                 return response.read(), response.headers
         except HTTPError as error:
-            if error.code in (404, 409, 412):
-                raise LeaseError(f"storage rejected lease operation ({error.code})") from None
-            raise LeaseError(f"storage unavailable ({error.code})") from None
+            code = error.headers.get('x-ms-error-code', 'Unknown')
+            raise BlobError(error.code, code) from None
         except (URLError, OSError, TimeoutError) as error:
             raise LeaseError("storage operation uncertain") from error
 
     def initialize(self, task):
         try:
             self.request(task, 'PUT', headers={'x-ms-blob-type': 'BlockBlob', 'If-None-Match': '*'}, body=b'{"generation":0}')
-        except LeaseError as error:
-            if '(412)' not in str(error):
+        except BlobError as error:
+            if (error.status, error.code) not in {(409, 'BlobAlreadyExists'), (412, 'ConditionNotMet')}:
                 raise
 
     def acquire(self, task, lease_id, duration):

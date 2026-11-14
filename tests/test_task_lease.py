@@ -124,12 +124,19 @@ class LeaseTests(unittest.TestCase):
 class BlobStoreTests(unittest.TestCase):
     def test_existing_blob_is_not_overwritten(self):
         store = BlobStore('account123', 'task-leases', lambda: 'token')
-        error = HTTPError('https://example.invalid', 412, 'precondition', {}, None)
+        error = HTTPError('https://example.invalid', 409, 'exists', {'x-ms-error-code': 'BlobAlreadyExists'}, None)
         with patch('scripts.task_lease.urlopen', side_effect=error) as call:
             store.initialize('TASK-101')
         request = call.call_args.args[0]
         self.assertEqual(request.get_header('If-none-match'), '*')
         self.assertEqual(request.get_header('X-ms-blob-type'), 'BlockBlob')
+
+    def test_unrelated_conflict_is_not_treated_as_existing_blob(self):
+        store = BlobStore('account123', 'task-leases', lambda: 'token')
+        error = HTTPError('https://example.invalid', 409, 'conflict', {'x-ms-error-code': 'LeaseAlreadyPresent'}, None)
+        with patch('scripts.task_lease.urlopen', side_effect=error):
+            with self.assertRaises(LeaseError):
+                store.initialize('TASK-101')
 
     def test_storage_failure_is_not_treated_as_existing_blob(self):
         store = BlobStore('account123', 'task-leases', lambda: 'token')
