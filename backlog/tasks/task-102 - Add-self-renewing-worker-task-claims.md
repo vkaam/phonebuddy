@@ -4,7 +4,7 @@ title: Add self-renewing worker task claims
 status: To Do
 assignee: []
 created_date: '2026-11-14T11:49:00Z'
-updated_date: '2026-11-14T11:51:00Z'
+updated_date: '2026-11-14T12:15:00Z'
 labels: []
 dependencies:
   - TASK-101
@@ -43,4 +43,6 @@ Depends on merged and completed TASK-101. Worker-held claims are cooperative and
 Draft task-record PR: https://github.com/vkaam/phonebuddy/pull/130. TASK-101 is In Progress in PR 128 and is not yet on main; do not claim TASK-102 until its dependency is merged and finalized.
 
 PR 130 was closed temporarily because the repository-wide audit rejects an open implementation PR with an unclaimed To Do task and TASK-101 is absent from main. Reopen after TASK-101 is merged and finalized, when this task can be claimed. The task record is preserved on its feature branch.
+
+TASK-101 merged and reached Done on main in PR 128. Task intake is being published on separate triage branch triage/gh-129-task-102; the reserved implementation branch remains agent/gh-129-1-worker-leases. The old task-record PR 130 remains closed. Before implementation, fetch main and rerun the live claim verification and applicable lease requirements.
 <!-- SECTION:NOTES:END -->
