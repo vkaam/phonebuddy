@@ -4,6 +4,7 @@ title: Add self-renewing worker task claims
 status: To Do
 assignee: []
 created_date: '2026-11-14T11:49:00Z'
+updated_date: '2026-11-14T11:49:00Z'
 labels: []
 dependencies:
   - TASK-101
@@ -35,3 +36,9 @@ Depends on merged and completed TASK-101. Worker-held claims are cooperative and
 - [ ] #3 After expiry, a replacement can acquire the task and must reconcile existing task, branch and PR state before resuming; retry and interruption fail closed.
 - [ ] #4 Automated tests cover contention, renewal failure, release, expiry and recovery, and operating documentation explains credentials, renewal, takeover and the cooperative enforcement limitation.
 <!-- AC:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Draft task-record PR: https://github.com/vkaam/phonebuddy/pull/130. TASK-101 is In Progress in PR 128 and is not yet on main; do not claim TASK-102 until its dependency is merged and finalized.
+<!-- SECTION:NOTES:END -->
