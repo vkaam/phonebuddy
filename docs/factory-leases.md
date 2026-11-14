@@ -13,8 +13,9 @@ Deploy `infra/factory-leases.bicep` separately into an approved factory resource
 group with a globally unique account name and the object ID of the trusted
 coordinator's service principal. The account disables shared keys and public
 blob access. The coordinator receives Blob Data Contributor at the container
-scope; workers must not receive this role or GitHub publishing credentials.
-Provisioning the role requires suitable role-assignment permissions. Use Entra
+scope. Cooperative workers need separately authorized container access; unlike a
+trusted controller, they can break leases and alter records. Do not grant them
+GitHub publishing credentials for an enforced boundary. Provisioning the role requires suitable role-assignment permissions. Use Entra
 access tokens for `https://storage.azure.com/`; do not place tokens in blobs,
 logs, source control or command-line arguments.
 
@@ -41,3 +42,39 @@ Storage loss, token failure or ambiguous responses fail closed. Blob leases can
 be broken by authorized principals and do not protect unrelated resources.
 The implementation uses one primary account; disaster recovery and cross-region
 failover need a separate epoch and controller protocol before activation.
+
+## Cooperative worker wrapper
+
+A worker with explicitly authorized Blob Data Contributor access to the private
+container and a current Azure CLI login can run a command under a task lease:
+
+```sh
+python3 -B scripts/worker_lease.py --task TASK-123 \
+  --branch agent/example -- worker-command arg
+```
+
+The wrapper uses the single approved `pbphonebuddyleases` / `task-leases`
+namespace; it does not accept an alternate account or container. Run from the
+task's checkout on its approved branch. The wrapper acquires a
+60-second lease, renews it every 20 seconds, fetches `origin`, and requires the
+live Backlog guard to reconcile the task, branch, issue and PR before starting
+the command. It needs the GitHub CLI's read access for that guard. A takeover
+uses the same command after the prior lease expires; do not bypass reconciliation.
+The fetch and guard have bounded timeouts; a hung preflight stops without
+starting work. The wrapper terminates remaining members of the child process
+group before releasing a confirmed lease after normal exit or handled shutdown.
+If the host cannot confirm the group is gone (including permission errors), the
+wrapper exits with an error and leaves the lease to expire, even if the direct
+command completed. Group termination is abrupt to avoid work after lease loss.
+On renewal failure, expiry, uncertain ownership or shutdown it stops the child
+process group and exits nonzero. It does not release a lease it cannot confirm.
+The lease expires if the wrapper or host crashes. An uncatchable wrapper crash
+may leave a child running; process-group cleanup cannot run in that case.
+
+This mechanism is cooperative. It cannot stop work outside its child process
+group, a process that escapes that group, or a worker that ignores the wrapper;
+it does not revoke GitHub credentials or fence in-flight GitHub operations. A
+worker must not publish outside this supervised command and must stop if it
+cannot confirm the lease. Do not interpret this as the trusted publishing
+controller or authorization for unattended publishing. Restrict and audit
+storage access: a Blob Data Contributor can break leases or alter generations.

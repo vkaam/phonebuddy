@@ -1,16 +1,22 @@
 ---
 id: TASK-102
 title: Add self-renewing worker task claims
-status: To Do
-assignee: []
+status: In Progress
+assignee:
+  - '@codex'
 created_date: '2026-11-14T11:49:00Z'
-updated_date: '2026-11-14T12:15:00Z'
+updated_date: '2026-11-14T14:03:00Z'
 labels: []
 dependencies:
   - TASK-101
 references:
   - https://github.com/vkaam/phonebuddy/issues/129
   - scripts/task_lease.py
+  - docs/factory-leases.md
+  - scripts/worker_lease.py
+modified_files:
+  - scripts/worker_lease.py
+  - tests/test_worker_lease.py
   - docs/factory-leases.md
 priority: high
 type: feature
@@ -37,6 +43,15 @@ Depends on merged and completed TASK-101. Worker-held claims are cooperative and
 - [ ] #4 Automated tests cover contention, renewal failure, release, expiry and recovery, and operating documentation explains credentials, renewal, takeover and the cooperative enforcement limitation.
 <!-- AC:END -->
 
+## Implementation Plan
+
+<!-- SECTION:PLAN:BEGIN -->
+1. Build a worker command wrapper that acquires the task lease and performs live task, branch and PR reconciliation before starting work.
+2. Renew in the background and stop the child process group on lease loss, uncertainty or shutdown; release on clean exit.
+3. Add failure, contention, takeover and process lifecycle tests and document authentication and cooperative limits.
+4. Run required checks, publish and obtain independent review.
+<!-- SECTION:PLAN:END -->
+
 ## Implementation Notes
 
 <!-- SECTION:NOTES:BEGIN -->
@@ -45,4 +60,10 @@ Draft task-record PR: https://github.com/vkaam/phonebuddy/pull/130. TASK-101 is 
 PR 130 was closed temporarily because the repository-wide audit rejects an open implementation PR with an unclaimed To Do task and TASK-101 is absent from main. Reopen after TASK-101 is merged and finalized, when this task can be claimed. The task record is preserved on its feature branch.
 
 TASK-101 merged and reached Done on main in PR 128. Task intake is being published on separate triage branch triage/gh-129-task-102; the reserved implementation branch remains agent/gh-129-1-worker-leases. The old task-record PR 130 remains closed. Before implementation, fetch main and rerun the live claim verification and applicable lease requirements.
+
+TASK-102 acquired an exclusive Blob lease; live claim guard passed with claim_verified true on the synchronized branch.
+
+Independent review of the initial wrapper identified cleanup, bounded-preflight, split-namespace, branch recheck and loss/shutdown edge cases. The implementation was revised to fail closed, terminate and verify the process group, bind to the approved storage namespace, bound preflight and recheck the branch. Final committed-head review remains required.
+
+Live Azure verification on the reserved synthetic task confirmed that an unknown task is rejected before the worker runs, and that the supervisor renews and releases a real Blob lease around a harmless command. Independent review findings have been addressed in scope; final-head independent review remains pending.
 <!-- SECTION:NOTES:END -->
