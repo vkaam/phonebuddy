@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-14T07:21:00Z'
-updated_date: '2026-11-14T07:26:00Z'
+updated_date: '2026-11-14T07:28:00Z'
 labels: []
 dependencies: []
 references:
@@ -54,4 +54,6 @@ This task implements the storage and lease foundation; trusted publishing enforc
 
 <!-- SECTION:NOTES:BEGIN -->
 Owner approved bootstrap without a lease. Live pre-claim audit passed. Nine focused tests pass and Bicep 0.48.1 compiles. No live Azure provisioning or integration test has run; subscription, resource group and coordinator identity remain to be selected. GitHub publishing fencing is a separate required slice.
+
+Draft PR: https://github.com/vkaam/phonebuddy/pull/128. Full local baseline passed with modern Bash and init.defaultBranch override; Bicep 0.48.1 compiled. Hosted checks, independent review and live Azure validation remain pending.
 <!-- SECTION:NOTES:END -->
