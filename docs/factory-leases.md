@@ -54,7 +54,8 @@ python3 -B scripts/worker_lease.py --task TASK-123 \
 ```
 
 The wrapper uses the single approved `pbphonebuddyleases` / `task-leases`
-namespace; it does not accept an alternate account or container. Run from the
+namespace; it does not accept an alternate account or container. Commands must
+be noninteractive: the worker receives no standard input. Run from the
 task's checkout on its approved branch. The wrapper acquires a
 60-second lease, renews it every 20 seconds, fetches `origin`, and requires the
 live Backlog guard to reconcile the task, branch, issue and PR before starting
@@ -68,8 +69,10 @@ wrapper exits with an error and leaves the lease to expire, even if the direct
 command completed. Group termination is abrupt to avoid work after lease loss.
 On renewal failure, expiry, uncertain ownership or shutdown it stops the child
 process group and exits nonzero. It does not release a lease it cannot confirm.
-The lease expires if the wrapper or host crashes. An uncatchable wrapper crash
-may leave a child running; process-group cleanup cannot run in that case.
+A separate watchdog stops the worker process group if the wrapper crashes; the
+worker is not started until the watchdog is armed. The lease expires if the
+wrapper or host crashes. Simultaneous watchdog failure, escaped processes or
+host failures remain outside this cooperative process boundary.
 
 This mechanism is cooperative. It cannot stop work outside its child process
 group, a process that escapes that group, or a worker that ignores the wrapper;

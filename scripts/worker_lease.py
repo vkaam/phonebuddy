@@ -2,6 +2,7 @@
 import argparse
 import json
 import os
+import select
 import signal
 import subprocess
 import sys
@@ -18,6 +19,45 @@ from scripts.task_lease import BlobStore, LeaseError, acquire
 ROOT = Path(__file__).resolve().parent.parent
 LEASE_ACCOUNT = 'pbphonebuddyleases'
 LEASE_CONTAINER = 'task-leases'
+
+# The watchdog owns the process group and stays alive until the supervisor
+# terminates it. The worker is stopped before exec until the supervisor arms it.
+CHILD_BOOTSTRAP = (
+    'import os,signal,sys; os.kill(os.getpid(),signal.SIGSTOP); '
+    'os.execvp(sys.argv[1],sys.argv[1:])'
+)
+WATCHDOG = """import os, select, signal, subprocess, sys, time
+control, status = map(int, sys.argv[1:3])
+try:
+    child = subprocess.Popen([sys.executable, '-I', '-S', '-c', sys.argv[3], *sys.argv[4:]])
+    while True:
+        ready, _, _ = select.select([control], [], [], .05)
+        if ready and not os.read(control, 1):
+            raise RuntimeError('supervisor stopped')
+        pid, state = os.waitpid(child.pid, os.WUNTRACED | os.WNOHANG)
+        if pid and os.WIFSTOPPED(state):
+            break
+        if pid:
+            raise RuntimeError('bootstrap exited before stopping')
+        time.sleep(.01)
+    os.write(status, b'R')
+    if os.read(control, 1) != b'G':
+        raise RuntimeError('supervisor stopped')
+    os.kill(child.pid, signal.SIGCONT)
+    while True:
+        ready, _, _ = select.select([control], [], [], .05)
+        if ready and not os.read(control, 1):
+            raise RuntimeError('supervisor stopped')
+        result = child.poll()
+        if result is not None:
+            os.write(status, ('X%d\\n' % result).encode())
+            # Keep the group leader alive until the supervisor kills the group.
+            while os.read(control, 1):
+                pass
+            break
+finally:
+    os.killpg(os.getpgrp(), signal.SIGKILL)
+"""
 
 
 class WorkerError(RuntimeError):
@@ -57,58 +97,91 @@ class Supervisor:
             return False
         return True
 
-    def _terminate_group(self, child):
+    def _terminate_group(self, watchdog):
         try:
             try:
-                os.killpg(child.pid, signal.SIGKILL)
+                os.killpg(watchdog.pid, signal.SIGKILL)
             except ProcessLookupError:
-                child.wait()
-                return
-            try:
-                child.wait(timeout=self.grace)
-            except subprocess.TimeoutExpired as error:
-                self.lost.set()
-                raise WorkerError('worker termination could not be confirmed') from error
+                pass
+            watchdog.wait(timeout=self.grace)
             deadline = time.monotonic() + self.grace
             while True:
                 try:
-                    os.killpg(child.pid, 0)
+                    os.killpg(watchdog.pid, 0)
                 except ProcessLookupError:
                     break
                 if time.monotonic() >= deadline:
                     self.lost.set()
                     raise WorkerError('process group cleanup could not be confirmed')
                 time.sleep(min(self.poll_interval, max(0, deadline - time.monotonic())))
-        except OSError as error:
+        except (OSError, subprocess.TimeoutExpired) as error:
             self.lost.set()
             raise WorkerError('process group cleanup could not be confirmed') from error
 
     def run(self, command, *, stdout=None, stderr=None, timeout=None, env=None):
         if not self.healthy() or self.stop.is_set():
             raise WorkerError('lease unavailable or shutdown requested')
-        child = subprocess.Popen(command, cwd=ROOT, stdout=stdout, stderr=stderr,
-                                 start_new_session=True, env=env)
-        deadline = None if timeout is None else time.monotonic() + timeout
+        control_read, control_write = os.pipe()
         try:
-            while child.poll() is None:
-                if deadline is not None and time.monotonic() >= deadline:
-                    raise WorkerError('preflight timed out')
+            status_read, status_write = os.pipe()
+        except OSError:
+            os.close(control_read)
+            os.close(control_write)
+            raise
+        try:
+            watchdog = subprocess.Popen(
+                [sys.executable, '-I', '-S', '-c', WATCHDOG, str(control_read),
+                 str(status_write), CHILD_BOOTSTRAP, *command], cwd=ROOT,
+                pass_fds=(control_read, status_write), stdin=subprocess.DEVNULL,
+                stdout=stdout, stderr=stderr, start_new_session=True, env=env)
+        except BaseException:
+            for fd in (control_read, control_write, status_read, status_write):
+                os.close(fd)
+            raise
+        os.close(control_read)
+        os.close(status_write)
+        deadline = None if timeout is None else time.monotonic() + timeout
+        termination_started = False
+        try:
+            ready, _, _ = select.select([status_read], [], [], 5)
+            if not ready or os.read(status_read, 1) != b'R':
+                self.lost.set()
+                raise WorkerError('worker watchdog unavailable')
+            if not self.healthy() or self.stop.is_set():
+                raise WorkerError('lease lost or shutdown requested')
+            os.write(control_write, b'G')
+            data = b''
+            while True:
                 healthy = self.healthy()
                 if self.stop.is_set() or not healthy:
                     raise WorkerError('lease lost or shutdown requested')
-                time.sleep(self.poll_interval)
-            healthy = self.healthy()
-            if self.stop.is_set() or not healthy:
-                raise WorkerError('lease lost or shutdown requested')
-            result = child.returncode
-            self._terminate_group(child)
-            healthy = self.healthy()
-            if self.stop.is_set() or not healthy:
+                if deadline is not None and time.monotonic() >= deadline:
+                    raise WorkerError('preflight timed out')
+                ready, _, _ = select.select([status_read], [], [], self.poll_interval)
+                if ready:
+                    chunk = os.read(status_read, 64)
+                    if not chunk:
+                        self.lost.set()
+                        raise WorkerError('worker watchdog stopped')
+                    data += chunk
+                    if b'\n' in data:
+                        if not data.startswith(b'X'):
+                            self.lost.set()
+                            raise WorkerError('invalid watchdog status')
+                        result = int(data[1:].strip())
+                        break
+            termination_started = True
+            self._terminate_group(watchdog)
+            if self.stop.is_set() or not self.healthy():
                 raise WorkerError('lease lost or shutdown requested')
             return result
         except BaseException:
-            self._terminate_group(child)
+            if not termination_started:
+                self._terminate_group(watchdog)
             raise
+        finally:
+            os.close(control_write)
+            os.close(status_read)
 
     def close(self):
         self.stop.set()

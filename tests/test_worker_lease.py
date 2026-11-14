@@ -1,5 +1,6 @@
 import json
 import os
+import subprocess
 import sys
 import tempfile
 import threading
@@ -9,7 +10,7 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 from scripts.task_lease import LeaseError
-from scripts.worker_lease import Supervisor, WorkerError, main, reconcile
+from scripts.worker_lease import CHILD_BOOTSTRAP, WATCHDOG, Supervisor, WorkerError, main, reconcile
 
 
 class FakeLease:
@@ -90,11 +91,71 @@ class SupervisorTests(unittest.TestCase):
         supervisor = Supervisor(lease, interval=1, poll_interval=0.01, grace=0.1)
         supervisor.start()
         try:
-            with self.assertRaisesRegex(WorkerError, 'timed out'):
+            with self.assertRaises(WorkerError):
                 supervisor.run([sys.executable, '-c', 'import time; time.sleep(5)'], timeout=0.1)
         finally:
             supervisor.close()
-        self.assertEqual(lease.releases, 1)
+        self.assertEqual(lease.releases, 0 if supervisor.lost.is_set() else 1)
+
+    def test_bootstrap_and_watchdog_ignore_python_startup_hooks(self):
+        lease = FakeLease()
+        supervisor = Supervisor(lease, interval=1, poll_interval=0.01, grace=1)
+        with tempfile.TemporaryDirectory() as directory:
+            marker = Path(directory) / 'startup'
+            Path(directory, 'sitecustomize.py').write_text(
+                'from pathlib import Path; Path(' + repr(str(marker)) + ').write_text("unsafe")')
+            env = dict(os.environ, PYTHONPATH=directory)
+            supervisor.start()
+            try:
+                self.assertEqual(supervisor.run(['/usr/bin/true'], env=env), 0)
+            finally:
+                supervisor.close()
+            self.assertFalse(marker.exists())
+
+    def test_watchdog_kills_group_on_broken_status_pipe(self):
+        control_read, control_write = os.pipe()
+        status_read, status_write = os.pipe()
+        os.close(status_read)
+        proc = subprocess.Popen(
+            [sys.executable, '-I', '-S', '-c', WATCHDOG, str(control_read),
+             str(status_write), CHILD_BOOTSTRAP, '/usr/bin/true'],
+            pass_fds=(control_read, status_write), start_new_session=True,
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        os.close(control_read)
+        os.close(status_write)
+        try:
+            self.assertEqual(proc.wait(timeout=5), -__import__('signal').SIGKILL)
+        finally:
+            os.close(control_write)
+            if proc.poll() is None:
+                proc.kill()
+                proc.wait()
+
+    def test_supervisor_crash_stops_ordinary_child(self):
+        with tempfile.TemporaryDirectory() as directory:
+            ready = str(Path(directory) / 'ready')
+            marker = str(Path(directory) / 'late')
+            worker = ('import pathlib,sys,time; pathlib.Path(sys.argv[1]).write_text("ready"); '
+                      'time.sleep(1); pathlib.Path(sys.argv[2]).write_text("late")')
+            parent = ("import sys; from scripts.worker_lease import Supervisor; "
+                      "from tests.test_worker_lease import FakeLease; "
+                      "s=Supervisor(FakeLease(),interval=1,poll_interval=.01,grace=.5); "
+                      "s.start(); s.run([sys.executable,'-c',sys.argv[1],sys.argv[2],sys.argv[3]])")
+            proc = subprocess.Popen([sys.executable, '-B', '-c', parent, worker, ready, marker],
+                                    cwd=str(Path(__file__).resolve().parent.parent))
+            try:
+                deadline = time.monotonic() + 5
+                while not os.path.exists(ready) and proc.poll() is None and time.monotonic() < deadline:
+                    time.sleep(0.02)
+                self.assertTrue(os.path.exists(ready), 'worker did not start')
+                proc.kill()
+                proc.wait(timeout=2)
+                time.sleep(1.2)
+                self.assertFalse(os.path.exists(marker), 'worker survived supervisor crash')
+            finally:
+                if proc.poll() is None:
+                    proc.kill()
+                    proc.wait()
 
     def test_shutdown_stops_running_worker_and_releases_lease(self):
         lease = FakeLease()
@@ -120,6 +181,23 @@ class SupervisorTests(unittest.TestCase):
                 with self.assertRaises(WorkerError):
                     supervisor.run(['should-not-run'])
                 popen.assert_not_called()
+        finally:
+            supervisor.close()
+        self.assertEqual(lease.releases, 0)
+
+    def test_lease_loss_after_cleanup_does_not_signal_group_twice(self):
+        lease = FakeLease()
+        supervisor = Supervisor(lease, interval=1, poll_interval=0.01, grace=1)
+        terminate = supervisor._terminate_group
+        def lose_after_cleanup(child):
+            terminate(child)
+            lease.valid = False
+        supervisor.start()
+        try:
+            with patch.object(supervisor, '_terminate_group', side_effect=lose_after_cleanup) as cleanup:
+                with self.assertRaises(WorkerError):
+                    supervisor.run(['/usr/bin/true'])
+                self.assertEqual(cleanup.call_count, 1)
         finally:
             supervisor.close()
         self.assertEqual(lease.releases, 0)

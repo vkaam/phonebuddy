@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-14T11:49:00Z'
-updated_date: '2026-11-14T14:04:00Z'
+updated_date: '2026-11-14T14:14:00Z'
 labels: []
 dependencies:
   - TASK-101
@@ -68,4 +68,8 @@ Independent review of the initial wrapper identified cleanup, bounded-preflight,
 Live Azure verification on the reserved synthetic task confirmed that an unknown task is rejected before the worker runs, and that the supervisor renews and releases a real Blob lease around a harmless command. Independent review findings have been addressed in scope; final-head independent review remains pending.
 
 PR 130 was reopened as the TASK-102 implementation PR on the synchronized branch. Current implementation and live synthetic-blob checks are recorded there; committed-head independent review and hosted checks are pending.
+
+Independent committed-head review 9b547821261b752518a1e87c4ac212859889fb41 reproduced an ordinary child surviving supervisor SIGKILL. Added an independently armed watchdog and paused bootstrap to stop the process group on supervisor death, with a crash regression; final review remains pending.
+
+Watchdog reworked after further independent review: it is the process-group leader, starts an isolated paused worker, kills the group on any watchdog exit or supervisor loss, and avoids signaling a reaped group twice. Startup-hook, broken-pipe, supervisor-crash and cleanup regressions pass. Final committed-head review and hosted checks remain pending.
 <!-- SECTION:NOTES:END -->
