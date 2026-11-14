@@ -110,8 +110,8 @@ class Lease:
 
     def renew(self):
         self._check()
-        started = self.clock()
         try:
+            started = self.clock()
             self.store.lease_action(self.task, self.lease_id, 'renew')
             if self.clock() >= self.deadline:
                 raise LeaseError('renewal completed after local deadline')

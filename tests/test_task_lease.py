@@ -114,6 +114,16 @@ class LeaseTests(unittest.TestCase):
         with self.assertRaises(LeaseError):
             lease.renew()
 
+    def test_renewal_clock_failure_invalidates_handle(self):
+        lease = self.acquire()
+        lease.clock = Mock(side_effect=[0, LeaseError('clock unavailable')])
+        with self.assertRaises(LeaseError):
+            lease.renew()
+        self.assertFalse(lease.valid)
+        lease.clock = self.clock
+        with self.assertRaises(LeaseError):
+            lease.renew()
+
     def test_renewal_extends_deadline(self):
         lease = self.acquire()
         self.clock.now = 10

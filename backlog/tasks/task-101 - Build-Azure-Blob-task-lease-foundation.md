@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-14T07:21:00Z'
-updated_date: '2026-11-14T12:08:00Z'
+updated_date: '2026-11-14T12:10:00Z'
 labels: []
 dependencies: []
 references:
@@ -62,4 +62,6 @@ Owner authorization 2026-11-14: use the Azure CLI selected subscription for the 
 Azure deployment factory-lease-foundation succeeded in subscription 43c19721-4a1d-49ed-954b-5e8a29b346b1, phonebuddy, Belgium Central: account pbphonebuddyleases, private task-leases container, managed identity id-pb-factory-coordinator. Shared key and public blob access are disabled, HTTPS and TLS 1.2 required. A temporary container-scoped user role was removed and the remaining direct role assignment is the coordinator. Live tests using reserved TASK-999999999999999999 passed contention, renew, release, increasing generation, expiry and reacquisition. This revealed Azure BlobAlreadyExists HTTP 409, now handled and covered by regression tests. The reserved test blob must not be deleted or reused. Trusted publishing remains unimplemented; do not use as autonomous claim authorization.
 
 Independent review at b5eafb8144e043329646da03ad566f22336569f6 identified a blocking deadline flaw: macOS monotonic time can stop during sleep. Updated deadlines to use macOS continuous time or Linux CLOCK_BOOTTIME, failing closed when unavailable; added sleep and clock regressions. Review and acceptance must be refreshed on the updated head.
+
+Independent review at cfb220c5d769cf5efa604f7ae252365510f68d37 confirmed suspend handling but identified a second-clock-read failure path that left the handle valid. Fix moves the read into the invalidating guard and adds a regression; final-head review remains pending.
 <!-- SECTION:NOTES:END -->
