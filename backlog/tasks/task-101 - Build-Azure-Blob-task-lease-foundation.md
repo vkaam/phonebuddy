@@ -1,11 +1,11 @@
 ---
 id: TASK-101
 title: Build Azure Blob task lease foundation
-status: In Progress
+status: Done
 assignee:
   - '@codex'
 created_date: '2026-11-14T07:21:00Z'
-updated_date: '2026-11-14T12:10:00Z'
+updated_date: '2026-11-14T12:12:00Z'
 labels: []
 dependencies: []
 references:
@@ -36,9 +36,9 @@ This task implements the storage and lease foundation; trusted publishing enforc
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 A dedicated private storage account and container support identity-scoped task lease coordination without embedded credentials.
-- [ ] #2 Atomic task leases support contention, renewal, release, recovery after expiry, and durable increasing generations while failing closed on uncertain ownership.
-- [ ] #3 Tests cover contention, lease loss, expiry, generation persistence, and backend errors; operational documentation states setup and the limitations pending publishing enforcement.
+- [x] #1 A dedicated private storage account and container support identity-scoped task lease coordination without embedded credentials.
+- [x] #2 Atomic task leases support contention, renewal, release, recovery after expiry, and durable increasing generations while failing closed on uncertain ownership.
+- [x] #3 Tests cover contention, lease loss, expiry, generation persistence, and backend errors; operational documentation states setup and the limitations pending publishing enforcement.
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -64,4 +64,12 @@ Azure deployment factory-lease-foundation succeeded in subscription 43c19721-4a1
 Independent review at b5eafb8144e043329646da03ad566f22336569f6 identified a blocking deadline flaw: macOS monotonic time can stop during sleep. Updated deadlines to use macOS continuous time or Linux CLOCK_BOOTTIME, failing closed when unavailable; added sleep and clock regressions. Review and acceptance must be refreshed on the updated head.
 
 Independent review at cfb220c5d769cf5efa604f7ae252365510f68d37 confirmed suspend handling but identified a second-clock-read failure path that left the handle valid. Fix moves the read into the invalidating guard and adds a regression; final-head review remains pending.
+
+Independent agent review and scoped acceptance at 5cf0ea70b74586e8fc183fef75947d9f8a8c9a06: no blocking findings; 14 focused tests and diff check pass from an isolated archive. Reviewer independently confirmed live account settings and coordinator role; live lease operations were verified earlier and are recorded above. Review must be revalidated on the final task-record head.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Added and deployed dedicated private Azure Blob lease storage and implemented fail-closed task lease acquisition, renewal, expiry handling and durable generations. Live contention and recovery tests, 14 focused tests, the full local baseline and hosted checks passed. A separate trusted publishing controller remains required for enforced GitHub fencing.
+<!-- SECTION:FINAL_SUMMARY:END -->
