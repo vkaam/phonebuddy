@@ -5,7 +5,7 @@ status: Done
 assignee:
   - '@codex'
 created_date: '2026-11-14T11:49:00Z'
-updated_date: '2026-11-14T14:24:00Z'
+updated_date: '2026-11-14T14:36:00Z'
 labels: []
 dependencies:
   - TASK-101
@@ -76,6 +76,10 @@ Watchdog reworked after further independent review: it is the process-group lead
 The manually held lease expired before the end-to-end handover test; implementation was paused, and the actual TASK-102 wrapper invocation then acquired the lease, passed live reconciliation, renewed during a harmless 22-second command and released successfully. The manual lease was reacquired afterward and the fresh live consistency check passed with claim_verified true. No competing claim was observed. Final review must cover this evidence.
 
 Independent agent worker_review validated scoped acceptance at e3a866a5d522736c6455fd681481ceb3f39a95ad with no blocking findings and independently passed all 30 focused tests and diff check. Full local baseline and hosted checks passed. Actual TASK-102 end-to-end acquisition, reconciliation, renewal, command and release were subsequently verified live. Final task-record head requires independent revalidation and hosted checks.
+
+A second manual lease lapse was detected during final verification. Work paused; the lease was reacquired. Re-running live claim reconciliation before resuming; proposed Done is temporarily withdrawn until the check passes.
+
+After the second lapse, the task was returned to In Progress locally, the lease was reacquired, and a fresh live guard passed with claim_verified true and no competing claim observed. This is a point-in-time check and cannot prove no activity occurred during the gap. Proposed Done restored; final-head review and checks must be refreshed.
 <!-- SECTION:NOTES:END -->
 
 ## Final Summary
