@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-15T20:39:00Z'
-updated_date: '2026-11-15T21:44:00Z'
+updated_date: '2026-11-15T21:46:00Z'
 labels:
   - identity
   - backend
@@ -97,7 +97,23 @@ Draft PR opened: https://github.com/vkaam/phonebuddy/pull/134 (head 413065125efa
 Posted issue progress evidence on #22 (comment ID 6901672132) linking draft PR #134 and summarizing scope, local validation, and remaining live configuration requirements.
 
 PR #134 was marked ready for review after all pre-merge checks passed on ae76048709afa02082c7e13b675f80d61f974515: Quality, Repository-wide task and issue drift, Build immutable release image, and advisory Risk report. Updated issue progress in comment 6901705441; PR remains unmerged pending final-head recheck.
+
+Merge is blocked: the automatic approval review rejected the authorized squash-merge request because it mutates protected/default main and requires separate approval. PR #134 remains ready and all checks were green on head 5b513d27f48989d69b312544028112297caadcba; no merge was performed.
+
+Posted issue #22 merge-blocker progress comment ID 6901882540; it records PR #134 check evidence and the approval-review rejection without changing approved issue requirements.
 <!-- SECTION:NOTES:END -->
+
+## Comments
+
+<!-- COMMENTS:BEGIN -->
+created: 2026-11-15T21:46:00Z
+
+---
+
+Merge blocker: GitHub merge action was rejected by automatic approval review because squash-merging PR #134 mutates protected/default main and requires separate approval. PR is ready and current checks passed; task remains In Progress until an authorized merge occurs.
+
+---
+<!-- COMMENTS:END -->
 
 ## Final Summary
 
