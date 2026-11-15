@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-15T20:39:00Z'
-updated_date: '2026-11-15T21:23:00Z'
+updated_date: '2026-11-15T21:27:00Z'
 labels:
   - identity
   - backend
@@ -89,4 +89,6 @@ Spec: Preserve issue #22 acceptance. Use the already planned React web and Fasti
 
 <!-- SECTION:NOTES:BEGIN -->
 Implemented SPA auth code + PKCE with MSAL session storage, sign-in/out and reauthentication handling; protected workspace rendering waits for API membership confirmation. API validates Entra RS256 tokens against tenant issuer, audience, required claims and token lifetime; membership and roles come from Azure SQL, and one-use hashed WebSocket tickets are organization-bound and recheck active membership. Synthetic API tests cover user/admin memberships, no-membership/cross-organization HTTP denial, revoked membership, invalid signature/issuer/audience/expired tokens, WebSocket organization binding and replay. Web unit tests, web build, Playwright smoke tests, API integration tests, and full scripts/check.py passed. scripts/check.py needed a per-process init.defaultBranch=master override for one pre-existing fixture that assumes that default; repository settings were not changed. Real Entra app registration, SQL deployment and live identity are intentionally not configured in this task.
+
+Independent read-only review found and drove two fixes: SQL ticket creation now checks the INSERT OUTPUT recordset after cleanup instead of the cleanup-sensitive rowsAffected[0], and MSAL token expiry now triggers silent renewal; failed renewal clears the confirmed workspace session and requires sign-in. Added a synthetic timed expiry test. Reviewer rechecked both fixes and reported no remaining blocker; SQL behavior has no live database integration test because this task intentionally uses synthetic identities and no deployed database.
 <!-- SECTION:NOTES:END -->

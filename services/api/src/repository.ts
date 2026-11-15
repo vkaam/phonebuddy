@@ -101,6 +101,7 @@ export class SqlAuthRepository implements AuthRepository {
           OR (ConsumedAt IS NOT NULL AND ConsumedAt < DATEADD(hour, -1, SYSUTCDATETIME()));
 
         INSERT INTO dbo.WebSocketTicket (TicketHash, TenantId, ObjectId, OrganizationId, ExpiresAt)
+        OUTPUT inserted.TicketHash AS ticketHash
         SELECT @ticketHash, @tenantId, @objectId, @organizationId, @expiresAt
         WHERE EXISTS (
           SELECT 1 FROM dbo.OrganizationMembership
@@ -108,7 +109,7 @@ export class SqlAuthRepository implements AuthRepository {
             AND OrganizationId = @organizationId AND IsActive = 1
         )
       `);
-    return result.rowsAffected[0] === 1;
+    return result.recordset.length === 1;
   }
 
   async consumeSocketTicket(

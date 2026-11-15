@@ -2,8 +2,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createAuthService } from '../src/auth.js';
 
-function fakeClient({ account = null, redirectResult = null, tokenError = null } = {}) {
+function fakeClient({ account = null, redirectResult = null, tokenError = null, tokenErrorAfter = 1, expiresOn = null } = {}) {
   const calls = [];
+  let silentCalls = 0;
   let activeAccount = account;
   return {
     calls,
@@ -14,8 +15,9 @@ function fakeClient({ account = null, redirectResult = null, tokenError = null }
     setActiveAccount(value) { calls.push(['setActiveAccount', value]); activeAccount = value; },
     async acquireTokenSilent(request) {
       calls.push(['acquireTokenSilent', request]);
-      if (tokenError) throw tokenError;
-      return { accessToken: 'synthetic-api-access-token' };
+      silentCalls += 1;
+      if (tokenError && silentCalls >= tokenErrorAfter) throw tokenError;
+      return { accessToken: 'synthetic-api-access-token', expiresOn };
     },
     async loginRedirect(request) { calls.push(['loginRedirect', request]); },
     async logoutRedirect(request) { calls.push(['logoutRedirect', request]); },
@@ -47,6 +49,27 @@ test('expired or interaction-required sessions are marked for sign-in again', as
   auth.requireSignIn();
   assert.equal(auth.getSnapshot().status, 'reauthenticationRequired');
   await assert.rejects(auth.getAccessToken(), error => error?.name === 'InteractionRequiredAuthError' && error.errorCode === 'interaction_required');
+});
+
+test('session is cleared and reauthentication is requested when silent renewal expires', async () => {
+  const account = { homeAccountId: 'account-1', username: 'user@example.test' };
+  const client = fakeClient({
+    account,
+    tokenError: { name: 'InteractionRequiredAuthError', errorCode: 'interaction_required' },
+    tokenErrorAfter: 2,
+    expiresOn: new Date(Date.now() + 25),
+  });
+  const auth = createAuthService(client, { apiScope: 'scope', postLogoutRedirectUri: 'https://app.example' });
+  const needsSignIn = new Promise(resolve => {
+    const unsubscribe = auth.subscribe(snapshot => {
+      if (snapshot.status === 'reauthenticationRequired') { unsubscribe(); resolve(snapshot); }
+    });
+  });
+
+  assert.equal((await auth.initialize()).status, 'signedIn');
+  const expired = await needsSignIn;
+  assert.equal(expired.account, account);
+  assert.equal(auth.getSnapshot().status, 'reauthenticationRequired');
 });
 
 test('sign-out uses the current account and the configured redirect URI', async () => {

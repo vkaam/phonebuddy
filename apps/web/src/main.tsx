@@ -25,6 +25,7 @@ function App() {
   const [organizationId, setOrganizationId] = useState('');
   useEffect(() => {
     let active = true;
+    let membershipConfirmed = false;
     let unsubscribe: (() => void) | undefined;
     const start = async () => {
       try {
@@ -35,7 +36,13 @@ function App() {
         const config = validateConfig(await response.json());
         const auth = createMsalAuthService(config);
         unsubscribe = auth.subscribe((snapshot: AuthState) => {
-          if (active) setSession({ status: snapshot.status === 'signedIn' ? 'loading' : snapshot.status as AppSession['status'], auth, account: snapshot.account });
+          if (!active) return;
+          if (snapshot.status === 'signedIn' && membershipConfirmed) {
+            setSession(current => ({ ...current, status: 'signedIn', auth, account: snapshot.account }));
+            return;
+          }
+          if (snapshot.status !== 'signedIn') membershipConfirmed = false;
+          setSession({ status: snapshot.status === 'signedIn' ? 'loading' : snapshot.status as AppSession['status'], auth, account: snapshot.account });
         });
         await auth.initialize();
         if (!active) return;
@@ -48,6 +55,7 @@ function App() {
         const body = await me.json() as { memberships?: Membership[] };
         const memberships = Array.isArray(body.memberships) ? body.memberships : [];
         if (!memberships.length) { setSession({ status: 'noMembership', auth, account: snapshot.account, memberships }); return; }
+        membershipConfirmed = true;
         setOrganizationId(memberships[0].organizationId);
         setSession({ status: 'signedIn', auth, account: snapshot.account, memberships });
       } catch (error) {
