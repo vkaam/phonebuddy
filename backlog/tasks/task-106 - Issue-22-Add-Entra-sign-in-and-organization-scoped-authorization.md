@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-15T20:39:00Z'
-updated_date: '2026-11-15T21:30:00Z'
+updated_date: '2026-11-15T21:44:00Z'
 labels:
   - identity
   - backend
@@ -95,4 +95,12 @@ Independent read-only review found and drove two fixes: SQL ticket creation now 
 Draft PR opened: https://github.com/vkaam/phonebuddy/pull/134 (head 413065125efa0731ca39e01d0433c7348dd5e6ab; base main 38ea5a84bb445ffe8e64b71814d2bbbf9408c3c8). Independent review initially found SQL insert-result accounting and proactive expiry gaps; both were fixed in commit 4130651 and re-reviewed with no blocking findings. Awaiting hosted CI checks and PR review.
 
 Posted issue progress evidence on #22 (comment ID 6901672132) linking draft PR #134 and summarizing scope, local validation, and remaining live configuration requirements.
+
+PR #134 was marked ready for review after all pre-merge checks passed on ae76048709afa02082c7e13b675f80d61f974515: Quality, Repository-wide task and issue drift, Build immutable release image, and advisory Risk report. Updated issue progress in comment 6901705441; PR remains unmerged pending final-head recheck.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Implemented the approved Entra PKCE sign-in and organization-scoped access slice for issue #22. Added a Fastify API that validates Entra access tokens, resolves active membership/roles from Azure SQL, and issues one-use organization-bound WebSocket tickets; gated the browser workspace behind verified membership with sign-out and proactive session expiry handling. Synthetic API and auth tests, web build/browser smoke, and full repository checks pass. Independent review findings were fixed and rechecked. PR #134 is ready for review; live Entra registration, Azure SQL deployment/integration, and production identity use remain intentionally out of scope.
+<!-- SECTION:FINAL_SUMMARY:END -->
