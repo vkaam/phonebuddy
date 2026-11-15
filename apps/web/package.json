@@ -11,6 +11,7 @@
     "test:browser": "playwright test"
   },
   "dependencies": {
+    "@azure/msal-browser": "5.29.1",
     "react": "19.1.0",
     "react-dom": "19.1.0"
   },
