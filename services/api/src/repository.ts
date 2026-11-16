@@ -31,9 +31,27 @@ export interface SqlConnectionSettings {
   managedIdentityClientId?: string;
 }
 
+export class RetryableConnection<T> {
+  private pending: Promise<T> | undefined;
+
+  get(connect: () => Promise<T>): Promise<T> {
+    if (this.pending) return this.pending;
+    const attempt = connect();
+    this.pending = attempt;
+    void attempt.catch(() => {
+      if (this.pending === attempt) this.pending = undefined;
+    });
+    return attempt;
+  }
+
+  get hasAttempt(): boolean {
+    return this.pending !== undefined;
+  }
+}
+
 export class SqlAuthRepository implements AuthRepository {
   private readonly pool: sql.ConnectionPool;
-  private connected: Promise<sql.ConnectionPool> | undefined;
+  private readonly connected = new RetryableConnection<sql.ConnectionPool>();
 
   constructor(settings: SqlConnectionSettings) {
     this.pool = new sql.ConnectionPool({
@@ -50,8 +68,7 @@ export class SqlAuthRepository implements AuthRepository {
   }
 
   private connection(): Promise<sql.ConnectionPool> {
-    this.connected ??= this.pool.connect();
-    return this.connected!;
+    return this.connected.get(() => this.pool.connect());
   }
 
   async membershipsFor(principal: Principal): Promise<Membership[]> {
@@ -142,7 +159,7 @@ export class SqlAuthRepository implements AuthRepository {
   }
 
   async close(): Promise<void> {
-    if (this.connected) await this.pool.close();
+    if (this.connected.hasAttempt) await this.pool.close();
   }
 }
 

@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-15T20:39:00Z'
-updated_date: '2026-11-15T21:46:00Z'
+updated_date: '2026-11-16T05:27:00Z'
 labels:
   - identity
   - backend
@@ -42,11 +42,13 @@ modified_files:
   - apps/web/README.md
   - apps/web/src/config.js
   - apps/web/src/auth.js
+  - apps/web/src/session.js
   - apps/web/src/main.tsx
   - apps/web/src/style.css
   - apps/web/e2e/smoke.spec.js
   - apps/web/tests/config.test.mjs
   - apps/web/tests/auth.test.mjs
+  - apps/web/tests/session.test.mjs
   - apps/web/config.example.json
 priority: high
 type: feature
@@ -101,6 +103,8 @@ PR #134 was marked ready for review after all pre-merge checks passed on ae76048
 Merge is blocked: the automatic approval review rejected the authorized squash-merge request because it mutates protected/default main and requires separate approval. PR #134 remains ready and all checks were green on head 5b513d27f48989d69b312544028112297caadcba; no merge was performed.
 
 Posted issue #22 merge-blocker progress comment ID 6901882540; it records PR #134 check evidence and the approval-review rejection without changing approved issue requirements.
+
+Addressed PR #134 review threads 4580334390 and 4580334396. Added a retryable SQL connection cache that clears rejected attempts while coalescing concurrent requests; regression test verifies first failure then successful retry. Preserved the resolved no-membership state after silent token renewal and added a session-state regression test. Targeted checks pass: API 5/5, web unit 12/12, web build, Playwright 2/2, and full scripts/check.py.
 <!-- SECTION:NOTES:END -->
 
 ## Comments
@@ -111,6 +115,14 @@ created: 2026-11-15T21:46:00Z
 ---
 
 Merge blocker: GitHub merge action was rejected by automatic approval review because squash-merging PR #134 mutates protected/default main and requires separate approval. PR is ready and current checks passed; task remains In Progress until an authorized merge occurs.
+
+---
+
+created: 2026-11-16T05:27:00Z
+
+---
+
+PR review comments resolved in working tree: SQL connection retry and no-membership session preservation. Tests cover both regressions. Waiting for CI on the updated PR head before reacting and resolving the GitHub threads.
 
 ---
 <!-- COMMENTS:END -->

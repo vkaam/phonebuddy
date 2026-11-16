@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { createMsalAuthService } from './auth.js';
 import { validateConfig } from './config.js';
+import { sessionForAuthUpdate } from './session.js';
 import './style.css';
 
 type Membership = { organizationId: string; role: 'user' | 'admin' };
@@ -25,7 +26,7 @@ function App() {
   const [organizationId, setOrganizationId] = useState('');
   useEffect(() => {
     let active = true;
-    let membershipConfirmed = false;
+    let accessResolved = false;
     let unsubscribe: (() => void) | undefined;
     const start = async () => {
       try {
@@ -37,12 +38,8 @@ function App() {
         const auth = createMsalAuthService(config);
         unsubscribe = auth.subscribe((snapshot: AuthState) => {
           if (!active) return;
-          if (snapshot.status === 'signedIn' && membershipConfirmed) {
-            setSession(current => ({ ...current, status: 'signedIn', auth, account: snapshot.account }));
-            return;
-          }
-          if (snapshot.status !== 'signedIn') membershipConfirmed = false;
-          setSession({ status: snapshot.status === 'signedIn' ? 'loading' : snapshot.status as AppSession['status'], auth, account: snapshot.account });
+          if (snapshot.status !== 'signedIn') accessResolved = false;
+          setSession(current => sessionForAuthUpdate(current, snapshot, auth, accessResolved) as AppSession);
         });
         await auth.initialize();
         if (!active) return;
@@ -54,8 +51,8 @@ function App() {
         if (!me.ok) throw new Error('Could not load your workspace access. Try again.');
         const body = await me.json() as { memberships?: Membership[] };
         const memberships = Array.isArray(body.memberships) ? body.memberships : [];
+        accessResolved = true;
         if (!memberships.length) { setSession({ status: 'noMembership', auth, account: snapshot.account, memberships }); return; }
-        membershipConfirmed = true;
         setOrganizationId(memberships[0].organizationId);
         setSession({ status: 'signedIn', auth, account: snapshot.account, memberships });
       } catch (error) {

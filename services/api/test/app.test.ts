@@ -3,7 +3,7 @@ import { after, before, test } from 'node:test';
 import { createLocalJWKSet, exportJWK, generateKeyPair, SignJWT } from 'jose';
 import { buildApi } from '../src/app.js';
 import { issuerForTenant, readApiConfig, type ApiConfig } from '../src/config.js';
-import { MemoryAuthRepository } from '../src/repository.js';
+import { MemoryAuthRepository, RetryableConnection } from '../src/repository.js';
 import { createEntraAccessTokenVerifier } from '../src/token.js';
 
 const tenantId = '11111111-1111-4111-8111-111111111111';
@@ -96,6 +96,22 @@ test('API configuration fails closed on missing or unsafe settings', () => {
     SQL_DATABASE: 'phonebuddy',
     WEB_ORIGIN: 'http://phonebuddy.example',
   }), /WEB_ORIGIN/);
+});
+
+test('a failed SQL connection attempt is shared then cleared so a later request can retry', async () => {
+  const connection = new RetryableConnection<{ id: number }>();
+  let attempts = 0;
+  const connect = async () => {
+    attempts += 1;
+    if (attempts === 1) throw new Error('transient connection failure');
+    return { id: attempts };
+  };
+
+  const first = connection.get(connect);
+  assert.equal(connection.get(connect), first);
+  await assert.rejects(first, /transient connection failure/);
+  assert.deepEqual(await connection.get(connect), { id: 2 });
+  assert.equal(attempts, 2);
 });
 
 test('API validates token signature, issuer, audience, and expiration', async () => {
