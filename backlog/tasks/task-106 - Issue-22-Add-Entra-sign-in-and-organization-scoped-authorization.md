@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-15T20:39:00Z'
-updated_date: '2026-11-16T05:27:00Z'
+updated_date: '2026-11-16T05:28:00Z'
 labels:
   - identity
   - backend
@@ -105,6 +105,8 @@ Merge is blocked: the automatic approval review rejected the authorized squash-m
 Posted issue #22 merge-blocker progress comment ID 6901882540; it records PR #134 check evidence and the approval-review rejection without changing approved issue requirements.
 
 Addressed PR #134 review threads 4580334390 and 4580334396. Added a retryable SQL connection cache that clears rejected attempts while coalescing concurrent requests; regression test verifies first failure then successful retry. Preserved the resolved no-membership state after silent token renewal and added a session-state regression test. Targeted checks pass: API 5/5, web unit 12/12, web build, Playwright 2/2, and full scripts/check.py.
+
+PR threads 4580334390 (SQL reconnect) and 4580334396 (no-membership renewal) are fixed, regression-tested, reacted to with +1, and resolved. The full local quality check passed after these changes; hosted CI is being rerun on the updated PR head.
 <!-- SECTION:NOTES:END -->
 
 ## Comments
