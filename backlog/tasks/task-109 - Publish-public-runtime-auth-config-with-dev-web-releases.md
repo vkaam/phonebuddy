@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-16T21:06:00Z'
-updated_date: '2026-11-16T21:30:00Z'
+updated_date: '2026-11-16T21:33:00Z'
 labels: []
 dependencies: []
 references:
@@ -53,8 +53,8 @@ Spec: Generate and publish only validated public runtime settings for the dev St
 <!-- AC:BEGIN -->
 - [ ] #1 A configured dev release serves a valid /config.json at the site root with the dev API HTTPS URL, tenant ID, SPA client ID, and API scope.
 - [ ] #2 If required API URL or identity settings are absent or invalid, the release does not publish a fabricated or malformed config and the shell keeps its clear unconfigured behavior.
-- [ ] #3 The generated runtime configuration contains only public settings and no credentials, client secrets, tokens, or API keys.
-- [ ] #4 Automated checks cover config generation and validation, and deployment documentation explains how dev values are supplied and how other environments stay separate.
+- [x] #3 The generated runtime configuration contains only public settings and no credentials, client secrets, tokens, or API keys.
+- [x] #4 Automated checks cover config generation and validation, and deployment documentation explains how dev values are supplied and how other environments stay separate.
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -69,13 +69,11 @@ Spec: Generate and publish only validated public runtime settings for the dev St
 ## Implementation Notes
 
 <!-- SECTION:NOTES:BEGIN -->
-Implemented fail-closed generation from public dev Actions Variables and included root config.json in the immutable CI web artifact when all values validate. Added coverage for valid, missing, malformed URL, invalid Entra/scope, stale file removal, and public-field allow-list behavior; documented local versus dev values and environment separation.
+Implemented fail-closed generation of a root config.json from the four public dev Actions Variables and wired it into the exact-source CI frontend build before archive checksumming. Missing or invalid values remove any stale output. Added automated coverage for valid values, absent/invalid settings, HTTPS-only hosted URLs, identity and scope validation, stale-file removal, and the allow-listed public fields. Updated web and Azure delivery documentation for local config, dev variable names, and environment separation.
 
-Verification: focused generator tests passed (5/5); full web Node tests passed (16/16) after production-only dependency install; web lint passed using the already-installed pinned Biome binary; actionlint passed for ci.yml; node --check passed for both new JS files; scripts/quality.py passed; required Python unit tests passed (215/215) on retry. Full npm ci failed with ENOSPC; python scripts/check.py also failed while writing its report after ENOSPC. The partial install and task-generated temp bundle were removed.
+Verification: final web suite 17/17 passed using a temporary production-only install; lint passed using the existing pinned Biome binary; node --check and real CLI configured/unconfigured cases passed; actionlint and scripts/quality.py passed; Python unit tests 215/215 passed on retry. Full npm ci and scripts/check.py could not complete because the host ran out of disk space (ENOSPC); task-generated partial installs and temp output were removed. PR CI Quality and repository-wide audit passed; PR-only CI intentionally skipped main-push web build/test steps.
 
-Hosted /config.json remains unverified: the supplied localhost API URL is invalid for hosting, and no separate dev API HTTPS origin has been supplied. The workflow therefore omits config until all four public Actions Variables are configured with valid dev values; no endpoint was invented.,
+Acceptance evidence: AC #3 and #4 are verified. AC #1 remains unverified and AC #2 is not fully checked because the hosted application has not been rebuilt. A read-only request to the supplied dev host returned 404 for /config.json. The supplied API URL is localhost-only, and no separate dev API HTTPS origin exists in the supplied configuration; the workflow safely leaves the site unconfigured until valid public variables are supplied.
 
-Final web suite rerun after the last test expansion passed 17/17. The current dev host GET https://thankful-wave-01ad93d0f.3.azurestaticapps.net/config.json returned Azure Static Web Apps 404. Groma reports no architecture owner for the changed CI, generator, and test files; no architecture map edits were needed.
-
-Draft PR: https://github.com/vkaam/phonebuddy/pull/139 (Refs #137). PR head 0c226fd52b9105c031ad746ca4b2cdce34514487. Repository-wide Backlog audit passed; Quality and Build immutable release image jobs passed. The PR event intentionally skipped main-push-only web build/test steps, so the final web suite was verified locally at 17/17. Hosted config remains blocked by the current /config.json 404 and the missing real dev API HTTPS origin.
+Draft PR: https://github.com/vkaam/phonebuddy/pull/139 (Refs #137). Keep TASK-109 active until a real dev API HTTPS origin is available and the authorized main release serves the validated config.,
 <!-- SECTION:NOTES:END -->
