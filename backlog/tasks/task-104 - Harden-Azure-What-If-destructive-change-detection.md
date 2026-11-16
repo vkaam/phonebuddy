@@ -1,11 +1,11 @@
 ---
 id: TASK-104
 title: Harden Azure What-If destructive change detection
-status: In Progress
+status: Done
 assignee:
   - '@codex'
 created_date: '2026-11-15T18:58:00Z'
-updated_date: '2026-11-16T05:54:00Z'
+updated_date: '2026-11-16T05:57:00Z'
 labels: []
 dependencies: []
 references:
@@ -39,7 +39,7 @@ Independent later work; no dependency on TASK-63 and no task depends on this ite
 <!-- AC:BEGIN -->
 - [x] #1 Actual Azure What-If resource IDs identify SQL and Storage resources, including nested types and case variations; destructive property deletions are rejected.
 - [x] #2 Missing or malformed resource identity and ambiguous change details fail closed while reviewed non-destructive changes remain allowed.
-- [ ] #3 Regression tests cover the retained Azure What-If shape and the combined validation path; required checks pass without a live destructive deployment.
+- [x] #3 Regression tests cover the retained Azure What-If shape and the combined validation path; required checks pass without a live destructive deployment.
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -58,4 +58,14 @@ Independent later work; no dependency on TASK-63 and no task depends on this ite
 Independent review found no blocking defects and validated acceptance coverage. Validation: 74 tests passed across test_release_recovery, test_bicep_preflight, and test_bicep_ci_boundary; full scripts/check.py passed with process-local Bash 5 and Git init default overrides; git diff --check passed. No live destructive deployment was performed.
 
 Draft PR: https://github.com/vkaam/phonebuddy/pull/135. Independent review passed with no blocking findings; hosted checks are pending. Task remains In Progress pending hosted verification and merge.
+
+Final PR head bcd55bde4b823d3fe0a94bbf93c128b8c3f9497b passed hosted CI (run 43813256771) and the advisory Backlog audit (run 43813256694). Independent review of this head found no blocking findings. PR #135 is ready for review; all acceptance criteria are verified.
+
+Supersedes the earlier pending/draft note: PR #135 is ready for review and all current hosted checks pass. All acceptance criteria are checked and task status is Done in this feature-branch record; merging this PR makes that status final on main.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Hardened the release safety guard to derive case-insensitive nested SQL and Storage types from validated Azure What-If resource IDs, reject malformed or conflicting identities and ambiguous deltas, and detect nested array property deletions. The general pre-deploy validator now uses the same guard. Added regression coverage and documented the fail-closed behavior. Verification passed: 74 focused tests; full scripts/check.py with process-local Bash 5 and Git init defaults; hosted CI and Backlog audit on PR #135 head bcd55bde; independent review; git diff --check. No live destructive deployment was performed. PR #135 is ready to merge.
+<!-- SECTION:FINAL_SUMMARY:END -->
