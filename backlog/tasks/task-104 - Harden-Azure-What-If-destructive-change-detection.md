@@ -1,11 +1,11 @@
 ---
 id: TASK-104
 title: Harden Azure What-If destructive change detection
-status: In Progress
+status: Done
 assignee:
   - '@codex'
 created_date: '2026-11-15T18:58:00Z'
-updated_date: '2026-11-16T06:03:00Z'
+updated_date: '2026-11-16T06:06:00Z'
 labels: []
 dependencies: []
 references:
@@ -37,9 +37,9 @@ Independent later work; no dependency on TASK-63 and no task depends on this ite
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 Actual Azure What-If resource IDs identify SQL and Storage resources, including nested types and case variations; destructive property deletions are rejected.
-- [ ] #2 Missing or malformed resource identity and ambiguous change details fail closed while reviewed non-destructive changes remain allowed.
-- [ ] #3 Regression tests cover the retained Azure What-If shape and the combined validation path; required checks pass without a live destructive deployment.
+- [x] #1 Actual Azure What-If resource IDs identify SQL and Storage resources, including nested types and case variations; destructive property deletions are rejected.
+- [x] #2 Missing or malformed resource identity and ambiguous change details fail closed while reviewed non-destructive changes remain allowed.
+- [x] #3 Regression tests cover the retained Azure What-If shape and the combined validation path; required checks pass without a live destructive deployment.
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -66,4 +66,12 @@ Supersedes the earlier pending/draft note: PR #135 is ready for review and all c
 Reopened after P1 review thread on PR #135 identified valid ARM extension-resource IDs with multiple /providers/ segments. Current parser blocks these ordinary deployment What-If entries. Fix and revalidation are in progress; prior acceptance and review evidence is stale for the new head.
 
 P1 fix applied locally: parser now validates each provider segment and derives identity from the terminal provider, allowing valid extension-resource paths. Added regression for Microsoft.Insights diagnosticSettings nested under Microsoft.App. Independent re-review found no blockers. 75 targeted tests, full scripts/check.py, and git diff --check pass. Prior Done/acceptance evidence is superseded; PR hosted checks must rerun on the new head.
+
+Superseding prior review state: independent reviewer task104_review reviewed final code at 423b0d83015e0bd1ebe94fcf517fe9dfdeb457ae and confirmed the multi-provider fix, terminal resource type matching, and fail-closed behavior. 75 focused tests and full scripts/check.py pass. Hosted CI run 43814255197 and advisory Backlog audit run 43814255232 passed on that head. P1 thread was replied to, given a 👍, and resolved.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Hardened the recovery and pre-deploy What-If guards to derive nested, case-insensitive resource types from Azure IDs, including multi-provider extension resources. SQL and Storage property deletions, including nested array deltas, are blocked; missing, malformed, conflicting, or ambiguous details fail closed. Added regression coverage and safety documentation. Verification: 75 focused tests, full scripts/check.py, git diff --check, hosted CI and Backlog audit, and independent final-head review all passed. Fixed and resolved the P1 extension-resource review finding. No live destructive deployment was performed. PR #135 is ready to merge.
+<!-- SECTION:FINAL_SUMMARY:END -->
