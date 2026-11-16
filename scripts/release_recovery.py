@@ -216,23 +216,29 @@ def _what_if_resource_type(change):
     lowered = [segment.casefold() for segment in segments]
     provider_indexes = [index for index, segment in enumerate(lowered)
                         if segment == 'providers']
-    if len(provider_indexes) != 1:
-        raise ReleaseStateError('Azure What-If resourceId has ambiguous provider identity')
+    if not provider_indexes:
+        raise ReleaseStateError('Azure What-If resourceId has no provider identity')
     provider_index = provider_indexes[0]
     scope = segments[:provider_index]
-    if (provider_index + 3 > len(segments) or len(segments[provider_index + 1:]) < 3
-            or len(segments[provider_index + 2:]) % 2 != 0):
-        raise ReleaseStateError('Azure What-If resourceId has malformed provider identity')
     if scope:
         if len(scope) not in {2, 4} or lowered[0] != 'subscriptions':
             raise ReleaseStateError('Azure What-If resourceId has malformed scope identity')
         if len(scope) == 4 and lowered[2] != 'resourcegroups':
             raise ReleaseStateError('Azure What-If resourceId has malformed resource-group identity')
-    namespace = segments[provider_index + 1]
-    type_segments = segments[provider_index + 2:-1:2]
-    if not namespace or not type_segments:
-        raise ReleaseStateError('Azure What-If resourceId has malformed resource type')
-    derived_type = '/'.join((namespace, *type_segments)).casefold()
+
+    derived_type = None
+    for index, provider_index in enumerate(provider_indexes):
+        end = (provider_indexes[index + 1]
+               if index + 1 < len(provider_indexes) else len(segments))
+        if end - provider_index < 4 or (end - provider_index - 2) % 2 != 0:
+            raise ReleaseStateError('Azure What-If resourceId has malformed provider identity')
+        namespace = segments[provider_index + 1]
+        type_segments = segments[provider_index + 2:end:2]
+        if not namespace or not type_segments:
+            raise ReleaseStateError('Azure What-If resourceId has malformed resource type')
+        # An extension resource follows its target resource path with another
+        # provider segment; the What-If change describes the terminal provider.
+        derived_type = '/'.join((namespace, *type_segments)).casefold()
 
     reported_type = change.get('resourceType')
     if reported_type is not None:

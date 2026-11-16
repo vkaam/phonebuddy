@@ -609,6 +609,14 @@ class WhatIfEvidenceTests(unittest.TestCase):
                     '/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/dev/providers/Microsoft.App/containerApps/app'}]
         self.assertEqual(validate_what_if({'status': 'Succeeded', 'changes': changes}), changes)
 
+    def test_valid_extension_resource_provider_path_is_accepted(self):
+        changes = [{'changeType': 'NoChange',
+                    'resourceType': 'Microsoft.Insights/diagnosticSettings',
+                    'resourceId': ('/subscriptions/sub/resourceGroups/rg/providers/'
+                                   'Microsoft.App/managedEnvironments/env/providers/'
+                                   'Microsoft.Insights/diagnosticSettings/diag')}]
+        self.assertEqual(validate_what_if({'status': 'Succeeded', 'changes': changes}), changes)
+
     def test_combined_validation_rejects_resource_id_only_property_deletion(self):
         result = {'status': 'Succeeded', 'changes': [{
             'changeType': 'Modify',

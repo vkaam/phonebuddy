@@ -1,11 +1,11 @@
 ---
 id: TASK-104
 title: Harden Azure What-If destructive change detection
-status: Done
+status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-11-15T18:58:00Z'
-updated_date: '2026-11-16T05:57:00Z'
+updated_date: '2026-11-16T06:03:00Z'
 labels: []
 dependencies: []
 references:
@@ -37,9 +37,9 @@ Independent later work; no dependency on TASK-63 and no task depends on this ite
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [x] #1 Actual Azure What-If resource IDs identify SQL and Storage resources, including nested types and case variations; destructive property deletions are rejected.
-- [x] #2 Missing or malformed resource identity and ambiguous change details fail closed while reviewed non-destructive changes remain allowed.
-- [x] #3 Regression tests cover the retained Azure What-If shape and the combined validation path; required checks pass without a live destructive deployment.
+- [ ] #1 Actual Azure What-If resource IDs identify SQL and Storage resources, including nested types and case variations; destructive property deletions are rejected.
+- [ ] #2 Missing or malformed resource identity and ambiguous change details fail closed while reviewed non-destructive changes remain allowed.
+- [ ] #3 Regression tests cover the retained Azure What-If shape and the combined validation path; required checks pass without a live destructive deployment.
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -62,10 +62,8 @@ Draft PR: https://github.com/vkaam/phonebuddy/pull/135. Independent review passe
 Final PR head bcd55bde4b823d3fe0a94bbf93c128b8c3f9497b passed hosted CI (run 43813256771) and the advisory Backlog audit (run 43813256694). Independent review of this head found no blocking findings. PR #135 is ready for review; all acceptance criteria are verified.
 
 Supersedes the earlier pending/draft note: PR #135 is ready for review and all current hosted checks pass. All acceptance criteria are checked and task status is Done in this feature-branch record; merging this PR makes that status final on main.
+
+Reopened after P1 review thread on PR #135 identified valid ARM extension-resource IDs with multiple /providers/ segments. Current parser blocks these ordinary deployment What-If entries. Fix and revalidation are in progress; prior acceptance and review evidence is stale for the new head.
+
+P1 fix applied locally: parser now validates each provider segment and derives identity from the terminal provider, allowing valid extension-resource paths. Added regression for Microsoft.Insights diagnosticSettings nested under Microsoft.App. Independent re-review found no blockers. 75 targeted tests, full scripts/check.py, and git diff --check pass. Prior Done/acceptance evidence is superseded; PR hosted checks must rerun on the new head.
 <!-- SECTION:NOTES:END -->
-
-## Final Summary
-
-<!-- SECTION:FINAL_SUMMARY:BEGIN -->
-Hardened the release safety guard to derive case-insensitive nested SQL and Storage types from validated Azure What-If resource IDs, reject malformed or conflicting identities and ambiguous deltas, and detect nested array property deletions. The general pre-deploy validator now uses the same guard. Added regression coverage and documented the fail-closed behavior. Verification passed: 74 focused tests; full scripts/check.py with process-local Bash 5 and Git init defaults; hosted CI and Backlog audit on PR #135 head bcd55bde; independent review; git diff --check. No live destructive deployment was performed. PR #135 is ready to merge.
-<!-- SECTION:FINAL_SUMMARY:END -->
