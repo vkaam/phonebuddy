@@ -129,6 +129,10 @@ jobs:
         working-directory: apps/web
         env:
           VITE_RELEASE_VERSION: ${{ github.sha }}
+          PHONEBUDDY_DEV_API_BASE_URL: ${{ vars.PHONEBUDDY_DEV_API_BASE_URL }}
+          PHONEBUDDY_DEV_ENTRA_TENANT_ID: ${{ vars.PHONEBUDDY_DEV_ENTRA_TENANT_ID }}
+          PHONEBUDDY_DEV_ENTRA_CLIENT_ID: ${{ vars.PHONEBUDDY_DEV_ENTRA_CLIENT_ID }}
+          PHONEBUDDY_DEV_API_SCOPE: ${{ vars.PHONEBUDDY_DEV_API_SCOPE }}
         run: |
           set -euo pipefail
           mkdir -p public
@@ -142,6 +146,7 @@ jobs:
           PY
           npm ci
           npm run build
+          node scripts/generate-public-config.mjs dist/config.json
           mkdir -p "$RUNNER_TEMP/release-web"
           tar --sort=name --mtime='UTC 1970-01-01' --owner=0 --group=0 --numeric-owner \
             -cf - -C dist . | gzip -n > "$RUNNER_TEMP/release-web/web.tar.gz"

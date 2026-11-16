@@ -46,10 +46,20 @@ resources through Bicep, and requires the version-matched HTTP readiness and
 request-health gate before recording a release annotation. Workspace analytics
 are not a prerequisite for this product pilot's main release path. The same
 trusted dev release deploys the source-bound web artifact to the Static Web App
-in East US 2 and verifies its release metadata. Later successful main releases
-update it; test and production are not deployed by this workflow. The web shell
-is a preview without calling, authentication, or backend integration; it needs
-no API endpoint. Public browser configuration must never contain secrets.
+in East US 2 and verifies its release metadata. The CI build can include a root
+`config.json` generated from the public repository Actions Variables
+`PHONEBUDDY_DEV_API_BASE_URL`, `PHONEBUDDY_DEV_ENTRA_TENANT_ID`,
+`PHONEBUDDY_DEV_ENTRA_CLIENT_ID`, and `PHONEBUDDY_DEV_API_SCOPE`. Set these only
+after the dev API HTTPS endpoint and Entra SPA values are confirmed. The
+generator validates all four values and removes any stale config from the
+packaged site when a value is missing or invalid, so the first release can keep
+its unconfigured shell. The supplied `http://localhost:3000` value is local-
+development-only and must not be used in a hosted artifact. The preview hostname
+is [thankful-wave-01ad93d0f.3.azurestaticapps.net](https://thankful-wave-01ad93d0f.3.azurestaticapps.net);
+the API must have its own real HTTPS origin. Later successful main releases
+update the dev preview; test and production are not deployed by this workflow.
+Their settings must be scoped to their own builds and artifacts. Public browser
+configuration must never contain secrets.
 
 Use distinct resource groups, data, secrets, workload identities, deployment
 identities and access assignments for each environment, even if subscriptions
