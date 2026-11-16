@@ -122,20 +122,88 @@ class RecoveryDecisionTests(unittest.TestCase):
 
     def test_destructive_what_if_is_detected_and_invalid_result_fails_closed(self):
         self.assertTrue(has_destructive_infrastructure_change({
-            'changes': [{'changeType': 'Delete', 'resourceType': 'Microsoft.Storage/storageAccounts'}],
+            'changes': [{'changeType': 'Delete', 'resourceId':
+                         '/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/dev/providers/Microsoft.Storage/storageAccounts/store'}],
         }))
         self.assertTrue(has_destructive_infrastructure_change({
             'changes': [{
                 'changeType': 'Modify',
                 'resourceType': 'Microsoft.Sql/servers/databases',
+                'resourceId': '/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/dev/providers/Microsoft.Sql/servers/server/databases/db',
                 'delta': [{'propertyChangeType': 'Delete'}],
             }],
         }))
         self.assertFalse(has_destructive_infrastructure_change({
-            'changes': [{'changeType': 'Modify', 'resourceType': 'Microsoft.App/containerApps'}],
+            'changes': [{'changeType': 'Modify',
+                         'resourceId': '/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/dev/providers/Microsoft.App/containerApps/app'}],
         }))
         with self.assertRaisesRegex(ReleaseStateError, 'changes array'):
             has_destructive_infrastructure_change({})
+
+    def test_resource_ids_detect_nested_sql_and_storage_property_deletions(self):
+        resource_ids = (
+            '/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/dev/providers/microsoft.sql/servers/server/databases/db/transparentDataEncryptionPolicies/Default',
+            '/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/dev/providers/MICROSOFT.STORAGE/storageAccounts/store/blobServices/default/containers/data',
+        )
+        for resource_id in resource_ids:
+            with self.subTest(resource_id=resource_id):
+                self.assertTrue(has_destructive_infrastructure_change({
+                    'changes': [{
+                        'changeType': 'Modify',
+                        'resourceId': resource_id,
+                        'delta': [{'propertyChangeType': 'Delete', 'path': 'properties'}],
+                    }],
+                }))
+
+    def test_array_property_deltas_are_checked_recursively(self):
+        resource_id = ('/subscriptions/id/resourceGroups/dev/providers/'
+                       'Microsoft.Storage/storageAccounts/store')
+        self.assertTrue(has_destructive_infrastructure_change({'changes': [{
+            'changeType': 'Modify', 'resourceId': resource_id,
+            'delta': [{'propertyChangeType': 'Array', 'children': [
+                {'propertyChangeType': 'Delete', 'path': 'properties.items[0]'},
+            ]}],
+        }]}))
+        self.assertFalse(has_destructive_infrastructure_change({'changes': [{
+            'changeType': 'Modify', 'resourceId': resource_id,
+            'delta': [{'propertyChangeType': 'Array', 'children': [
+                {'propertyChangeType': 'NoEffect', 'path': 'properties.items[0]'},
+            ]}],
+        }]}))
+
+    def test_resource_identity_and_ambiguous_changes_fail_closed(self):
+        invalid_changes = (
+            {'changeType': 'Create'},
+            {'changeType': 'Create', 'resourceId': '/subscriptions/id/resourceGroups/dev'},
+            {'changeType': 'Create', 'resourceId': '/subscriptions/id/resourceGroups/dev/providers/Microsoft.Storage/storageAccounts'},
+            {'changeType': 'Create',
+             'resourceId': '/subscriptions/id/resourceGroups/dev/providers/Microsoft.Resources/providers/Microsoft.Storage/storageAccounts/store'},
+            {'changeType': 'Modify',
+             'resourceId': '/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/dev/providers/Microsoft.Sql/servers/s/databases/d',
+             'resourceType': 'Microsoft.Storage/storageAccounts',
+             'delta': [{'propertyChangeType': 'Delete'}]},
+            {'changeType': 'Modify',
+             'resourceId': '/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/dev/providers/Microsoft.Storage/storageAccounts/s',
+             'delta': [{}]},
+        )
+        for change in invalid_changes:
+            with self.subTest(change=change):
+                with self.assertRaises(ReleaseStateError):
+                    has_destructive_infrastructure_change({'changes': [change]})
+        with self.assertRaisesRegex(ReleaseStateError, 'change must be an object'):
+            has_destructive_infrastructure_change({'changes': [None]})
+
+    def test_reviewed_non_destructive_sql_and_storage_changes_remain_allowed(self):
+        for resource_id in (
+                '/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/dev/providers/Microsoft.Sql/servers/server/databases/db',
+                '/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/dev/providers/Microsoft.Storage/storageAccounts/store/blobServices/default'):
+            with self.subTest(resource_id=resource_id):
+                self.assertFalse(has_destructive_infrastructure_change({
+                    'changes': [{
+                        'changeType': 'Modify', 'resourceId': resource_id,
+                        'delta': [{'propertyChangeType': 'Modify', 'path': 'properties'}],
+                    }],
+                }))
 
     def test_manual_recovery_requires_schema_compatibility_and_current_evidence(self):
         current = release('b', version=2, compatible=[1, 2], mode='expand')
