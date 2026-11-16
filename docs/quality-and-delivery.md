@@ -422,6 +422,13 @@ destructive infrastructure changes are blocked from automatic recovery. The
 workflows never reverse database migrations or restore a backup over newer
 data.
 
+Both the general What-If validator and the recovery guard derive resource types
+from Azure `resourceId` paths, including nested provider types. Resource
+deletions and replacements are blocked, as are SQL or Storage modifications
+whose property deltas delete data. Missing, malformed, conflicting, or
+ambiguous resource identity and property-change details fail closed before a
+deployment is applied.
+
 An authorized operator can dispatch
 [`azure-recover.yml`](../.github/workflows/azure-recover.yml) from protected
 `main`, select an immutable release ID, and provide a reason. The workflow

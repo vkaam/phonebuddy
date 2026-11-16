@@ -157,24 +157,94 @@ def manual_recovery_decision(target, current_release):
 
 
 def has_destructive_infrastructure_change(what_if):
-    """Fail closed when Azure What-If includes a resource deletion or replacement."""
+    """Fail closed when Azure What-If contains destructive or ambiguous resource changes."""
     if not isinstance(what_if, dict) or not isinstance(what_if.get('changes'), list):
         raise ReleaseStateError('Azure What-If result must contain a changes array')
     for change in what_if['changes']:
         if not isinstance(change, dict):
-            continue
-        if str(change.get('changeType', '')).casefold() in {'delete', 'replace'}:
+            raise ReleaseStateError('Azure What-If change must be an object')
+        resource_type = _what_if_resource_type(change)
+        change_type = change.get('changeType')
+        if not isinstance(change_type, str) or change_type.casefold() not in {
+                'create', 'modify', 'nochange', 'ignore', 'delete', 'replace'}:
+            raise ReleaseStateError('Azure What-If change has an unknown change type')
+        change_type = change_type.casefold()
+        if change_type in {'delete', 'replace'}:
             return True
-        if str(change.get('changeType', '')).casefold() == 'modify':
-            resource_type = str(change.get('resourceType', '')).casefold()
+        if change_type == 'modify':
             delta = change.get('delta')
             if resource_type.startswith(('microsoft.sql/', 'microsoft.storage/')):
-                if isinstance(delta, list) and any(
-                        isinstance(item, dict)
-                        and str(item.get('propertyChangeType', '')).casefold() == 'delete'
-                        for item in delta):
+                if not isinstance(delta, list) or not delta:
+                    raise ReleaseStateError(
+                        'Azure What-If SQL or Storage modification has ambiguous property changes'
+                    )
+                if _what_if_delta_has_deletion(delta):
                     return True
     return False
+
+
+def _what_if_delta_has_deletion(delta):
+    """Inspect nested What-If property deltas and fail closed on unknown shapes."""
+    for item in delta:
+        if (not isinstance(item, dict)
+                or not isinstance(item.get('propertyChangeType'), str)):
+            raise ReleaseStateError('Azure What-If SQL or Storage property change is ambiguous')
+        change_type = item['propertyChangeType'].casefold()
+        if change_type == 'delete':
+            return True
+        if change_type == 'array':
+            children = item.get('children')
+            if not isinstance(children, list) or not children:
+                raise ReleaseStateError('Azure What-If array property change is ambiguous')
+            if _what_if_delta_has_deletion(children):
+                return True
+        elif change_type not in {'create', 'modify', 'noeffect'}:
+            raise ReleaseStateError('Azure What-If SQL or Storage property change is ambiguous')
+    return False
+
+
+def _what_if_resource_type(change):
+    """Derive an ARM resource type from What-If identity and reject conflicts."""
+    resource_id = change.get('resourceId')
+    if not isinstance(resource_id, str) or not resource_id.startswith('/'):
+        raise ReleaseStateError('Azure What-If change is missing a valid resourceId')
+    segments = resource_id.split('/')[1:]
+    if (not segments or any(not segment or segment in {'.', '..'} for segment in segments)
+            or any('%' in segment for segment in segments)):
+        raise ReleaseStateError('Azure What-If resourceId is malformed')
+
+    lowered = [segment.casefold() for segment in segments]
+    provider_indexes = [index for index, segment in enumerate(lowered)
+                        if segment == 'providers']
+    if not provider_indexes:
+        raise ReleaseStateError('Azure What-If resourceId has no provider identity')
+    provider_index = provider_indexes[0]
+    scope = segments[:provider_index]
+    if scope:
+        if len(scope) not in {2, 4} or lowered[0] != 'subscriptions':
+            raise ReleaseStateError('Azure What-If resourceId has malformed scope identity')
+        if len(scope) == 4 and lowered[2] != 'resourcegroups':
+            raise ReleaseStateError('Azure What-If resourceId has malformed resource-group identity')
+
+    derived_type = None
+    for index, provider_index in enumerate(provider_indexes):
+        end = (provider_indexes[index + 1]
+               if index + 1 < len(provider_indexes) else len(segments))
+        if end - provider_index < 4 or (end - provider_index - 2) % 2 != 0:
+            raise ReleaseStateError('Azure What-If resourceId has malformed provider identity')
+        namespace = segments[provider_index + 1]
+        type_segments = segments[provider_index + 2:end:2]
+        if not namespace or not type_segments:
+            raise ReleaseStateError('Azure What-If resourceId has malformed resource type')
+        # An extension resource follows its target resource path with another
+        # provider segment; the What-If change describes the terminal provider.
+        derived_type = '/'.join((namespace, *type_segments)).casefold()
+
+    reported_type = change.get('resourceType')
+    if reported_type is not None:
+        if not isinstance(reported_type, str) or reported_type.casefold() != derived_type:
+            raise ReleaseStateError('Azure What-If resource identity is conflicting or ambiguous')
+    return derived_type
 
 
 class AzureBlobStore:

@@ -605,8 +605,35 @@ class MediaTemplateSecurityTests(unittest.TestCase):
 
 class WhatIfEvidenceTests(unittest.TestCase):
     def test_complete_results_are_accepted(self):
-        changes = [{'changeType': 'Create', 'resourceId': '/subscriptions/example/resourceGroups/dev'}]
+        changes = [{'changeType': 'Create', 'resourceId':
+                    '/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/dev/providers/Microsoft.App/containerApps/app'}]
         self.assertEqual(validate_what_if({'status': 'Succeeded', 'changes': changes}), changes)
+
+    def test_valid_extension_resource_provider_path_is_accepted(self):
+        changes = [{'changeType': 'NoChange',
+                    'resourceType': 'Microsoft.Insights/diagnosticSettings',
+                    'resourceId': ('/subscriptions/sub/resourceGroups/rg/providers/'
+                                   'Microsoft.App/managedEnvironments/env/providers/'
+                                   'Microsoft.Insights/diagnosticSettings/diag')}]
+        self.assertEqual(validate_what_if({'status': 'Succeeded', 'changes': changes}), changes)
+
+    def test_combined_validation_rejects_resource_id_only_property_deletion(self):
+        result = {'status': 'Succeeded', 'changes': [{
+            'changeType': 'Modify',
+            'resourceId': '/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/dev/providers/Microsoft.Storage/storageAccounts/store/blobServices/default/containers/data',
+            'delta': [{'propertyChangeType': 'Delete', 'path': 'properties'}],
+        }]}
+        with self.assertRaisesRegex(ValueError, 'destructive infrastructure change'):
+            validate_what_if(result)
+
+    def test_missing_or_malformed_resource_identity_fails_validation(self):
+        for resource_id in (None, '/subscriptions/id/resourceGroups/dev', '/x'):
+            with self.subTest(resource_id=resource_id):
+                change = {'changeType': 'Create'}
+                if resource_id is not None:
+                    change['resourceId'] = resource_id
+                with self.assertRaises(ValueError):
+                    validate_what_if({'status': 'Succeeded', 'changes': [change]})
 
     def test_cli_rejects_missing_results_without_running_bicep(self):
         root = Path(__file__).resolve().parents[1]
@@ -648,7 +675,7 @@ class WhatIfEvidenceTests(unittest.TestCase):
         resource_ids = (
             '/subscriptions/3787e2b4-802f-4b28-8793-1a32cc410b45/resourceGroups/rg-pb-dev-westeurope-foundation/providers/Microsoft.App/containerApps/ca-pb-dev-other',
             '/subscriptions/3787e2b4-802f-4b28-8793-1a32cc410b45/resourceGroups/rg-pb-prod-westeurope-foundation/providers/Microsoft.App/containerApps/ca-pb-prod-release-test',
-            '/subscriptions/not-a-guid/resourceGroups/rg-pb-dev-westeurope-foundation/providers/Microsoft.App/containerApps/ca-pb-dev-release-test',
+            '/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/rg-pb-dev-westeurope-foundation/providers/Microsoft.App/containerApps/ca-pb-dev-other',
             '/subscriptions/3787e2b4-802f-4b28-8793-1a32cc410b45/resourceGroups/rg-other/providers/Microsoft.Insights/scheduledQueryRules/alert-pb-dev-health-latency',
             '/subscriptions/3787e2b4-802f-4b28-8793-1a32cc410b45/resourceGroups/rg-pb-dev-westeurope-foundation/providers/Microsoft.Insights/scheduledQueryRules/alert-pb-dev-other',
         )

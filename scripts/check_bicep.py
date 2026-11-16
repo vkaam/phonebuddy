@@ -11,6 +11,11 @@ import sys
 import tempfile
 from urllib.parse import urlencode
 
+try:
+    from .release_recovery import ReleaseStateError, has_destructive_infrastructure_change
+except ImportError:
+    from release_recovery import ReleaseStateError, has_destructive_infrastructure_change
+
 ROOT = Path(__file__).resolve().parents[1]
 ENVIRONMENTS = ('dev', 'test', 'prod')
 FOUNDRY_API_VERSION = '2024-10-01'
@@ -626,6 +631,11 @@ def validate_what_if(result, expected_scope=None):
     if any(not isinstance(change, dict) or change.get('changeType') not in allowed
            or not change.get('resourceId') for change in changes):
         raise ValueError('Incomplete or unexpected what-if result')
+    try:
+        if has_destructive_infrastructure_change(result):
+            raise ValueError('What-if includes a destructive infrastructure change')
+    except ReleaseStateError as error:
+        raise ValueError(str(error)) from error
     if expected_scope:
         scope = expected_scope.rstrip('/').lower()
         if (not re.fullmatch(
