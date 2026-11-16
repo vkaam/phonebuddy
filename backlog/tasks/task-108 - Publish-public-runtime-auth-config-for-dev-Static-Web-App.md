@@ -4,7 +4,7 @@ title: Publish public runtime auth config for dev Static Web App
 status: To Do
 assignee: []
 created_date: '2026-11-16T20:56:00Z'
-updated_date: '2026-11-16T21:05:00Z'
+updated_date: '2026-11-16T21:24:00Z'
 labels:
   - web
   - cicd
@@ -20,7 +20,7 @@ ordinal: 95000
 
 <!-- SECTION:DESCRIPTION:BEGIN -->
 Issue: https://github.com/vkaam/phonebuddy/issues/137
-Approved revision: 2026-11-16T20:53:48Z; SHA-256 59687a288ea1c290db11a5bd7be0a6073e19fc96176c63b5a870bb8cf263ac53.
+Approved revision: 2026-11-16T20:53:48Z; SHA-256 6dd2cb6c26ccdb6ee18639eaf1c09f32cc0a145e1c73ee388040b9d849c62e3d.
 Approval evidence: owner request in this conversation on 2026-11-16: “create a task for that gap,” referring to the missing deployed /config.json generation described immediately before the request. Issue #137 records that intent and its acceptance criteria.
 Branch: agent/gh-137-1-public-runtime-config
 Scope: .github/workflows/azure-deploy.yml; scripts/deployment_config.py; tests/test_deployment_config.py; apps/web/config.example.json; apps/web/README.md; this task's own CLI-managed record
