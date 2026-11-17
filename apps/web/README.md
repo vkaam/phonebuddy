@@ -4,13 +4,30 @@ Use Node 22 or newer. Run `npm ci`, `npm test`, and `npm run build` in this
 directory, or `npm run dev` for local development. The static artifact is
 `dist/`; it uses hash routes and does not require a server-side fallback.
 
-The app reads a public `config.json` from the site root. Copy
-`config.example.json` to `config.json` and set `apiBaseUrl`, `entraTenantId`,
-`entraClientId`, and the exposed API `apiScope`. These values identify public
-services and an Entra SPA registration; never put credentials, client secrets,
-access tokens, or API keys in this file. Entra redirect URIs must include the
-site origin. The SPA uses MSAL authorization code with PKCE and keeps its cache
-in session storage.
+The app reads a public `config.json` from the site root. For local development,
+copy `config.example.json` to `public/config.json` and set `apiBaseUrl`,
+`entraTenantId`, `entraClientId`, and the exposed API `apiScope`. The example
+uses `http://localhost:3000`; it is only valid for local development. These
+values identify public services and an Entra SPA registration; never put
+credentials, client secrets, access tokens, or API keys in this file. Entra
+redirect URIs must include the site origin. The SPA uses MSAL authorization
+code with PKCE and keeps its cache in session storage.
+
+The protected-main CI build reads the dev values from repository Actions
+Variables named `PHONEBUDDY_DEV_API_BASE_URL`,
+`PHONEBUDDY_DEV_ENTRA_TENANT_ID`, `PHONEBUDDY_DEV_ENTRA_CLIENT_ID`, and
+`PHONEBUDDY_DEV_API_SCOPE`. Add them under **Settings → Secrets and variables →
+Actions → Variables**. They are public configuration, not secrets. The generator
+writes `dist/config.json` only when all four values pass validation and the API
+URL is HTTPS. Otherwise it removes any stale config from the artifact, so the
+published shell stays in its clear unconfigured state. Do not use the local
+localhost URL for a hosted release.
+
+The current dev preview is
+[thankful-wave-01ad93d0f.3.azurestaticapps.net](https://thankful-wave-01ad93d0f.3.azurestaticapps.net).
+Set the API base URL to the separately hosted API origin only after that HTTPS
+endpoint exists. Future test and production builds must use their own
+environment-specific variables and artifacts; do not reuse dev values.
 
 After sign-in the browser sends an API access token to `/api/me` over HTTPS.
 The workspace opens only after the API confirms an active organization
