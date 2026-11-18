@@ -154,8 +154,9 @@ branch.
 
 `Task link` runs the PR's own copy of the guard and reads the task from the PR
 head, so a PR could weaken either. The guard warns when a task's `Scope` differs
-from main; the reviewer must confirm the owner agreed. Changes under
-`scripts/` and `.github/` are owned by `@vkaam` in CODEOWNERS. Unattended parallel workers need the lease service in
+from main; the reviewer must confirm the owner agreed. CODEOWNERS assigns
+`scripts/` and `.github/` to `@vkaam`, but that review is only enforced once the
+ruleset requires Code Owner review. Unattended parallel workers need the lease service in
 [factory leases](factory-leases.md), which is not required for interactive work.
 
 ## Older records
@@ -177,3 +178,5 @@ These settings live in GitHub, not in this repository:
   before merging". CI already runs on `merge_group`.
 - Optionally allow auto-merge so grouped Dependabot minor and patch updates
   merge once `Quality` passes.
+- Optionally require Code Owner review, so changes to the guard, workflows and
+  policy files need the owner's approval.
