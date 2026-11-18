@@ -4,7 +4,7 @@ title: Resolve post-merge web npm audit failure
 status: To Do
 assignee: []
 created_date: '2026-11-18T05:54:00Z'
-updated_date: '2026-11-18T05:56:00Z'
+updated_date: '2026-11-18T05:57:00Z'
 labels:
   - web
   - cicd
@@ -48,6 +48,15 @@ created: 2026-11-18T05:56:00Z
 ---
 
 2026-11-18 implementation preflight is blocked before claim: the required live guard exited 1 with claim_verified=false and "A read-only GitHub connection is required." Project docs also state no trusted lease/publishing controller is configured. This task remains To Do; no application files were changed.
+
+---
+
+author: @codex
+created: 2026-11-18T05:57:00Z
+
+---
+
+Draft tracking PR opened: https://github.com/vkaam/phonebuddy/pull/142. It includes only this task record; the implementation task remains To Do pending the claim and trusted lease prerequisites.
 
 ---
 <!-- COMMENTS:END -->
