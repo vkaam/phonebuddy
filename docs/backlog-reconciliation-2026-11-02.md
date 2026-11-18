@@ -6,6 +6,8 @@ records, relevant branches and the three open PRs (#55, #60, #61).
 TASK-67 records the owner-authorized reconciliation and its review evidence.
 This document is a dated audit, not another editable issue/task lifecycle source.
 Use GitHub and Backlog for live state.
+The migration rules it applied (issue-body digests, `Replaced by` records) are
+no longer checked; see the current [factory workflow](issue-backlog-governance.md).
 
 ## Corrections
 

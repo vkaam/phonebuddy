@@ -1,12 +1,20 @@
 version: 2
 updates:
+  # Minor and patch updates arrive as one grouped PR per ecosystem; majors stay
+  # separate. Dependabot PRs are exempt from the Task link check.
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    groups:
+      actions-minor-and-patch:
+        update-types: [minor, patch]
   - package-ecosystem: npm
     directory: /apps/web
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    groups:
+      web-minor-and-patch:
+        update-types: [minor, patch]

@@ -250,8 +250,8 @@ issue-level acceptance, with native Backlog.md tasks as the factory's atomic
 execution ledger. GitHub repositories, PRs and Actions remain the source/review/delivery
 platform; the earlier Azure DevOps control-plane proposal is superseded.
 Application hosting and the proposed agent execution remain on Azure. Follow
-[Issue and Backlog governance](issue-backlog-governance.md): triage approved issue
-revisions into scoped CLI-managed tasks before coding, preserve native TASK IDs,
+[the factory workflow](issue-backlog-governance.md): triage issues labeled
+`approved` into scoped CLI-managed tasks before coding, preserve native TASK IDs,
 and report execution evidence upward without mirroring human-owned requirements.
 
 Run factory orchestration on ACA, with durable run state in a separate factory database, work on Service Bus, evidence in factory Blob Storage, and coding/review inference through a separate Foundry project/account. Begin with a deterministic state machine rather than recursively self-modifying agents. Model tool-calling capability is a spike requirement.
@@ -264,14 +264,14 @@ Separate planner, implementer, and reviewer contexts and permissions. The review
 
 | Step | Agent/system responsibility | Required output |
 | --- | --- | --- |
-| Intake | Triage an explicitly approved GitHub issue revision into atomic native tasks | Stable issue/task mapping, scoped behavior, native acceptance/dependencies, verification and approval evidence |
+| Intake | Triage a GitHub issue labeled `approved` into atomic native tasks | Stable issue/task mapping, scoped behavior, native acceptance/dependencies and verification commands |
 | Design | Architect checks boundaries and dependency changes | ADR when needed; API/event/schema changes |
 | Implement | Coding agent changes an isolated branch | Patch, tests, migration/config changes, updated docs |
 | Verify | Deterministic CI executes the proposed checks | Test logs, scans, build artifacts, Bicep report, AI eval report where relevant |
 | Review | Separate reviewer inspects final diff and evidence | Findings tied to files and acceptance criteria |
 | Propose | Orchestrator opens/updates a PR | Scope, validation, limitations, deployment/rollback notes, run IDs |
 | Release | Protected pipeline promotes reviewed artifacts | Environment checks, migration result, smoke results, release provenance |
-| Complete intent | Reconciler confirms every required task PR has merged to the default branch | Task/PR links and issue closure; release health is tracked separately |
+| Complete intent | The PR that completes an issue closes it with `Closes #N` once every required task has merged | Task/PR links and issue closure; release health is tracked separately |
 
 Agents may create branches and PRs and iterate on failed checks within bounded attempts. The author may not approve their own changes, change protected policy, modify credentials, expand their permissions, or directly deploy production. A separate permitted agent or trusted controller may merge through effective GitHub rules after independent review, scoped acceptance and required pre-merge checks. The trusted pipeline then promotes through the delivery gates; a post-merge failure creates new linked work.
 
@@ -281,9 +281,10 @@ federation for trusted GitHub deployment jobs, as specified in the
 PR permissions separately from Azure access; a coding runner has no merge,
 policy-administration or deployment authority. Separate build and deployment
 identities, and run untrusted PR builds without privileged service connections.
-Durable leases, idempotent triage and reconciliation prevent duplicate work;
-branch-local task status is not a distributed lock. Workers require a recorded
-triage amendment for scope changes. Intermediate PRs reference their parent issue
+Interactive work claims a task with an assignee and an immediate draft PR;
+unattended parallel workers will also need durable leases, because branch-local
+task status is not a distributed lock. Workers need an owner-agreed, recorded
+amendment for scope changes. Intermediate PRs reference their parent issue
 without closing it; all required task merges control closure. Default-branch
 CI/CD and release health are observed afterward and failures create linked work.
 

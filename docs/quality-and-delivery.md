@@ -52,33 +52,15 @@ backup/restore exercise, hosted CI, or human review.
 
 ## Checks available now
 
-For each bounded increment, use the
-[work specification template](templates/work-specification.md) to define behavior
-and acceptance cases, and the
-[acceptance evidence template](templates/acceptance-evidence.md) to record results.
-Follow [Issue and Backlog governance](issue-backlog-governance.md): GitHub Issues
-own human-approved intent and aggregate acceptance; native Backlog tasks own
-atomic execution. Record the approved issue revision, approval evidence, explicit
-file scope, verification commands and task acceptance before coding.
-Keep the Backlog task as the execution plan of record: link specifications and evidence
-through the CLI, and map evidence to its acceptance criterion IDs. Small changes
-can include the completed evidence directly in the PR body; larger changes can
-link a dedicated record. Record failed and pending checks as well as successes.
-These templates support the Phase 0 delivery loop; cloud execution and independent
-review still require their own evidence.
-
-Task completion on a feature branch is provisional until merge. An independent
-agent may validate task acceptance and review the PR. Merge a small, ready PR
-after required pre-merge checks and blocking findings are clear. The merge makes
-its task Done final; close the parent issue when all required task PRs merge.
-For legacy tasks left In Progress on main after their sole PR merged, checked
-native acceptance and the merged PR establish effective completion; the audit
-reports the stale status without demanding another PR. Incomplete acceptance
-or an unmerged task still blocks issue closure.
-Report task and PR transitions on the issue without rewriting approved intent.
-Observe default-branch CI/CD afterward. A failure creates a new linked issue
-and native task; it does not reopen the merged work. Runtime reconciliation and
-leases remain future factory work, so record and retry any sync failure visibly.
+Work follows [the factory workflow](issue-backlog-governance.md): an approved
+issue, one Backlog task per PR with `Issue`, `Branch`, `Scope` and `Verify`
+lines, completion recorded before independent review, and merge as the point
+where the task becomes Done. For larger increments, the
+[work specification template](templates/work-specification.md) helps define
+behavior and acceptance cases, and the
+[acceptance evidence template](templates/acceptance-evidence.md) records results.
+Small changes can put the evidence directly in the PR body. Record failed and
+pending checks as well as successes.
 
 Run from the repository root with Python 3.9 or newer:
 
@@ -87,21 +69,16 @@ python3 -B scripts/quality.py
 python3 -B scripts/run_required_unittests.py
 ```
 
-PR Quality runs `python3 -B scripts/backlog_consistency.py --ci-pr` against
-fresh `origin/main` with read-only GitHub access and retains
-`artifacts/backlog-consistency.json`. The PR's approved task, dependencies,
-branch/PR claim and changed-path scope remain blocking. The separate advisory
-`Backlog audit` workflow retains the repository-wide result, including
-unrelated task/issue drift. It is not a required check and does not delay the
-main CI workflow or its release trigger. Its JSON `status` must be read after
-the run; a missing report is inconclusive and must be rerun for reconciliation.
-The local bundle
-registers `--offline` structural validation; live
-claim validation remains an outstanding gate until run separately. Immediately
-before claiming/resuming use the full guard
-command with `--base origin/main --task TASK-ID --branch RECORDED-BRANCH` after
-fetching origin. Require `claim_verified: true`. See the
-[guard contract and limits](issue-backlog-governance.md#executable-consistency-guard).
+Task validation is separate from these code checks. The `Task link` job runs
+`python3 -B scripts/backlog_consistency.py --pr` against fresh `origin/main`
+with read-only GitHub access and retains `artifacts/task-link.json`. It passes
+Dependabot and Backlog-only PRs as exempt; for other PRs it checks the task,
+issue approval, dependencies and changed-path scope. The advisory
+`Backlog audit` workflow reports repository-wide drift as warnings and is never
+required. The local bundle runs the offline audit (`--offline`). Before claiming
+or resuming a task, run the claim check described in the
+[factory workflow](issue-backlog-governance.md#3-claim) and require
+`claim_verified: true`.
 
 Or run the baseline and web checks and save a local evidence bundle (requires
 Node.js 20 or newer, npm, registry access, and Playwright's pinned Chromium).
@@ -114,8 +91,9 @@ npx playwright install chromium
 cd ../..
 ```
 
-On Linux, system browser libraries may also be required; CI installs them with
-`npx playwright install --with-deps chromium`. Then run from the repository root:
+On Linux, system browser libraries may also be required
+(`npx playwright install --with-deps chromium` installs them). Then run from
+the repository root:
 
 ```sh
 python3 -B scripts/check.py
@@ -170,9 +148,9 @@ The unprivileged `CI` workflow caches only Playwright's Chromium headless-shell
 browser files under `~/.cache/ms-playwright`. The smoke tests use the configured
 Chromium project without a browser channel, so Playwright runs its default
 headless shell. CI installs it with
-`npx playwright install --with-deps --only-shell chromium`; this still installs
-and checks Linux system dependencies on every run and the smoke tests still run
-on every cache hit or miss. See [Playwright's browser installation guidance](https://playwright.dev/docs/browsers#chromium-headless-shell)
+`npx playwright install --only-shell chromium`, relying on the GitHub-hosted
+Ubuntu image for system libraries; the smoke tests still run on every cache
+hit or miss. See [Playwright's browser installation guidance](https://playwright.dev/docs/browsers#chromium-headless-shell)
 for the `--only-shell` behavior.
 
 The cache uses `actions/cache` pinned to immutable revision
@@ -183,18 +161,18 @@ changes to the browser/toolchain lockfile or runner identity miss and repopulate
 a new cache. The v2 key also separates the smaller headless-shell cache from
 an earlier experiment that included the full Chromium browser.
 
-On a protected `main` push, Quality still runs `npm ci`, `npm audit`, lint,
-web unit and browser smoke tests, the build, actionlint, Bicep validation,
-Gitleaks, and source-bound evidence uploads after either a cache hit or miss.
-PR Quality keeps the repository and Python policy tests, the PR-scoped live
-claim/scope guard, actionlint, Bicep validation and Gitleaks. The full web and
-dependency checks run on the merged main SHA before the release image is built
-or promoted. A cache hit is a download optimization, not verification evidence.
+Quality runs `npm ci`, `npm audit`, lint, web unit and browser smoke tests and
+the build on every protected `main` push, merge-group run and manual run, and
+on PRs that change `apps/web/`. Other PRs skip the web steps and keep the
+repository and Python policy tests, actionlint, Bicep validation and Gitleaks.
+A cache hit is a download optimization, not verification evidence.
 We do not cache npm: the current locked graph installs
 28 packages in about 1–2 seconds, and an initial 59 MB npm cache hit did not
 reduce `npm ci` time.
 
-The browser cache is used only on protected `main` pushes. See
+The browser cache is used only on protected `main` pushes; PR runs download
+the browser without restoring or saving a cache.
+See
 [GitHub's cache access rules](https://docs.github.com/en/actions/reference/workflows-and-actions/dependency-caching#restrictions-for-accessing-a-cache).
 The privileged `.github/workflows/pr-safety.yml` workflow does not restore or
 consume CI caches, PR artifacts, or PR code. Keep cache use out of
@@ -236,12 +214,12 @@ remains representative evidence, not a controlled benchmark. Linux system
 dependency installation, locked npm install, audit, every test, build,
 actionlint, Gitleaks, and evidence uploads still ran on the warm hit.
 
-The `CI` workflow runs on every PR (without path filters), pushes to `main`,
-manual dispatch, and merge groups. Its single stable required check is
-`Quality`. PR and merge-group runs keep the fast safety checks; protected-main
-pushes add the locked web install, audit, lint, unit/browser tests and build.
-The exact-source release image is built only after main Quality succeeds, and
-the trusted Azure release verifies that run and artifact before promotion. Quality:
+The `CI` workflow runs on every PR, pushes to `main`, manual dispatch, and
+merge groups. Its stable checks are `Quality` (code) and `Task link` (task
+validation). PRs run the web steps only when they change `apps/web/`;
+protected-main pushes and merge groups always run them. The exact-source
+release image is built only after main Quality succeeds, and the trusted Azure
+release verifies that run and artifact before promotion. Quality:
 
 - Checks UTF-8 text, final newlines, trailing whitespace, conflict markers,
   local Markdown file links, and immutable action references. Anchor existence
@@ -255,10 +233,11 @@ the trusted Azure release verifies that run and artifact before promotion. Quali
   for 14 days, identified by run ID and attempt. Failed steps fail `Quality`.
 
 Actions use immutable revisions; downloaded tools have pinned SHA-256 hashes.
-Dependabot proposes weekly action and web npm updates. The local bundle and
+Dependabot proposes weekly action and web npm updates, grouping minor and patch
+updates into one PR per ecosystem. The local bundle and
 protected-main Quality run `npm audit` against the locked web dependency graph;
-any reported severity or registry failure stops main verification and promotion.
-It does not block an otherwise ready PR. CI retains the audit
+any reported severity or registry failure stops main verification and promotion,
+and fails Quality on PRs that change the web app. CI retains the audit
 log with its QA evidence. A maintainer reviews each finding, affected usage,
 and proposed update, applies a verified fix, and reruns the checks. If a fix is
 unavailable or the registry cannot be reached, record the finding or outage,
@@ -267,7 +246,7 @@ silently suppress it. A clean audit reflects the registry's current advisory
 data, not proof that dependencies have no vulnerabilities.
 Tool versions/checksums require
 reviewed updates in the workflow. CI has a read-only token, no Azure credentials,
-no privileged connections, no shared cache, and a ten-minute job limit.
+no privileged connections, no shared cache, and a twenty-minute job limit.
 Run untrusted PRs only on GitHub-hosted disposable runners.
 
 ## Interpreting PR safety
@@ -343,6 +322,11 @@ resolved review threads and strict `Quality`; they prohibit deletion and
 non-fast-forward updates and require zero approving reviews. This setting
 permits the adopted agent-review policy, but the advisory report still does
 not authorize a merge.
+
+As inspected on 18 November 2026, these rules are unchanged. The owner should
+add `Task link` as a required check and enable the merge queue, then drop the
+"up to date before merging" requirement; see the
+[factory workflow](issue-backlog-governance.md#repository-settings-for-the-owner).
 
 GitHub's [required-check behavior](https://docs.github.com/en/pull-requests/how-tos/merge-and-close-pull-requests/troubleshooting-required-status-checks)
 accepts skipped/neutral checks in some cases, so the evaluator specifically

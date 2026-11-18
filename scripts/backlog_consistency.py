@@ -1,25 +1,30 @@
-"""Read-only issue/task/claim validation. Python 3.9+, no package dependencies."""
+"""Read-only task-link guard for the issue -> task -> PR workflow.
+
+Python 3.9+, standard library only. It never writes to GitHub, tasks or issues.
+
+Modes (see docs/issue-backlog-governance.md):
+  --pr                     validate the current branch against its single task
+  --task TASK-n --branch B check a claim or resume; requires claim_verified true
+  (default)                audit every task; --offline skips GitHub evidence
+"""
 
 import argparse
-import base64
 from datetime import datetime, timezone
 import fnmatch
-import hashlib
 import json
 import os
 from pathlib import Path, PurePosixPath
 import re
 import subprocess
-import sys
 from urllib.error import HTTPError, URLError
-from urllib.parse import quote
 from urllib.request import Request, urlopen
 
 
 ROOT = Path(__file__).resolve().parents[1]
 ID = re.compile(r"TASK-[1-9][0-9]*\Z")
 PATH = re.compile(r"backlog/(?:archive/)?tasks/task-([1-9][0-9]*) - .+\.md\Z", re.I)
-ADOPTION = "2026-11-01"
+APPROVED = "approved"
+EXEMPT_AUTHORS = {"dependabot[bot]"}
 
 
 class EvidenceError(ValueError):
@@ -144,82 +149,216 @@ def load_tasks(root, ref=None):
 
 
 def field(task, name):
-    # Existing descriptions use both labeled paragraphs and Markdown headings.
+    """Return a `Name: value` line or a `## Name` section from the description."""
     body = task["body"]
-    match = re.search(r"^" + re.escape(name) + r":\s*(.+)$", body, re.M | re.I)
+    match = re.search(r"^" + re.escape(name) + r":[ \t]*(\S.*)$", body, re.M | re.I)
     if match:
         return match[1].strip().rstrip(".")
     match = re.search(r"^## " + re.escape(name) + r"\s*\n(.*?)(?=\n## |\Z)", body, re.S | re.I)
-    if match:
-        return match[1].strip()
-    if name == "Branch":
-        match = re.search(r"\bBranch: ([A-Za-z0-9/_-]+)", body)
-        return match[1] if match else ""
-    return ""
+    return match[1].strip() if match else ""
 
 
-def focus_for_branch(tasks, branch):
-    """Include the PR's task and its native dependencies, never unrelated work."""
-    owners = [tid for tid, task in tasks.items() if not task["archived"] and field(task, "Branch") == branch]
-    focus = set(owners)
-
-    def add_dependencies(tid):
-        for dependency in tasks[tid]["meta"]["dependencies"]:
-            if dependency in tasks and dependency not in focus:
-                focus.add(dependency)
-                add_dependencies(dependency)
-
-    for owner in owners:
-        add_dependencies(owner)
-    return focus
-
-
-def historical(task, base):
-    old = base.get(task["id"])
-    return bool(old and str(old["meta"].get("created_date", "9999"))[:10] < ADOPTION)
-
-
-def primary_issue(task, repository):
-    explicit = field(task, "Issue") or field(task, "Primary issue")
+def issue_url(task, repository):
     pattern = rf"https://github\.com/{re.escape(repository)}/issues/[1-9][0-9]*"
-    if not re.fullmatch(pattern, explicit) or explicit not in task["meta"]["references"]:
-        raise EvidenceError("canonical primary Issue URL must also be in native references")
-    return explicit
+    explicit = field(task, "Issue") or field(task, "Primary issue")
+    if re.fullmatch(pattern, explicit):
+        return explicit
+    for reference in task["meta"]["references"]:
+        if re.fullmatch(pattern, reference):
+            return reference
+    raise EvidenceError("task needs an `Issue:` line or reference to an issue in this repository")
+
+
+def scope_patterns(task):
+    """Scope entries are repository-relative paths or globs separated by `;`.
+
+    Prose entries (words without a slash or extension) are notes and grant nothing.
+    Backlog records are always in scope, so tasks never list their own record.
+    """
+    patterns = []
+    for entry in field(task, "Scope").split(";"):
+        entry = entry.strip().rstrip(".")
+        if not entry or entry.startswith("backlog/"):
+            continue
+        if " " in entry and "/" not in entry:
+            continue
+        if (entry.startswith(("/", "~")) or "\\" in entry or ".." in PurePosixPath(entry).parts
+                or entry.split("/")[0] in {"*", "**", ".git"}):
+            raise EvidenceError(f"Scope entry is not a bounded repository path: {entry}")
+        patterns.append(entry)
+    return patterns
 
 
 def spec(task, repository):
-    issue = primary_issue(task, repository)
-    body = task["body"].split("## Acceptance Criteria", 1)[0]
-    digest = re.search(r"SHA-256(?: of UTF-8 issue body)?\s+([0-9a-f]{64})", body, re.I)
-    revision = re.search(r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ", body)
-    approval = field(task, "Approval evidence") or field(task, "Approval")
+    """The fields that make a task executable."""
+    issue = issue_url(task, repository)
     branch = field(task, "Branch")
-    scope = field(task, "Scope")
-    # Earlier CLI-managed specifications put external/context notes after the
-    # repository allowlist on the same line. Those notes grant no file scope.
-    scope = scope.split(". External scope:", 1)[0].split(". Archived TASK-", 1)[0]
-    verify = field(task, "Verify") or field(task, "Verification")
-    if not digest or not revision or not approval:
-        raise EvidenceError("approved timestamp, SHA-256 and explicit approval evidence are required")
-    if not branch or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9/_-]*", branch) or branch in {"main", "master"}:
-        raise EvidenceError("a unique feature Branch is required")
-    if not scope or not verify or not task["ac"]:
-        raise EvidenceError("explicit Scope, Verify commands and native acceptance are required")
-    paths = []
-    for path in scope.split(";"):
-        path = path.strip().rstrip(".")
-        if path in {"this task's own CLI-managed record", "this task's CLI-managed record",
-                    "this task record through Backlog CLI", "this task record only"}:
-            path = task["path"]
-        if (not path or path.startswith(("/", "~")) or "\\" in path
-                or ".." in PurePosixPath(path).parts or any(c in path for c in "`$\n")
-                or path.split("/")[0] in {"*", "**", ".git"}):
-            raise EvidenceError("Scope must enumerate repository-relative paths or bounded directory globs")
-        paths.append(path)
-    if task["path"] not in paths:
-        raise EvidenceError("Scope must explicitly include this native task record")
-    return {"issue": issue, "digest": digest[1].lower(), "revision": revision[0],
-            "branch": branch, "scope": paths, "verify": verify}
+    if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9/._-]*", branch) or branch in {"main", "master"}:
+        raise EvidenceError("task needs a `Branch:` line naming its feature branch")
+    scope = scope_patterns(task)
+    if not scope:
+        raise EvidenceError("task needs a `Scope:` line listing the paths it may change")
+    if not task["ac"]:
+        raise EvidenceError("task needs at least one acceptance criterion")
+    return {"issue": issue, "branch": branch, "scope": scope}
+
+
+def issue_problem(issue):
+    if not issue:
+        return "linked issue could not be read"
+    if issue.get("state") != "open":
+        return "linked issue is not open"
+    if APPROVED not in {label.get("name") for label in issue.get("labels", [])}:
+        return f"linked issue is not labeled `{APPROVED}`"
+    return None
+
+
+def merged_from(branch, live):
+    return [p for p in live["pulls"] if p.get("merged_at") and p["head"]["ref"] == branch]
+
+
+def completed(tid, base, live):
+    """A dependency is complete when main has it Done, or (older records) when
+    main still says In Progress but every criterion is checked and its PR merged."""
+    task = base.get(tid)
+    if not task:
+        return False
+    if task["meta"]["status"] == "Done":
+        return True
+    if task["archived"] or task["meta"]["status"] != "In Progress" or not task["ac"]:
+        return False
+    if not all(checked for checked, _ in task["ac"]) or not live:
+        return False
+    branch = field(task, "Branch")
+    return bool(branch and merged_from(branch, live))
+
+
+def structure(tasks, only=None):
+    """Unknown dependencies and cycles; restricted to `only` and its dependencies."""
+    errors, visiting, visited = [], set(), set()
+
+    def walk(tid):
+        if tid in visiting:
+            errors.append(f"{tid}: cyclic dependencies")
+            return
+        if tid in visited:
+            return
+        visiting.add(tid)
+        for dep in tasks[tid]["meta"]["dependencies"]:
+            if dep not in tasks:
+                errors.append(f"{tid}: unknown dependency {dep}")
+            else:
+                walk(dep)
+        visiting.discard(tid)
+        visited.add(tid)
+
+    for tid in ([only] if only else tasks):
+        walk(tid)
+    return errors
+
+
+def active(tasks):
+    return {tid: t for tid, t in tasks.items() if not t["archived"] and t["meta"]["status"] != "Done"}
+
+
+def competing_prs(tid, branch, live):
+    title = re.compile(rf"\b{re.escape(tid)}\b")
+    return sorted(p["number"] for p in live["pulls"]
+                  if p["state"] == "open" and p["head"]["ref"] != branch and title.search(p.get("title") or ""))
+
+
+def check_task(task, base, repository, live, branch):
+    """Rules shared by PR and claim validation for one task."""
+    tid, errors = task["id"], []
+    try:
+        info = spec(task, repository)
+    except EvidenceError as error:
+        return [f"{tid}: {error}"], None
+    if info["branch"] != branch:
+        errors.append(f"{tid}: recorded branch is {info['branch']}, not {branch}")
+    problem = issue_problem(live["issues"].get(info["issue"]))
+    if problem:
+        errors.append(f"{tid}: {problem}")
+    waiting = [dep for dep in task["meta"]["dependencies"] if not completed(dep, base, live)]
+    if waiting:
+        errors.append(f"{tid}: dependencies are not complete on main: {', '.join(waiting)}")
+    if base.get(tid, {}).get("meta", {}).get("status") == "Done":
+        errors.append(f"{tid}: task is already Done on main; create a follow-up task")
+    others = competing_prs(tid, branch, live)
+    if others:
+        errors.append(f"{tid}: another open PR names this task: {', '.join(f'#{n}' for n in others)}")
+    return errors, info
+
+
+def exemption(changed, author):
+    """PRs that need no task: dependency bots and pure Backlog record changes."""
+    if author in EXEMPT_AUTHORS:
+        return f"author {author}"
+    if not changed:
+        return "no changed paths"
+    if all(path.startswith("backlog/") for path in changed):
+        return "Backlog records only"
+    return None
+
+
+def check_pr(tasks, base, repository, live, branch, changed, author):
+    reason = exemption(changed, author)
+    if reason:
+        return {"errors": [], "warnings": [], "exempt": reason}
+    owners = [t for t in active(tasks).values() if field(t, "Branch") == branch]
+    owners += [t for t in tasks.values() if t["meta"]["status"] == "Done" and not t["archived"]
+               and field(t, "Branch") == branch and base.get(t["id"], {}).get("meta", {}).get("status") != "Done"]
+    if len(owners) != 1:
+        found = ", ".join(t["id"] for t in owners) or "none"
+        return {"errors": [f"branch {branch}: needs exactly one task with `Branch: {branch}` (found {found})"],
+                "warnings": [], "task": None}
+    task = owners[0]
+    errors, info = check_task(task, base, repository, live, branch)
+    errors += structure(tasks, task["id"])
+    warnings = []
+    if info:
+        outside = [p for p in changed if not p.startswith("backlog/")
+                   and not any(fnmatch.fnmatchcase(p, pattern) for pattern in info["scope"])]
+        errors += [f"{task['id']}: changed path outside Scope: {p}" for p in outside]
+    if task["meta"]["status"] == "Done" and not all(checked for checked, _ in task["ac"]):
+        errors.append(f"{task['id']}: Done requires every acceptance criterion checked")
+    if task["meta"]["status"] == "To Do":
+        warnings.append(f"{task['id']}: task is still To Do; claim it before review")
+    return {"errors": errors, "warnings": warnings, "task": task["id"]}
+
+
+def check_claim(tasks, base, repository, live, target, branch):
+    task = tasks.get(target)
+    if not task or task["archived"] or task["meta"]["status"] == "Done":
+        return {"errors": [f"{target}: task is missing, archived or Done"], "warnings": []}
+    errors, _ = check_task(task, base, repository, live, branch)
+    errors += structure(tasks, target)
+    if task["meta"]["status"] == "To Do" and task["meta"]["assignee"]:
+        errors.append(f"{target}: To Do task is already assigned to {', '.join(task['meta']['assignee'])}")
+    if merged_from(branch, live):
+        errors.append(f"{target}: branch {branch} already has a merged PR; use a new task and branch")
+    return {"errors": errors, "warnings": []}
+
+
+def audit(tasks, base, repository, live):
+    errors, warnings, branches = structure(tasks), [], {}
+    for tid, task in sorted(active(tasks).items()):
+        try:
+            info = spec(task, repository)
+        except EvidenceError as error:
+            warnings.append(f"{tid}: not executable: {error}")
+            continue
+        if info["branch"] in branches:
+            errors.append(f"{tid}: branch {info['branch']} is also recorded by {branches[info['branch']]}")
+        branches[info["branch"]] = tid
+        if not live:
+            continue
+        problem = issue_problem(live["issues"].get(info["issue"]))
+        if problem:
+            warnings.append(f"{tid}: {problem}")
+        if task["meta"]["status"] == "In Progress" and merged_from(info["branch"], live):
+            warnings.append(f"{tid}: PR merged but task is still In Progress; finish or split the remaining work")
+    return {"errors": errors, "warnings": warnings}
 
 
 class GitHub:
@@ -267,363 +406,83 @@ class GitHub:
         raise EvidenceError("GitHub evidence exceeds pagination limit; no passing fallback.")
 
 
-def branch_tasks(root, client, sha, wanted):
-    listing = git(root, "ls-tree", "-r", "--name-only", sha, "--", "backlog/tasks", optional=True)
-    if listing is None:
-        tree = client.get(f"git/trees/{sha}?recursive=1")
-        if tree.get("truncated") or not isinstance(tree.get("tree"), list):
-            raise EvidenceError("Truncated branch tree cannot establish exclusive claims.")
-        listing = "\n".join(x["path"] for x in tree["tree"] if x.get("type") == "blob")
-    found = {}
-    for path in listing.splitlines():
-        match = PATH.fullmatch(path)
-        if not match or path.startswith("backlog/archive/") or f"TASK-{match[1]}" not in wanted:
-            continue
-        content = git(root, "show", f"{sha}:{path}", optional=True)
-        if content is None:
-            blob = client.get(f"contents/{quote(path, safe='/')}?ref={sha}")
-            if blob.get("encoding") != "base64" or "content" not in blob:
-                raise EvidenceError("Branch task content unavailable.")
-            content = base64.b64decode(blob["content"]).decode()
-        task = parse_task(content, path)
-        if task["id"] in found:
-            raise EvidenceError(f"{task['id']}: ambiguous branch claim record.")
-        found[task["id"]] = task
-    return found
-
-
-def collect(root, repository, tasks, base_sha, client=None):
-    client = client or GitHub(repository)
-    repo = client.get("")
-    default = repo["default_branch"]
-    default_sha = client.get(f"git/ref/heads/{quote(default, safe='')}")["object"]["sha"]
-    if default_sha != base_sha:
-        raise EvidenceError("Default-branch evidence is stale; fetch current main and rerun validation.")
+def collect(client, tasks, repository, wanted):
+    """Fetch PRs and the linked issues of `wanted` task IDs."""
     pulls = client.pages("pulls?state=all")
-    for pr in pulls:
-        pr["on_default_branch"] = bool(pr.get("merged_at") and pr.get("merge_commit_sha")
-                                       and git(root, "merge-base", "--is-ancestor", pr["merge_commit_sha"],
-                                               base_sha, optional=True) is not None)
-    branches = client.pages("branches")
     issues = {}
-    for task in tasks.values():
+    for tid in wanted:
         try:
-            url = primary_issue(task, repository)
+            url = issue_url(tasks[tid], repository)
         except EvidenceError:
             continue
         if url not in issues:
-            issues[url] = client.get("issues/" + url.rsplit("/", 1)[1])
-    claims = []
-    for branch in branches:
-        for tid, task in branch_tasks(root, client, branch["commit"]["sha"], tasks).items():
-            if (field(task, "Branch") == branch["name"] and not task["archived"]
-                    and task["meta"]["status"] in {"In Progress", "Done"}):
-                claims.append({"task": tid, "branch": branch["name"],
-                               "sha": branch["commit"]["sha"], "status": task["meta"]["status"]})
-    # Open PRs can come from a fork whose branch is absent from the base repo.
-    for pr in pulls:
-        if pr["state"] != "open":
-            continue
-        for tid, task in branch_tasks(root, client, pr["head"]["sha"], tasks).items():
-            if field(task, "Branch") == pr["head"]["ref"] and not task["archived"]:
-                claims.append({"task": tid, "branch": pr["head"]["ref"],
-                               "sha": pr["head"]["sha"], "status": task["meta"]["status"],
-                               "pr": pr["number"], "repository": pr["head"]["repo"]["full_name"]})
-    if client.get(f"git/ref/heads/{quote(default, safe='')}")["object"]["sha"] != default_sha:
-        raise EvidenceError("Default branch changed during collection; rerun on fresh evidence.")
-    return {"default_branch": default, "default_sha": default_sha, "issues": issues,
-            "pulls": pulls, "claims": claims, "collected_at": datetime.now(timezone.utc).isoformat()}
+            issues[url] = client.get("issues/" + url.rsplit("/", 1)[1], missing=True)
+    return {"pulls": pulls, "issues": issues}
 
 
-def validate(tasks, base, repository, live=None, target=None, branch=None, changed=(), focus=None):
-    errors, warnings, specs, blocked = [], [], {}, {}
-
-    def fail(tid, reason):
-        if focus is None or tid in focus or tid == "scope":
-            errors.append(f"{tid}: {reason}")
-
-    for tid in base.keys() - tasks.keys():
-        fail(tid, "native identity/history was removed; retain an explicit archival/migration record")
-    for tid, task in tasks.items():
-        old = base.get(tid)
-        unchanged_done = (old is not None and old == task
-                          and task["meta"]["status"] == "Done")
-        amended_done = (old is not None and old != task
-                        and task["meta"]["status"] == "Done"
-                        and old["meta"]["status"] == "Done")
-        if historical(task, base) and not amended_done:
-            if not task["archived"] and task["meta"]["status"] != "Done":
-                warnings.append(f"{tid}: historical import is ineligible; fresh atomic triage is required")
-            continue
-        if unchanged_done or (task["archived"] and not amended_done):
-            continue
-        try:
-            specs[tid] = spec(task, repository)
-            if task["meta"]["status"] == "Done" and not all(x[0] for x in task["ac"]):
-                fail(tid, "proposed completion has unchecked native acceptance")
-            if task["meta"]["status"] == "In Progress" and len(task["meta"]["assignee"]) != 1:
-                fail(tid, "active execution requires one explicit assignee")
-        except EvidenceError as error:
-            fail(tid, str(error))
-    visiting, visited = set(), set()
-
-    def walk(tid):
-        if tid in visiting:
-            fail(tid, "cyclic native dependencies")
-            return
-        if tid in visited:
-            return
-        visiting.add(tid)
-        for dep in tasks[tid]["meta"]["dependencies"]:
-            if dep not in tasks:
-                fail(tid, f"unknown native dependency {dep}")
-            else:
-                walk(dep)
-        visiting.remove(tid)
-        visited.add(tid)
-
-    for tid in tasks:
-        walk(tid)
-
-    completion_cache, completing = {}, set()
-
-    def completed(tid):
-        if tid in completion_cache:
-            return completion_cache[tid]
-        if tid in completing:
-            return False
-        old = base.get(tid)
-        current = tasks.get(tid)
-        legacy_merged = (old and current and old["meta"]["status"] == "In Progress"
-                         and current["meta"]["status"] == "In Progress")
-        if (not old or not current or ((old["archived"] or current["archived"])
-                                    and old["meta"]["status"] != "Done")
-                or not (old["meta"]["status"] == current["meta"]["status"] == "Done"
-                                            or legacy_merged) or not old["ac"]
-                or current["ac"] != old["ac"] or current["meta"]["dependencies"] != old["meta"]["dependencies"]
-                or not all(x[0] for x in current["ac"])
-                or any(field(current, key) != field(old, key) for key in
-                       ("Issue", "Primary issue", "Branch", "Scope", "Verify", "Verification"))
-                or not all(x[0] for x in old["ac"])):
-            return False
-        completing.add(tid)
-        dependencies_done = all(completed(dep) for dep in current["meta"]["dependencies"])
-        completing.remove(tid)
-        if not dependencies_done:
-            return False
-        if historical(old, base):
-            return True  # Grandfather verified historic completion on the default branch only.
-        if not live:
-            return False  # Offline structure is never live dependency authorization.
-        pr_branch = field(old, "Branch")
-        done = any(p.get("merged_at") and p.get("on_default_branch")
-                   and p["base"]["ref"] == live["default_branch"]
-                   and p["head"]["ref"] == pr_branch
-                   and p["head"]["repo"] and p["head"]["repo"]["full_name"] == repository
-                   for p in live["pulls"])
-        completion_cache[tid] = done
-        return done
-
-    for tid, task in tasks.items():
-        blocked[tid] = [dep for dep in task["meta"]["dependencies"] if not completed(dep)]
-        if task["meta"]["status"] == "In Progress" and completed(tid):
-            warnings.append(f"{tid}: merged PR and checked acceptance establish completion; native status is stale")
-        # Superseded IDs must not survive on any active downstream record.
-        old = base.get(tid)
-        replacements = re.findall(r"^Replaced by: (TASK-[1-9][0-9]*)\s*$", task["body"], re.M) if task["archived"] else []
-        if old and task["archived"] and old["meta"]["status"] != "Done" and task["meta"]["status"] != old["meta"]["status"]:
-            fail(tid, "archival must not turn unfinished work into completion")
-        if old and not old["archived"] and task["archived"] and old["meta"]["status"] != "Done":
-            intake = ("historical-import" in task["meta"]["labels"]
-                      and "needs-triage" in task["meta"]["labels"]
-                      and any(re.fullmatch(rf"https://github\.com/{re.escape(repository)}/issues/[1-9][0-9]*", u)
-                              for u in task["meta"]["references"]))
-            if not replacements and not intake:
-                fail(tid, "migration requires 'Replaced by: TASK-n' or explicit historical-import/needs-triage issue intake")
-        for replacement in replacements:
-            if replacement not in tasks or tasks[replacement]["archived"]:
-                fail(tid, f"replacement {replacement} is missing or archived")
-            else:
-                urls = set(task["meta"]["references"]) & set(tasks[replacement]["meta"]["references"])
-                if not any(re.fullmatch(rf"https://github\.com/{re.escape(repository)}/issues/[1-9][0-9]*", u) for u in urls):
-                    fail(tid, f"replacement {replacement} lacks the same canonical issue mapping")
-            for child in tasks.values():
-                if not child["archived"] and tid in child["meta"]["dependencies"]:
-                    fail(child["id"], f"stale migration dependency {tid}; remap to {replacement}")
-
-    signatures, branches = {}, {}
-    for tid, info in specs.items():
-        signature = (info["issue"], info["digest"], tuple(sorted(p for p in info["scope"] if not p.startswith("backlog/"))),
-                     tuple(text for _, text in tasks[tid]["ac"]))
-        if signature in signatures:
-            fail(tid, f"duplicate decomposition of {signatures[signature]}")
-            fail(signatures[signature], f"duplicate decomposition of {tid}")
-        signatures[signature] = tid
-        if info["branch"] in branches:
-            fail(tid, f"feature branch already assigned to {branches[info['branch']]}")
-            fail(branches[info["branch"]], f"feature branch already assigned to {tid}")
-        branches[info["branch"]] = tid
-        if live:
-            issue = live["issues"].get(info["issue"])
-            if not issue or "body" not in issue:
-                fail(tid, "live approval/revision evidence is unavailable")
-            elif issue.get("state") == "closed" and not all(
-                    completed(peer["id"]) for peer in tasks.values()
-                    if (field(peer, "Issue") or field(peer, "Primary issue")) == info["issue"]):
-                fail(tid, "issue is closed before all linked tasks have merged completion")
-            elif issue.get("state") not in {"open", "closed"}:
-                fail(tid, "issue state is unavailable")
-            elif hashlib.sha256((issue["body"] or "").encode()).hexdigest() != info["digest"]:
-                fail(tid, "issue body changed; authorized triage must reassess the approved revision")
-            prs = [p for p in live["pulls"] if p["head"]["ref"] == info["branch"]
-                   and p["head"]["repo"] and p["head"]["repo"]["full_name"] == repository]
-            if len(prs) > 1:
-                fail(tid, "multiple PRs reuse this task branch; split/reconcile through triage")
-            claims = [c for c in live["claims"] if c["task"] == tid]
-            owners = {(c.get("repository", repository), c["branch"]) for c in claims}
-            if (len(owners) > 1 or any(owner[0] != repository for owner in owners)
-                    or any(c["branch"] != info["branch"] for c in claims)):
-                fail(tid, "competing branch/PR claims; reconcile ownership before execution")
-            if any(c["status"] == "To Do" and c.get("pr") for c in claims):
-                fail(tid, "open implementation PR has an unclaimed To Do record")
-            if (tasks[tid]["meta"]["status"] == "In Progress" and not completed(tid)
-                    and not claims and info["branch"] != branch):
-                fail(tid, "active claim has no live branch/PR; reconcile deleted or stale work")
-            if tasks[tid]["meta"]["status"] == "In Progress" and blocked[tid]:
-                fail(tid, "active work lacks default-branch completion: " + ", ".join(blocked[tid]))
-
-    if target:
-        task = tasks.get(target)
-        if not task or task["archived"] or historical(task, base) or task["meta"]["status"] == "Done":
-            fail(target, "task is absent, archived, historical or already Done; it cannot be claimed")
-        elif target not in specs:
-            fail(target, "task has no valid approved execution specification")
-        else:
-            info = specs[target]
-            if task["meta"]["status"] == "To Do" and task["meta"]["assignee"]:
-                fail(target, "pending task is already assigned; do not take over another worker")
-            if branch != info["branch"]:
-                fail(target, f"claim must use the recorded branch {info['branch']}")
-            if blocked[target]:
-                fail(target, "dependencies lack verified default-branch completion: " + ", ".join(blocked[target]))
-            if not live:
-                fail(target, "claims require live evidence; offline checks cannot authorize work")
-            else:
-                for c in live["claims"]:
-                    if c["task"] == target and (c["branch"] != branch or c.get("repository", repository) != repository):
-                        fail(target, "task already claimed by another branch or repository")
-                if any(p.get("merged_at") and p["head"]["ref"] == branch for p in live["pulls"]):
-                    fail(target, "task branch already produced a merged PR; reconcile before reuse")
-
-    # PR source changes need an approved task on the current branch. Main audits
-    # still validate all records; branch-local Done may propose its own completion.
-    if changed and branch not in {"main", "master", None}:
-        candidates = [tid for tid, info in specs.items() if info["branch"] == branch]
-        if len(candidates) != 1:
-            fail("scope", "changed branch requires exactly one approved execution task")
-        else:
-            tid = candidates[0]
-            for path in changed:
-                if not any(fnmatch.fnmatchcase(path, pattern) for pattern in specs[tid]["scope"]):
-                    fail(tid, f"changed path outside approved scope: {path}")
-    return {"status": "fail" if errors else "pass", "errors": sorted(set(errors)),
-            "warnings": sorted(set(warnings)), "blocked_dependencies": blocked,
-            "task_count": len(tasks), "executable_tasks": sorted(specs),
-            "claim_task": target, "claim_verified": bool(target and live and not errors)}
-
-
-def source(root, tasks):
-    names = git(root, "ls-files", "--cached", "--others", "--exclude-standard", "-z").strip("\0").split("\0")
-    tracked = set(git(root, "ls-files", "--cached", "-z").strip("\0").split("\0"))
-    manifest = []
-    for name in sorted(set(n for n in names if n)):
-        if name.startswith("artifacts/") and name not in tracked:
-            continue  # Runtime evidence is not source. Tracked artifact changes still count.
-        path = root / name
-        if path.is_symlink():
-            entry = {"path": name, "symlink": os.readlink(path)}
-        elif path.is_file():
-            entry = {"path": name, "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
-                     "mode": path.stat().st_mode & 0o777}
-        elif not path.exists():
-            entry = {"path": name, "deleted": True}
-        else:
-            raise EvidenceError("Unsupported source entry in source manifest.")
-        manifest.append(entry)
-    return {"head": git(root, "rev-parse", "HEAD").strip(),
-            "status": git(root, "status", "--porcelain=v1", "--untracked-files=all"),
-            "manifest": manifest,
-            "manifest_sha256": hashlib.sha256(json.dumps(manifest, sort_keys=True).encode()).hexdigest()}
+def changed_paths(root, base_sha):
+    merge_base = git(root, "merge-base", base_sha, "HEAD").strip()
+    changed = git(root, "diff", "--no-renames", "--name-only", "-z", merge_base, "--").split("\0")
+    changed += git(root, "ls-files", "--others", "--exclude-standard", "-z").split("\0")
+    return sorted({p for p in changed if p and not p.startswith("artifacts/")})
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--root", type=Path, default=ROOT)
-    parser.add_argument("--base", default="origin/main", help="Fresh default-branch ref, never the task branch")
+    parser.add_argument("--base", default="origin/main", help="fresh default-branch ref")
     parser.add_argument("--repository", default=os.environ.get("GITHUB_REPOSITORY", "vkaam/phonebuddy"))
-    parser.add_argument("--task", help="Validate this native task immediately before claim/resume")
-    parser.add_argument("--branch", help="Task branch (defaults to GITHUB_HEAD_REF or current branch)")
-    parser.add_argument("--ci-pr", action="store_true", help="Block only on this PR's task and dependencies")
-    parser.add_argument("--offline", action="store_true", help="Structural checks only; cannot verify a claim")
-    parser.add_argument("--output", type=Path, help="Write JSON evidence in addition to stdout")
+    parser.add_argument("--task", help="claim/resume check for this task")
+    parser.add_argument("--branch", help="task branch (default: GITHUB_HEAD_REF or the current branch)")
+    parser.add_argument("--pr", "--ci-pr", dest="pr", action="store_true", help="validate this branch's PR")
+    parser.add_argument("--author", default=os.environ.get("PR_AUTHOR", ""), help="PR author login")
+    parser.add_argument("--offline", action="store_true", help="audit structure without GitHub evidence")
+    parser.add_argument("--output", type=Path, help="also write the JSON report here")
     args = parser.parse_args(argv)
-    report = {"schema_version": 1, "mode": "offline" if args.offline else "live",
-              "recorded_at": datetime.now(timezone.utc).isoformat(), "status": "fail",
-              "claim_verified": False, "errors": []}
-    output_safe = False
+    mode = "pr" if args.pr else "claim" if args.task else "audit"
+    report = {"schema_version": 2, "mode": mode, "recorded_at": datetime.now(timezone.utc).isoformat(),
+              "status": "fail", "claim_verified": False, "errors": [], "warnings": []}
+    output_ok = False
     try:
         root = args.root.resolve()
         if args.output:
-            output_path = args.output.resolve()
-            if output_path == root or root in output_path.parents:
-                relative = output_path.relative_to(root).as_posix()
-                tracked_output = git(root, "ls-files", "--error-unmatch", "--", relative, optional=True)
-                if not relative.startswith("artifacts/") or tracked_output is not None:
-                    raise EvidenceError("JSON output must be outside the checkout or an untracked artifacts/ file.")
-            output_safe = True
+            target = args.output.resolve()
+            if root in target.parents and not target.relative_to(root).as_posix().startswith("artifacts/"):
+                raise EvidenceError("--output must be outside the checkout or under artifacts/")
+            output_ok = True
+        if args.pr and args.task:
+            raise EvidenceError("--pr and --task are separate modes")
+        if args.offline and mode != "audit":
+            raise EvidenceError("PR and claim checks need live GitHub evidence; --offline is audit-only")
         tasks = load_tasks(root)
         base_sha = git(root, "rev-parse", args.base + "^{commit}").strip()
         base = load_tasks(root, base_sha)
-        before = source(root, tasks)
         branch = args.branch or os.environ.get("GITHUB_HEAD_REF") or git(root, "branch", "--show-current").strip()
-        if args.ci_pr and args.task:
-            raise EvidenceError("--ci-pr and --task serve different validation modes.")
-        if args.ci_pr and args.offline:
-            raise EvidenceError("PR Quality requires live GitHub evidence; --offline cannot validate a claim.")
-        if args.ci_pr and git(root, "merge-base", "--is-ancestor", base_sha, "HEAD", optional=True) is None:
-            raise EvidenceError("Test merge is behind current main; update the branch and rerun CI.")
-        focus = focus_for_branch(tasks, branch) if args.ci_pr else None
-        # --no-renames includes both old and new paths in scope validation.
-        changed = git(root, "diff", "--no-renames", "--name-only", "-z", base_sha, "--").split("\0")
-        changed = [p for p in changed if p]
-        changed += [p for p in git(root, "ls-files", "--others", "--exclude-standard", "-z").strip("\0").split("\0")
-                    if not p.startswith("artifacts/")]
-        changed = sorted(set(p for p in changed if p))
-        for path in list(changed):
-            candidate = root / path
-            if candidate.is_symlink():
-                destination = candidate.resolve()
-                if root not in destination.parents:
-                    raise EvidenceError(f"{path}: changed symlink escapes the approved checkout.")
-                changed.append(destination.relative_to(root).as_posix())
-        selected = {tid: t for tid, t in tasks.items() if (focus is None or tid in focus)
-                    and not t["archived"] and not historical(t, base)
-                    and (t["meta"]["status"] != "Done" or tid not in base or base[tid]["meta"]["status"] != "Done")}
-        live = None if args.offline else collect(root, args.repository, selected, base_sha)
-        report.update(validate(tasks, base, args.repository, live, args.task, branch, changed, focus))
-        report.update({"source": before, "base_sha": base_sha, "branch": branch,
-                       "repository": args.repository, "changed_paths": changed})
-        if live:
-            report["remote"] = {k: live[k] for k in ("default_branch", "default_sha", "collected_at", "claims")}
-        if source(root, load_tasks(root)) != before:
-            raise EvidenceError("Source changed during validation; rerun on stable source.")
+        report.update({"base_sha": base_sha, "branch": branch, "repository": args.repository})
+        if mode == "pr":
+            changed = changed_paths(root, base_sha)
+            report["changed_paths"] = changed
+            owners = [tid for tid, t in tasks.items() if field(t, "Branch") == branch]
+            live = None if exemption(changed, args.author) else collect(
+                GitHub(args.repository), tasks, args.repository, owners)
+            result = check_pr(tasks, base, args.repository, live, branch, changed, args.author)
+        elif mode == "claim":
+            live = collect(GitHub(args.repository), tasks, args.repository, [args.task] if args.task in tasks else [])
+            result = check_claim(tasks, base, args.repository, live, args.task, branch)
+            report["task"] = args.task
+        else:
+            live = None if args.offline else collect(GitHub(args.repository), tasks, args.repository, active(tasks))
+            result = audit(tasks, base, args.repository, live)
+        report.update(result)
+        report["status"] = "fail" if report["errors"] else "pass"
+        report["claim_verified"] = mode == "claim" and not report["errors"]
     except (EvidenceError, OSError, ValueError, KeyError, TypeError, subprocess.SubprocessError) as error:
-        # No raw API responses, subprocess commands, issue text or tokens in logs.
+        # Never echo raw API responses, issue text or tokens.
         report["status"] = "fail"
         report["claim_verified"] = False
         report["errors"].append(str(error) if isinstance(error, EvidenceError) else "Evidence could not be read or parsed.")
     output = json.dumps(report, indent=2) + "\n"
-    if args.output and output_safe:
+    if output_ok:
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(output)
     print(output, end="")

@@ -1,5 +1,10 @@
 # Factory task lease foundation
 
+Interactive work does not need leases: a task is claimed by the claim check,
+an assignee and an immediate draft PR, as described in the
+[factory workflow](issue-backlog-governance.md#3-claim). This component is
+parked until the factory runs unattended parallel workers.
+
 This is a storage foundation, not an authorization system for autonomous work.
 A Blob lease protects the task's record; it cannot fence GitHub writes. Do not
 use this component to authorize autonomous claims or publishing until a trusted

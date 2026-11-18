@@ -1,0 +1,31 @@
+name: Bug or CI failure
+description: Report broken behavior, a failed main-branch run or a deployment problem.
+labels: [bug, needs-triage]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Post-merge failures get a new issue; do not reopen the merged work.
+        The owner adds `approved` when agents may start on a fix.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: Observed behavior, with a link to the failing run, log or screenshot.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: How we will know it is fixed, checkable before the fix merges.
+      placeholder: |
+        - ...
+    validations:
+      required: true
