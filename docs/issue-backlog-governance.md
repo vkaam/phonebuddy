@@ -171,7 +171,12 @@ reconciliation changes; the guard supplies no automatic repair path.
 
 On a PR, required Quality runs the live guard with `--ci-pr --base origin/main`
 and the PR's head branch. It blocks on that task's approval, claim, scope and
-dependencies. If main has advanced beyond the tested merge commit, the check
+dependencies. A PR consisting solely of newly added, unassigned To Do native
+task records can instead pass as intake without an execution task on the intake
+branch. Each new task still requires valid issue, approval, scope and dependency
+metadata and live evidence. Existing task edits, removals, renames, completed or
+assigned records, and mixed source changes use the normal execution-task gate.
+If main has advanced beyond the tested merge commit, the check
 asks for an updated branch and rerun. The separate advisory Backlog audit
 workflow retains the repository-wide result on PR and main runs; it is not a
 required check and is not part of the main CI workflow that triggers release.

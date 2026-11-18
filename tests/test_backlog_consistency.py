@@ -104,6 +104,30 @@ class ConsistencyTests(unittest.TestCase):
         self.assertEqual(result["status"], "fail", result)
         self.assertTrue(any(fragment in e for e in result["errors"]), result)
 
+    def test_intake_accepts_only_new_unclaimed_task_files(self):
+        a, b = record(), record(81)
+        tasks = {a["id"]: a, b["id"]: b}
+        paths = [a["path"], b["path"]]
+        self.assertEqual(guard.intake_tasks(tasks, {}, paths), set(tasks))
+        self.assertEqual(guard.intake_tasks(tasks, {a["id"]: a}, paths), set())
+        self.assertEqual(guard.intake_tasks(tasks, {}, paths + ["scripts/feature.py"]), set())
+        self.assertEqual(guard.intake_tasks(tasks, {}, paths + ["backlog/tasks/deleted.md"]), set())
+        for change in (lambda t: t["meta"].update(status="Done"),
+                       lambda t: t["meta"].update(assignee=["@worker"]),
+                       lambda t: t["ac"].__setitem__(0, (True, "done"))):
+            altered = deepcopy(a)
+            change(altered)
+            self.assertEqual(guard.intake_tasks({a["id"]: altered}, {}, [a["path"]]), set())
+
+    def test_intake_still_validates_new_task_and_live_revision(self):
+        task = record()
+        focus = {task["id"]}
+        good = self.run_guard([task], branch="intake/new", changed=[task["path"]], focus=focus, intake=True)
+        self.assertEqual(good["status"], "pass", good)
+        bad = self.run_guard([task], remote=live(body="changed"), branch="intake/new",
+                             changed=[task["path"]], focus=focus, intake=True)
+        self.assertFails(bad, "issue body changed")
+
     def test_valid_claim_and_distinct_slices_of_same_issue(self):
         a, b = record(), record(81)
         result = self.run_guard([a, b], target=a["id"], branch="agent/task-80")
@@ -349,6 +373,48 @@ class ConsistencyTests(unittest.TestCase):
 
 
 class CollectionAndCliTests(unittest.TestCase):
+    def test_pr_cli_task_intake_and_mixed_changes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            def git(*args):
+                return subprocess.run(["git", *args], cwd=root, capture_output=True, check=True)
+            git("init")
+            (root / "existing.txt").write_text("base")
+            git("add", ".")
+            git("-c", "user.name=Test", "-c", "user.email=test@example.invalid",
+                "-c", "commit.gpgsign=false", "commit", "-m", "base")
+            folder = root / "backlog/tasks"
+            folder.mkdir(parents=True)
+            task = record()
+            (root / task["path"]).write_text(f'''---
+id: TASK-80
+title: Fixture
+status: To Do
+assignee: []
+labels: []
+references: [{ISSUE}]
+dependencies: []
+---
+## Description
+Issue: {ISSUE}
+Approved revision: 2026-11-02T00:00:00Z; SHA-256 {DIGEST}
+Approval evidence: owner approved
+Branch: agent/task-80
+Scope: scripts/feature-80.py; this task record only
+Verify: python3 tests
+## Acceptance Criteria
+<!-- AC:BEGIN -->
+- [ ] #1 Works
+<!-- AC:END -->
+''')
+            git("add", ".")
+            remote = live()
+            remote["collected_at"] = "2026-11-18T00:00:00Z"
+            with patch.object(guard, "collect", return_value=remote), patch("sys.stdout", new_callable=io.StringIO) as output:
+                self.assertEqual(guard.main(["--root", str(root), "--base", "HEAD", "--branch", "intake/new", "--ci-pr", "--repository", REPO]), 0, output.getvalue())
+                (root / "existing.txt").write_text("changed")
+                self.assertEqual(guard.main(["--root", str(root), "--base", "HEAD", "--branch", "intake/new", "--ci-pr", "--repository", REPO]), 1)
+
     def test_pagination_reads_all_pages_and_rejects_inconclusive_data(self):
         client = object.__new__(guard.GitHub)
         with patch.object(client, "get", side_effect=[[{}] * 100, [{"id": 101}]]):

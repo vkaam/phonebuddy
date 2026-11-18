@@ -174,6 +174,24 @@ def focus_for_branch(tasks, branch):
     return focus
 
 
+def intake_tasks(tasks, base, changed):
+    """Recognize only additions of new, active native task files."""
+    if not changed:
+        return set()
+    by_path = {task["path"]: tid for tid, task in tasks.items()}
+    result = set()
+    for path in changed:
+        tid = by_path.get(path)
+        if (not tid or tid in base or tasks[tid]["archived"]
+                or not path.startswith("backlog/tasks/")
+                or tasks[tid]["meta"]["status"] != "To Do"
+                or tasks[tid]["meta"]["assignee"]
+                or any(checked for checked, _ in tasks[tid]["ac"])):
+            return set()
+        result.add(tid)
+    return result
+
+
 def historical(task, base):
     old = base.get(task["id"])
     return bool(old and str(old["meta"].get("created_date", "9999"))[:10] < ADOPTION)
@@ -335,7 +353,7 @@ def collect(root, repository, tasks, base_sha, client=None):
             "pulls": pulls, "claims": claims, "collected_at": datetime.now(timezone.utc).isoformat()}
 
 
-def validate(tasks, base, repository, live=None, target=None, branch=None, changed=(), focus=None):
+def validate(tasks, base, repository, live=None, target=None, branch=None, changed=(), focus=None, intake=False):
     errors, warnings, specs, blocked = [], [], {}, {}
 
     def fail(tid, reason):
@@ -517,7 +535,7 @@ def validate(tasks, base, repository, live=None, target=None, branch=None, chang
 
     # PR source changes need an approved task on the current branch. Main audits
     # still validate all records; branch-local Done may propose its own completion.
-    if changed and branch not in {"main", "master", None}:
+    if changed and branch not in {"main", "master", None} and not intake:
         candidates = [tid for tid, info in specs.items() if info["branch"] == branch]
         if len(candidates) != 1:
             fail("scope", "changed branch requires exactly one approved execution task")
@@ -592,7 +610,6 @@ def main(argv=None):
             raise EvidenceError("PR Quality requires live GitHub evidence; --offline cannot validate a claim.")
         if args.ci_pr and git(root, "merge-base", "--is-ancestor", base_sha, "HEAD", optional=True) is None:
             raise EvidenceError("Test merge is behind current main; update the branch and rerun CI.")
-        focus = focus_for_branch(tasks, branch) if args.ci_pr else None
         # --no-renames includes both old and new paths in scope validation.
         changed = git(root, "diff", "--no-renames", "--name-only", "-z", base_sha, "--").split("\0")
         changed = [p for p in changed if p]
@@ -606,11 +623,21 @@ def main(argv=None):
                 if root not in destination.parents:
                     raise EvidenceError(f"{path}: changed symlink escapes the approved checkout.")
                 changed.append(destination.relative_to(root).as_posix())
+        intake = intake_tasks(tasks, base, changed) if args.ci_pr else set()
+        focus = focus_for_branch(tasks, branch) if args.ci_pr else None
+        if intake:
+            focus.update(intake)
+            pending = list(intake)
+            while pending:
+                for dep in tasks[pending.pop()]["meta"]["dependencies"]:
+                    if dep in tasks and dep not in focus:
+                        focus.add(dep)
+                        pending.append(dep)
         selected = {tid: t for tid, t in tasks.items() if (focus is None or tid in focus)
                     and not t["archived"] and not historical(t, base)
                     and (t["meta"]["status"] != "Done" or tid not in base or base[tid]["meta"]["status"] != "Done")}
         live = None if args.offline else collect(root, args.repository, selected, base_sha)
-        report.update(validate(tasks, base, args.repository, live, args.task, branch, changed, focus))
+        report.update(validate(tasks, base, args.repository, live, args.task, branch, changed, focus, bool(intake)))
         report.update({"source": before, "base_sha": base_sha, "branch": branch,
                        "repository": args.repository, "changed_paths": changed})
         if live:
