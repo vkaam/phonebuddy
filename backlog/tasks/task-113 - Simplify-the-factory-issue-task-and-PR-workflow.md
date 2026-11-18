@@ -5,7 +5,7 @@ status: Done
 assignee:
   - '@claude'
 created_date: '2026-11-18T20:41:00Z'
-updated_date: '2026-11-18T20:49:00Z'
+updated_date: '2026-11-18T20:56:00Z'
 labels: []
 dependencies: []
 references:
@@ -58,6 +58,8 @@ Scope note: AC 4 originally also triggered web checks when ci.yml changed. Dropp
 Claim check with the new guard on 2026-11-18: status pass, claim_verified true (base 7aff57a). PR-mode guard on this branch: pass, 21 changed paths within Scope.
 Verification: python3 -B scripts/quality.py passed; python3 -B scripts/run_required_unittests.py ran 206 tests OK (24 guard tests replace 36 old ones); actionlint passed on ci.yml and backlog-audit.yml; issue forms, dependabot.yml and ci.yml parse as YAML. Live audit reports 0 errors and drift warnings only (unapproved legacy issues, merged In Progress tasks).
 Fixed a parser bug carried over from the old guard: an empty `Scope:` line took the next line as its value.
+
+Independent agent review of 89ff27f: AC 1, 2, 4, 5 pass; AC 3 partial (B1, blocking): a second claim passed while a draft PR existed on the recorded branch. Fixed: claim mode now rejects an open PR on the recorded branch when the local task is To Do or unassigned, with a test. Non-blocking fixes: governance doc claim wording and Limits section (N1); Dependabot exemption limited to package.json, package-lock.json and workflow files (N3); web-change detection uses the merge commit first parent without a pipe (N4); Playwright cache used on every web run (N5); a linked pull request is rejected as an issue (N6); scope entries with a wildcard in the first segment are rejected and a Scope widened in the PR is flagged for the reviewer (N2, partial; the PR-owned guard remains a documented limit). Rerun: quality passed, actionlint passed, 207 unit tests OK.
 <!-- SECTION:NOTES:END -->
 
 ## Final Summary

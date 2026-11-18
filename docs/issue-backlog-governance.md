@@ -70,8 +70,11 @@ and assign yourself with the CLI, push the branch and open a **draft PR with
 `[TASK-n]` in the title** straight away. The draft PR is the visible claim.
 
 The claim check fails when the issue is closed or not `approved`, a dependency
-is not complete on main, the task is already assigned to someone else, another
-open PR names the task, or the branch already has a merged PR.
+is not complete on main, the task is To Do but already has an assignee, an open
+PR already exists on the task's branch while your copy of the task is still
+unclaimed, another open PR names the task, or the branch already has a merged
+PR. To resume your own claim, run the check from the claimed branch, where the
+task is In Progress and assigned.
 
 ### 4. Implement
 
@@ -120,8 +123,9 @@ new task. Do not reopen merged work.
 | `Backlog audit` | No | Repository-wide drift report. Its warnings are for cleanup and never block a PR. |
 | `PR safety` | No | Advisory risk report from default-branch code. It never authorizes a merge. |
 
-`Task link` passes immediately for PRs opened by `dependabot[bot]` and for PRs
-that change only `backlog/`. For every other PR it requires:
+`Task link` passes immediately for PRs that change only `backlog/`, and for
+PRs opened by `dependabot[bot]` that change only `package.json`,
+`package-lock.json` or workflow files. For every other PR it requires:
 
 1. exactly one task whose `Branch:` matches the PR branch;
 2. its issue open and labeled `approved`;
@@ -143,8 +147,15 @@ python3 -B scripts/backlog_consistency.py --offline                      # struc
 ## Limits
 
 The claim check is a snapshot, not a lock. Two agents can still race between
-the check and opening a draft PR; the PR makes the collision visible and the
-second claim then fails. Unattended parallel workers need the lease service in
+the check and opening a draft PR. Once the first draft PR exists, a claim from
+an unclaimed copy of the task fails. The guard does not know who is running it,
+so it cannot tell an owner resuming from someone else who checked out the same
+branch.
+
+`Task link` runs the PR's own copy of the guard and reads the task from the PR
+head, so a PR could weaken either. The guard warns when a task's `Scope` differs
+from main; the reviewer must confirm the owner agreed. Changes under
+`scripts/` and `.github/` are owned by `@vkaam` in CODEOWNERS. Unattended parallel workers need the lease service in
 [factory leases](factory-leases.md), which is not required for interactive work.
 
 ## Older records

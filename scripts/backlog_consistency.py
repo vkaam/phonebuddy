@@ -25,6 +25,8 @@ ID = re.compile(r"TASK-[1-9][0-9]*\Z")
 PATH = re.compile(r"backlog/(?:archive/)?tasks/task-([1-9][0-9]*) - .+\.md\Z", re.I)
 APPROVED = "approved"
 EXEMPT_AUTHORS = {"dependabot[bot]"}
+DEPENDENCY_FILES = ("package.json", "package-lock.json", ".github/workflows/*.yml", "**/package.json",
+                    "**/package-lock.json")
 
 
 class EvidenceError(ValueError):
@@ -183,7 +185,7 @@ def scope_patterns(task):
         if " " in entry and "/" not in entry:
             continue
         if (entry.startswith(("/", "~")) or "\\" in entry or ".." in PurePosixPath(entry).parts
-                or entry.split("/")[0] in {"*", "**", ".git"}):
+                or entry.split("/")[0] == ".git" or any(c in entry.split("/")[0] for c in "*?[")):
             raise EvidenceError(f"Scope entry is not a bounded repository path: {entry}")
         patterns.append(entry)
     return patterns
@@ -206,6 +208,8 @@ def spec(task, repository):
 def issue_problem(issue):
     if not issue:
         return "linked issue could not be read"
+    if issue.get("pull_request"):
+        return "linked number is a pull request, not an issue"
     if issue.get("state") != "open":
         return "linked issue is not open"
     if APPROVED not in {label.get("name") for label in issue.get("labels", [])}:
@@ -292,7 +296,8 @@ def check_task(task, base, repository, live, branch):
 
 def exemption(changed, author):
     """PRs that need no task: dependency bots and pure Backlog record changes."""
-    if author in EXEMPT_AUTHORS:
+    if author in EXEMPT_AUTHORS and changed and all(
+            any(fnmatch.fnmatchcase(path, pattern) for pattern in DEPENDENCY_FILES) for path in changed):
         return f"author {author}"
     if not changed:
         return "no changed paths"
@@ -324,6 +329,9 @@ def check_pr(tasks, base, repository, live, branch, changed, author):
         errors.append(f"{task['id']}: Done requires every acceptance criterion checked")
     if task["meta"]["status"] == "To Do":
         warnings.append(f"{task['id']}: task is still To Do; claim it before review")
+    on_main = base.get(task["id"])
+    if info and on_main and field(on_main, "Scope") and field(on_main, "Scope") != field(task, "Scope"):
+        warnings.append(f"{task['id']}: Scope differs from main; reviewer must confirm the owner agreed")
     return {"errors": errors, "warnings": warnings, "task": task["id"]}
 
 
@@ -337,6 +345,10 @@ def check_claim(tasks, base, repository, live, target, branch):
         errors.append(f"{target}: To Do task is already assigned to {', '.join(task['meta']['assignee'])}")
     if merged_from(branch, live):
         errors.append(f"{target}: branch {branch} already has a merged PR; use a new task and branch")
+    claimed = sorted(p["number"] for p in live["pulls"] if p["state"] == "open" and p["head"]["ref"] == branch)
+    if claimed and (task["meta"]["status"] == "To Do" or not task["meta"]["assignee"]):
+        errors.append(f"{target}: open PR {', '.join(f'#{n}' for n in claimed)} already claims this task; "
+                      "resume from that branch's task record")
     return {"errors": errors, "warnings": []}
 
 

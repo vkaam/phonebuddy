@@ -109,7 +109,7 @@ class SpecTests(unittest.TestCase):
     def test_scope_ignores_backlog_and_prose_and_rejects_escapes(self):
         task = record(scope="backlog/tasks/task-80 - Fixture.md; this task's own record; apps/web/**")
         self.assertEqual(guard.scope_patterns(task), ["apps/web/**"])
-        for bad in ("../outside.py", "/etc/passwd", "**", ".git/config"):
+        for bad in ("../outside.py", "/etc/passwd", "**", ".git/config", "?*", "[a-z]*/x.py", "*.py"):
             with self.subTest(bad=bad), self.assertRaises(guard.EvidenceError):
                 guard.scope_patterns(record(scope=bad))
 
@@ -118,6 +118,8 @@ class SpecTests(unittest.TestCase):
         self.assertIn("not labeled", guard.issue_problem(live(labels=())["issues"][ISSUE]))
         self.assertIn("not open", guard.issue_problem(live(state="closed")["issues"][ISSUE]))
         self.assertIn("could not be read", guard.issue_problem(None))
+        linked_pr = dict(live()["issues"][ISSUE], pull_request={"url": "x"})
+        self.assertIn("pull request", guard.issue_problem(linked_pr))
 
 
 class PullRequestTests(unittest.TestCase):
@@ -131,8 +133,12 @@ class PullRequestTests(unittest.TestCase):
         self.assertEqual((result["errors"], result["task"]), ([], "TASK-80"))
 
     def test_dependabot_and_backlog_only_changes_are_exempt(self):
-        self.assertEqual(self.check({}, author="dependabot[bot]", changed=["apps/web/package.json"])["exempt"],
+        bump = ["apps/web/package.json", "apps/web/package-lock.json", ".github/workflows/ci.yml"]
+        self.assertEqual(self.check({}, author="dependabot[bot]", changed=bump)["exempt"],
                          "author dependabot[bot]")
+        code_push = self.check({}, author="dependabot[bot]", changed=bump + ["apps/web/src/main.tsx"],
+                               branch="dependabot/npm/vite")
+        self.assertIn("found none", code_push["errors"][0])
         result = self.check({}, changed=["backlog/tasks/task-81 - New.md"], branch="agent/intake")
         self.assertEqual((result["errors"], result["exempt"]), ([], "Backlog records only"))
 
@@ -188,6 +194,13 @@ class PullRequestTests(unittest.TestCase):
         self.assertIn("TASK-80: another open PR names this task: #9",
                       self.check(tasks(record()), evidence=evidence)["errors"])
 
+    def test_scope_widened_in_the_pr_is_flagged_for_review(self):
+        base = tasks(record(scope="scripts/feature-80.py"))
+        widened = tasks(record(scope="scripts/feature-80.py; .github/**"))
+        result = self.check(widened, base=base, changed=[".github/workflows/ci.yml"])
+        self.assertEqual(result["errors"], [])
+        self.assertIn("Scope differs from main", result["warnings"][-1])
+
     def test_to_do_task_only_warns(self):
         result = self.check(tasks(record()))
         self.assertEqual(result["errors"], [])
@@ -206,6 +219,8 @@ class ClaimTests(unittest.TestCase):
     def test_unassigned_approved_task_can_be_claimed_and_resumed(self):
         self.assertEqual(self.claim(tasks(record())), [])
         self.assertEqual(self.claim(tasks(record(status="In Progress", assignee=["@me"]))), [])
+        own_draft = live([pull(4, "agent/task-80")])
+        self.assertEqual(self.claim(tasks(record(status="In Progress", assignee=["@me"])), own_draft), [])
 
     def test_claim_rejections(self):
         cases = {
@@ -215,6 +230,7 @@ class ClaimTests(unittest.TestCase):
             "already has a merged PR": (tasks(record()), live([pull(merged=True)]), "agent/task-80"),
             "another open PR": (tasks(record()), live([pull(3, "x", title="TASK-80 fix")]), "agent/task-80"),
             "not labeled": (tasks(record()), live(labels=("bug",)), "agent/task-80"),
+            "already claims this task": (tasks(record()), live([pull(4, "agent/task-80")]), "agent/task-80"),
         }
         for reason, (current, evidence, branch) in cases.items():
             with self.subTest(reason=reason):
@@ -284,7 +300,8 @@ class CollectionAndCliTests(unittest.TestCase):
             with patch.object(guard, "GitHub", side_effect=AssertionError("exempt PRs need no GitHub calls")):
                 code, report = run("--pr", "--branch", "agent/intake")
                 self.assertEqual((code, report["exempt"]), (0, "Backlog records only"))
-                (root / "app.py").write_text("print()\n")
+                (root / "backlog/tasks/task-81 - New.md").unlink()
+                (root / "package-lock.json").write_text("{}\n")
                 code, report = run("--pr", "--branch", "agent/intake", "--author", "dependabot[bot]")
                 self.assertEqual((code, report["exempt"]), (0, "author dependabot[bot]"))
             code, report = run("--pr", "--offline")

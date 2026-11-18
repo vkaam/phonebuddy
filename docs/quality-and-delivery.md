@@ -72,7 +72,7 @@ python3 -B scripts/run_required_unittests.py
 Task validation is separate from these code checks. The `Task link` job runs
 `python3 -B scripts/backlog_consistency.py --pr` against fresh `origin/main`
 with read-only GitHub access and retains `artifacts/task-link.json`. It passes
-Dependabot and Backlog-only PRs as exempt; for other PRs it checks the task,
+Backlog-only PRs and Dependabot dependency-file PRs as exempt; for other PRs it checks the task,
 issue approval, dependencies and changed-path scope. The advisory
 `Backlog audit` workflow reports repository-wide drift as warnings and is never
 required. The local bundle runs the offline audit (`--offline`). Before claiming
@@ -170,8 +170,8 @@ We do not cache npm: the current locked graph installs
 28 packages in about 1–2 seconds, and an initial 59 MB npm cache hit did not
 reduce `npm ci` time.
 
-The browser cache is used only on protected `main` pushes; PR runs download
-the browser without restoring or saving a cache.
+The browser cache is used by every run that executes the web steps. PR runs
+can restore the main cache but save only to their own PR scope.
 See
 [GitHub's cache access rules](https://docs.github.com/en/actions/reference/workflows-and-actions/dependency-caching#restrictions-for-accessing-a-cache).
 The privileged `.github/workflows/pr-safety.yml` workflow does not restore or
