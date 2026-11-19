@@ -1,11 +1,11 @@
 ---
 id: TASK-106
 title: Issue 22 - Add Entra sign-in and organization-scoped authorization
-status: In Progress
+status: Done
 assignee:
   - '@codex'
 created_date: '2026-11-15T20:39:00Z'
-updated_date: '2026-11-16T05:31:00Z'
+updated_date: '2026-11-19T04:16:00Z'
 labels:
   - identity
   - backend
@@ -109,6 +109,8 @@ Addressed PR #134 review threads 4580334390 and 4580334396. Added a retryable SQ
 PR threads 4580334390 (SQL reconnect) and 4580334396 (no-membership renewal) are fixed, regression-tested, reacted to with +1, and resolved. The full local quality check passed after these changes; hosted CI is being rerun on the updated PR head.
 
 Final PR feedback verification: on head 43fb6a763f65c33b2bdd354cf0011aea63eeec8c, Quality, repository drift, immutable image build and advisory risk report pass; both review threads are resolved; GitHub reports mergeable=true and mergeable_state=clean. PR #134 remains open and unmerged; the protected-main merge approval gate still applies.
+
+Reconciled 2026-11-19: PR #134 merged into main on 2026-11-16 (commit fc0d4e9) with all four criteria checked; main CI and the dev release for fc0d4e9 succeeded (deploy run 43811460274).
 <!-- SECTION:NOTES:END -->
 
 ## Comments
@@ -134,5 +136,5 @@ PR review comments resolved in working tree: SQL connection retry and no-members
 ## Final Summary
 
 <!-- SECTION:FINAL_SUMMARY:BEGIN -->
-Implemented the approved Entra PKCE sign-in and organization-scoped access slice for issue #22. Added a Fastify API that validates Entra access tokens, resolves active membership/roles from Azure SQL, and issues one-use organization-bound WebSocket tickets; gated the browser workspace behind verified membership with sign-out and proactive session expiry handling. Synthetic API and auth tests, web build/browser smoke, and full repository checks pass. Independent review findings were fixed and rechecked. PR #134 is ready for review; live Entra registration, Azure SQL deployment/integration, and production identity use remain intentionally out of scope.
+Implemented the approved Entra PKCE sign-in and organization-scoped access slice for issue #22. Added a Fastify API that validates Entra access tokens, resolves active membership/roles from Azure SQL, and issues one-use organization-bound WebSocket tickets; gated the browser workspace behind verified membership with sign-out and proactive session expiry handling. Synthetic API and auth tests, web build/browser smoke and full repository checks passed; independent review findings were fixed and rechecked. Merged in PR #134 on 2026-11-16. Live Entra registration, Azure SQL deployment/integration and production identity use remain out of scope.
 <!-- SECTION:FINAL_SUMMARY:END -->

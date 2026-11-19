@@ -1,11 +1,11 @@
 ---
 id: TASK-100
 title: Fix invalid Azure Login pin in manual recovery workflow
-status: In Progress
+status: Done
 assignee:
   - '@codex'
 created_date: '2026-11-13T11:52:00Z'
-updated_date: '2026-11-13T11:58:00Z'
+updated_date: '2026-11-19T04:16:00Z'
 labels:
   - cicd
 dependencies: []
@@ -38,9 +38,9 @@ Verify: python3 -B scripts/run_required_unittests.py; actionlint .github/workflo
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 The manual recovery workflow pins a resolvable immutable Azure Login commit consistent with the trusted deployment workflow.
-- [ ] #2 A regression test fails if the manual recovery workflow's Azure Login pin drifts from the trusted deployment workflow.
-- [ ] #3 A protected-main manual recovery dispatch gets past runner setup and Azure login, completes recovery verification, and retains operator evidence.
+- [x] #1 The manual recovery workflow pins a resolvable immutable Azure Login commit consistent with the trusted deployment workflow.
+- [x] #2 A regression test fails if the manual recovery workflow's Azure Login pin drifts from the trusted deployment workflow.
+- [x] #3 A protected-main manual recovery dispatch gets past runner setup and Azure login, completes recovery verification, and retains operator evidence.
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -60,4 +60,12 @@ Corrected the manual workflow pin to the resolvable Azure Login commit used by a
 Local verification passed: python3 -B scripts/run_required_unittests.py (178 tests); python3 -B scripts/quality.py; actionlint .github/workflows/ci.yml .github/workflows/pr-safety.yml .github/workflows/azure-recover.yml; GitHub API lookup confirmed the pinned commit exists. The hosted manual recovery dispatch remains pending merge.
 
 Draft PR: https://github.com/vkaam/phonebuddy/pull/126. The hosted-main manual recovery acceptance criterion remains pending because this protected workflow only runs on main. Keep TASK-100 In Progress until a post-merge manual recovery completes and its evidence artifact is retained.
+
+Reconciled 2026-11-19. AC1: on main, azure-recover.yml pins azure/login@a641126d1b8aa4d1fa005f4f92df94a3a4c4c906, the same commit as azure-deploy.yml. AC2: tests/test_bicep_ci_boundary.py test_manual_recovery_uses_the_trusted_azure_login_commit asserts both workflows use one identical 40-character pin. AC3: protected-main manual dispatch run 43589085675 (2026-11-14, source 6d3553b) passed Azure login, deployed the selected immutable release, verified backend and frontend recovery and retained artifact manual-recovery-43589085675-1.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Fixed the manual recovery workflow pin (issue #125): azure-recover.yml now uses the same resolvable Azure Login commit as the trusted deployment workflow, and a regression test fails on drift. Merged in PR #126 on 2026-11-13. The post-merge manual recovery dispatch (run 43589085675) passed login, recovered the selected release, verified backend and frontend, and retained its evidence.
+<!-- SECTION:FINAL_SUMMARY:END -->

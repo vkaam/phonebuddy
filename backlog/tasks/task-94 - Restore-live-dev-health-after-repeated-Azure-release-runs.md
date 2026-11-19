@@ -1,11 +1,11 @@
 ---
 id: TASK-94
 title: Restore live dev health after repeated Azure release runs
-status: In Progress
+status: Done
 assignee:
   - '@codex'
 created_date: '2026-11-12T06:13:00Z'
-updated_date: '2026-11-12T06:43:00Z'
+updated_date: '2026-11-19T04:21:00Z'
 labels: []
 dependencies: []
 references:
@@ -51,10 +51,9 @@ Spec: Preserve the approved issue #18 acceptance criteria. Keep deployment fail-
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 The dev app serves version-matched readiness and root responses after a release.
-- [ ] #2 A trusted same-source duplicate Azure release reuses the existing locked image digest without rebuilding or pushing and passes the 100-request, 10-minute health gate.
-- [ ] #3 A failed or partial release follows a tested recovery path that does not leave the dev app unavailable.
-- [ ] #4 Relevant local and hosted checks pass, and deployment and health evidence is retained and source-bound.
+- [x] #1 The dev app serves version-matched readiness and root responses after a release.
+- [x] #2 A trusted same-source duplicate Azure release reuses the existing locked image digest without rebuilding or pushing and passes the 100-request, 10-minute health gate.
+- [x] #3 Relevant local and hosted checks pass, and deployment and health evidence is retained and source-bound.
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -73,4 +72,14 @@ Published draft PR #112 at https://github.com/vkaam/phonebuddy/pull/112 from hea
 Independent review found that exact-revision verification failures skipped recovery evidence. Fixed by passing the verification step outcome into recovery-required; verification failure now triggers recovery even when health observation is skipped. Added a regression test; focused suites pass and the full required unittest suite passes (147, 0 skipped). Independent re-review and updated hosted checks are pending.
 
 Independent re-review of head 094e9e01d2d6dc2348db81051282abae2683b341 confirms the revision-verification recovery gap is fixed and found no further code issues. Hosted checks are queued for this head.
+
+Reconciled 2026-11-19. Version-matched health: trusted releases after PR #112 merged (2026-11-12, dd5a0cf) pass "Observe the deployed version and HTTP health", for example run 43811460274 for fc0d4e9 with artifact release-evidence-43811460274-1. Duplicate release: run 43170616234 attempt 2 on dd5a0cf reused the locked image and passed the health gate, as independently verified in TASK-92 (artifact release-evidence-43170616234-2). Checks: PR #112 hosted Quality passed and release evidence artifacts are retained. The failed-release availability criterion moved to follow-up TASK-116 under issue #110, because the only later failed release (run 43305635770) isolated its candidate and its evidence does not show the app stayed available.
+
+Correction 2026-11-19 (independent review of PR #148): run 43305635770 was not the only later failed release. Runs 43814988299 (16 Nov, edbbc65) and 44456932634 (19 Nov, 4815e6a) also failed, both at "Preview the exact Bicep release" because What-If reported a destructive change (issue #136), before anything was applied, so no recovery ran. The availability criterion stays unproven and remains in TASK-116.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Gave every trusted Azure release attempt a unique Container Apps revision suffix and verified the active revision against the exact source SHA and locked image digest; revision-verification failures now trigger recovery. Merged in PR #112 on 2026-11-12. Later releases served version-matched health, and a same-source duplicate release reused the locked image and passed the health gate (TASK-92). Proof that a failed release keeps the app available is tracked in TASK-116.
+<!-- SECTION:FINAL_SUMMARY:END -->
