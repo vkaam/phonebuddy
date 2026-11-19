@@ -84,7 +84,8 @@ class BicepCiBoundaryTests(unittest.TestCase):
 
     def test_release_state_storage_pins_azure_defaults_that_what_if_would_delete(self):
         # Issue #136: omitted Storage defaults appear as What-If deletions and block releases.
-        template = (Path(__file__).resolve().parents[1] / 'infra/hosting.bicep').read_text()
+        source = (Path(__file__).resolve().parents[1] / 'infra/hosting.bicep').read_text()
+        template = '\n'.join(line.split('//', 1)[0] for line in source.splitlines())
         blob = template.split("resource releaseStateBlobService ", 1)[1].split('\n}\n', 1)[0]
         container = template.split("resource releaseStateContainer ", 1)[1].split('\n}\n', 1)[0]
         self.assertRegex(blob, r'deleteRetentionPolicy: \{[^}]*allowPermanentDelete: false')

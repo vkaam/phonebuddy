@@ -5,7 +5,7 @@ status: Done
 assignee:
   - '@claude'
 created_date: '2026-11-19T04:28:00Z'
-updated_date: '2026-11-19T04:31:00Z'
+updated_date: '2026-11-19T04:34:00Z'
 labels: []
 dependencies: []
 priority: high
@@ -49,6 +49,8 @@ Claim check 2026-11-19: status pass, claim_verified true (base e80a5ff). Owner i
 
 Verification 2026-11-19. Compiled template: blobServices deleteRetentionPolicy {enabled, days 30, allowPermanentDelete false}; release-state container {publicAccess None, defaultEncryptionScope $account-encryption-key, denyEncryptionScopeOverride false}, equal to the before-values in the retained what-if.json, so no Azure setting changes. BICEP=~/.azure/bin/bicep python3 -B scripts/check_bicep.py passed; required unit suite OK; scripts/quality.py passed. New tests: test_release_state_storage_pins_azure_defaults_that_what_if_would_delete and test_storage_property_deletion_still_blocks_the_release; scripts/release_recovery.py unchanged.
 Read-only what-if against rg-pb-dev-francecentral-foundation with the release workflow parameters (image digest and release version of blocked run 44456932634): status Succeeded, counts Create 0 / Modify 7 / NoChange 9 / Ignore 10; all release-state Storage resources NoChange with no deletions; check_bicep.py --what-if-result with the expected scope exit 0; release_recovery.py check-what-if destructive=false. Control: the same what-if with the origin/main template gives destructive=true. Remaining Modify entries are on Container Apps, diagnostic settings, the registry, App Insights and the Static Web App, which the guard does not treat as destructive (unchanged behavior).
+
+Independent review of 26542fc: all four criteria pass (what-if reproduced independently: destructive=false; old template destructive=true; mutation tests confirm the regression test). No blocking findings. Addressed: the template test now ignores // comments, so a commented-out value fails it (verified by mutation). Known limits recorded, not changed here: (1) manual recovery to a release made before this fix (current last-good fc0d4e9) previews that release template and is still blocked by the same three deletions, until a post-fix release becomes last-good; (2) the guard inspects only Storage and SQL, so property deletions on Container Apps, diagnostic settings, the registry and the Static Web App are not checked (pre-existing; the current ones are display noise because fc0d4e9 deployed the same template and Azure kept every before-value).
 <!-- SECTION:NOTES:END -->
 
 ## Final Summary
