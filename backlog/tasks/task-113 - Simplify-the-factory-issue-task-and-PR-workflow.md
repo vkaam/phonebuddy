@@ -5,7 +5,7 @@ status: Done
 assignee:
   - '@claude'
 created_date: '2026-11-18T20:41:00Z'
-updated_date: '2026-11-18T20:56:00Z'
+updated_date: '2026-11-19T04:11:00Z'
 labels: []
 dependencies: []
 references:
@@ -60,6 +60,8 @@ Verification: python3 -B scripts/quality.py passed; python3 -B scripts/run_requi
 Fixed a parser bug carried over from the old guard: an empty `Scope:` line took the next line as its value.
 
 Independent agent review of 89ff27f: AC 1, 2, 4, 5 pass; AC 3 partial (B1, blocking): a second claim passed while a draft PR existed on the recorded branch. Fixed: claim mode now rejects an open PR on the recorded branch when the local task is To Do or unassigned, with a test. Non-blocking fixes: governance doc claim wording and Limits section (N1); Dependabot exemption limited to package.json, package-lock.json and workflow files (N3); web-change detection uses the merge commit first parent without a pipe (N4); Playwright cache used on every web run (N5); a linked pull request is rejected as an issue (N6); scope entries with a wildcard in the first segment are rejected and a Scope widened in the PR is flagged for the reviewer (N2, partial; the PR-owned guard remains a documented limit). Rerun: quality passed, actionlint passed, 207 unit tests OK.
+
+Codex review finding (P2, thread on scripts/backlog_consistency.py): the legacy completion fallback accepted any merged PR with the branch name. Fixed: collect() marks a merged PR on_default_branch only when its base is the default branch, its head is this repository and its merge commit is an ancestor of base; completed() uses only those. Tests cover main, other base, fork and unreachable merge commit. 208 unit tests OK; live audit 0 errors.
 <!-- SECTION:NOTES:END -->
 
 ## Final Summary

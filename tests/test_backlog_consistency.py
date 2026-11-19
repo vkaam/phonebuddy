@@ -61,9 +61,10 @@ def live(pulls=(), state="open", labels=("approved",)):
             "pulls": list(pulls)}
 
 
-def pull(number=1, branch="agent/task-80", merged=False, title="Change"):
+def pull(number=1, branch="agent/task-80", merged=False, title="Change", on_main=None):
     return {"number": number, "state": "closed" if merged else "open", "title": title,
-            "head": {"ref": branch}, "merged_at": "2026-11-02T00:00:00Z" if merged else None}
+            "head": {"ref": branch}, "merged_at": "2026-11-02T00:00:00Z" if merged else None,
+            "on_default_branch": merged if on_main is None else on_main}
 
 
 class NativeReaderTests(unittest.TestCase):
@@ -172,6 +173,9 @@ class PullRequestTests(unittest.TestCase):
         self.assertEqual(self.check(main, evidence=merged)["errors"], [])
         unchecked = tasks(record(80, deps=["TASK-70"]), record(70, status="In Progress"))
         self.assertTrue(self.check(unchecked, evidence=merged)["errors"])
+        elsewhere = live([pull(5, "agent/task-70", merged=True, on_main=False)])
+        self.assertIn("TASK-80: dependencies are not complete on main: TASK-70",
+                      self.check(main, evidence=elsewhere)["errors"])
 
     def test_archived_unfinished_dependency_is_not_complete(self):
         main = tasks(record(80, deps=["TASK-70"]), record(70, archived=True))
@@ -251,6 +255,43 @@ class AuditTests(unittest.TestCase):
 
 
 class CollectionAndCliTests(unittest.TestCase):
+    def test_merged_pr_counts_only_from_this_repository_into_the_default_branch_and_main(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+
+            def git(*args):
+                return subprocess.run(["git", *args], cwd=root, capture_output=True, check=True).stdout.decode()
+
+            commit = ("-c", "user.name=Test", "-c", "user.email=test@example.invalid",
+                      "-c", "core.hooksPath=/dev/null", "-c", "commit.gpgsign=false", "commit", "--allow-empty")
+            git("init", "-b", "main")
+            git(*commit, "-m", "on main")
+            on_main = git("rev-parse", "HEAD").strip()
+            git("switch", "-c", "integration")
+            git(*commit, "-m", "elsewhere")
+            elsewhere = git("rev-parse", "HEAD").strip()
+
+            def merged(base="main", repo=REPO, sha=on_main):
+                return {"number": 1, "state": "closed", "merged_at": "2026-11-02", "merge_commit_sha": sha,
+                        "base": {"ref": base}, "head": {"ref": "agent/task-70", "repo": {"full_name": repo}}}
+
+            class Client:
+                def __init__(self, pulls):
+                    self.pulls = pulls
+
+                def get(self, endpoint, missing=False):
+                    return {"default_branch": "main"}
+
+                def pages(self, endpoint):
+                    return self.pulls
+
+            cases = {"main": (merged(), True), "integration base": (merged(base="integration"), False),
+                     "fork": (merged(repo="fork/project"), False), "not on main": (merged(sha=elsewhere), False)}
+            for name, (pr, expected) in cases.items():
+                with self.subTest(name=name):
+                    result = guard.collect(Client([pr]), {}, REPO, [], root, on_main)
+                    self.assertIs(result["pulls"][0]["on_default_branch"], expected)
+
     def test_pagination_reads_all_pages_and_rejects_inconclusive_data(self):
         client = object.__new__(guard.GitHub)
         with patch.object(client, "get", side_effect=[[{}] * 100, [{"id": 101}]]):

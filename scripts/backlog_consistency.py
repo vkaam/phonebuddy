@@ -218,7 +218,13 @@ def issue_problem(issue):
 
 
 def merged_from(branch, live):
+    """Any merged PR from this branch name (used to refuse reusing a branch)."""
     return [p for p in live["pulls"] if p.get("merged_at") and p["head"]["ref"] == branch]
+
+
+def merged_into_main(branch, live):
+    """Merged PRs from this branch that reached the default branch (see collect)."""
+    return [p for p in merged_from(branch, live) if p.get("on_default_branch")]
 
 
 def completed(tid, base, live):
@@ -234,7 +240,7 @@ def completed(tid, base, live):
     if not all(checked for checked, _ in task["ac"]) or not live:
         return False
     branch = field(task, "Branch")
-    return bool(branch and merged_from(branch, live))
+    return bool(branch and merged_into_main(branch, live))
 
 
 def structure(tasks, only=None):
@@ -418,9 +424,21 @@ class GitHub:
         raise EvidenceError("GitHub evidence exceeds pagination limit; no passing fallback.")
 
 
-def collect(client, tasks, repository, wanted):
-    """Fetch PRs and the linked issues of `wanted` task IDs."""
+def collect(client, tasks, repository, wanted, root=ROOT, base_sha=None):
+    """Fetch PRs and the linked issues of `wanted` task IDs.
+
+    A merged PR counts as on the default branch only when it targeted that
+    branch from this repository and its merge commit is reachable from base_sha.
+    """
+    default = client.get("")["default_branch"]
     pulls = client.pages("pulls?state=all")
+    for pr in pulls:
+        head_repo = (pr["head"].get("repo") or {}).get("full_name")
+        pr["on_default_branch"] = bool(
+            pr.get("merged_at") and pr.get("merge_commit_sha") and base_sha
+            and pr["base"]["ref"] == default and head_repo == repository
+            and git(root, "merge-base", "--is-ancestor", pr["merge_commit_sha"], base_sha,
+                    optional=True) is not None)
     issues = {}
     for tid in wanted:
         try:
@@ -476,14 +494,16 @@ def main(argv=None):
             report["changed_paths"] = changed
             owners = [tid for tid, t in tasks.items() if field(t, "Branch") == branch]
             live = None if exemption(changed, args.author) else collect(
-                GitHub(args.repository), tasks, args.repository, owners)
+                GitHub(args.repository), tasks, args.repository, owners, root, base_sha)
             result = check_pr(tasks, base, args.repository, live, branch, changed, args.author)
         elif mode == "claim":
-            live = collect(GitHub(args.repository), tasks, args.repository, [args.task] if args.task in tasks else [])
+            live = collect(GitHub(args.repository), tasks, args.repository,
+                           [args.task] if args.task in tasks else [], root, base_sha)
             result = check_claim(tasks, base, args.repository, live, args.task, branch)
             report["task"] = args.task
         else:
-            live = None if args.offline else collect(GitHub(args.repository), tasks, args.repository, active(tasks))
+            live = None if args.offline else collect(GitHub(args.repository), tasks, args.repository,
+                                                     active(tasks), root, base_sha)
             result = audit(tasks, base, args.repository, live)
         report.update(result)
         report["status"] = "fail" if report["errors"] else "pass"
