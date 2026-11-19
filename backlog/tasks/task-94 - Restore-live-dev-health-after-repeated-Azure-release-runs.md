@@ -5,7 +5,7 @@ status: Done
 assignee:
   - '@codex'
 created_date: '2026-11-12T06:13:00Z'
-updated_date: '2026-11-19T04:16:00Z'
+updated_date: '2026-11-19T04:21:00Z'
 labels: []
 dependencies: []
 references:
@@ -74,6 +74,8 @@ Independent review found that exact-revision verification failures skipped recov
 Independent re-review of head 094e9e01d2d6dc2348db81051282abae2683b341 confirms the revision-verification recovery gap is fixed and found no further code issues. Hosted checks are queued for this head.
 
 Reconciled 2026-11-19. Version-matched health: trusted releases after PR #112 merged (2026-11-12, dd5a0cf) pass "Observe the deployed version and HTTP health", for example run 43811460274 for fc0d4e9 with artifact release-evidence-43811460274-1. Duplicate release: run 43170616234 attempt 2 on dd5a0cf reused the locked image and passed the health gate, as independently verified in TASK-92 (artifact release-evidence-43170616234-2). Checks: PR #112 hosted Quality passed and release evidence artifacts are retained. The failed-release availability criterion moved to follow-up TASK-116 under issue #110, because the only later failed release (run 43305635770) isolated its candidate and its evidence does not show the app stayed available.
+
+Correction 2026-11-19 (independent review of PR #148): run 43305635770 was not the only later failed release. Runs 43814988299 (16 Nov, edbbc65) and 44456932634 (19 Nov, 4815e6a) also failed, both at "Preview the exact Bicep release" because What-If reported a destructive change (issue #136), before anything was applied, so no recovery ran. The availability criterion stays unproven and remains in TASK-116.
 <!-- SECTION:NOTES:END -->
 
 ## Final Summary
