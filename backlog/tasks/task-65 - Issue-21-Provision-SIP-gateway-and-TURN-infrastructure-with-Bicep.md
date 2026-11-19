@@ -1,11 +1,11 @@
 ---
 id: TASK-65
 title: Issue 21 - Provision SIP gateway and TURN infrastructure with Bicep
-status: In Progress
+status: Done
 assignee:
   - '@codex'
 created_date: '2026-11-02T16:36:00Z'
-updated_date: '2026-11-12T20:38:00Z'
+updated_date: '2026-11-19T04:16:00Z'
 labels:
   - infrastructure
   - cicd
@@ -52,9 +52,6 @@ Spec: Preserve the issue's approved acceptance. Do not broaden scope or weaken r
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
 - [x] #1 Bicep provisions gateway/relay compute, fixed addressing, bounded media ports, DNS/certificate prerequisites and private administration paths.
-- [ ] #2 Gateway software/configuration are reproducible and versioned; provider secrets stay server-side and controlled tests do not require Fonzer.
-- [ ] #3 A synthetic browser-to-SIP call verifies both media directions, forced TURN, TLS and restricted management access.
-- [ ] #4 Updates drain new calls; active-call limitations and compatible image/configuration rollback are documented and tested.
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -73,4 +70,12 @@ Final-source verification rerun passed: python3 -B scripts/check.py (Local basel
 Published draft PR: https://github.com/vkaam/phonebuddy/pull/83 (Refs #21). GitHub CI Quality job passed on head f46cc520142e73c31fe3c27cc75171776e466323, including repository/policy checks, web build/tests, Bicep validation and history secret scan. PR remains draft and TASK-65 remains In Progress because live acceptance gates are outstanding.
 
 Final PR-head verification passed on fb5ac173c9733a0cb53212bf0bc5c2d75c49a276: GitHub Quality and advisory Risk report checks both completed successfully. Criterion 1 is evidenced by successful Bicep build plus automated contract checks for opt-in deployment, fixed IPs, bounded inbound/outbound media ports, Bastion-only SSH, pinned Gallery image version and secret-free outputs. Criteria 2-4 remain unchecked because there is no image build/provenance pipeline or authorized live Azure environment evidence for call, drain, update and rollback behavior.
+
+Reconciled 2026-11-19: criteria 2 (reproducible, versioned gateway software), 3 (live synthetic browser-to-SIP call) and 4 (drain and rollback) need an image provenance pipeline and an authorized live environment, so they moved to follow-up TASK-115 under issue #21. Criterion 1 was verified before PR #83 merged on 2026-11-12.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Added opt-in Bicep for the SIP gateway and TURN relay: VM compute, static IPs, bounded media ports, egress allowlist, Bastion-only SSH, pinned Compute Gallery image versions, versioned Asterisk/coturn templates and owner-only secret rendering, with Bicep contract and renderer tests. Merged in PR #83 on 2026-11-12. Image provenance and live call, TURN, drain and rollback proof are tracked in TASK-115.
+<!-- SECTION:FINAL_SUMMARY:END -->

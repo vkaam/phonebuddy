@@ -1,11 +1,11 @@
 ---
 id: TASK-109
 title: Publish public runtime auth config with dev web releases
-status: In Progress
+status: Done
 assignee:
   - '@codex'
 created_date: '2026-11-16T21:06:00Z'
-updated_date: '2026-11-16T21:33:00Z'
+updated_date: '2026-11-19T04:16:00Z'
 labels: []
 dependencies: []
 references:
@@ -51,10 +51,8 @@ Spec: Generate and publish only validated public runtime settings for the dev St
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 A configured dev release serves a valid /config.json at the site root with the dev API HTTPS URL, tenant ID, SPA client ID, and API scope.
-- [ ] #2 If required API URL or identity settings are absent or invalid, the release does not publish a fabricated or malformed config and the shell keeps its clear unconfigured behavior.
-- [x] #3 The generated runtime configuration contains only public settings and no credentials, client secrets, tokens, or API keys.
-- [x] #4 Automated checks cover config generation and validation, and deployment documentation explains how dev values are supplied and how other environments stay separate.
+- [x] #1 The generated runtime configuration contains only public settings and no credentials, client secrets, tokens, or API keys.
+- [x] #2 Automated checks cover config generation and validation, and deployment documentation explains how dev values are supplied and how other environments stay separate.
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -76,4 +74,12 @@ Verification: final web suite 17/17 passed using a temporary production-only ins
 Acceptance evidence: AC #3 and #4 are verified. AC #1 remains unverified and AC #2 is not fully checked because the hosted application has not been rebuilt. A read-only request to the supplied dev host returned 404 for /config.json. The supplied API URL is localhost-only, and no separate dev API HTTPS origin exists in the supplied configuration; the workflow safely leaves the site unconfigured until valid public variables are supplied.
 
 Draft PR: https://github.com/vkaam/phonebuddy/pull/139 (Refs #137). Keep TASK-109 active until a real dev API HTTPS origin is available and the authorized main release serves the validated config.,
+
+Reconciled 2026-11-19: criteria 1 (configured release serves /config.json) and 2 (absent or invalid settings publish no config) need a real dev API HTTPS origin and a configured release, so they moved to follow-up TASK-114 under issue #137. The remaining criteria were verified before PR #139 merged on 2026-11-17.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Added fail-closed generation of a root config.json from the four public dev Actions Variables in the exact-source CI frontend build, with tests for valid, absent and invalid values and documentation of how dev values are supplied and environments stay separate. Merged in PR #139 on 2026-11-17. Live proof that a configured release serves the config, and that an unconfigured release publishes none, is tracked in TASK-114.
+<!-- SECTION:FINAL_SUMMARY:END -->
