@@ -60,7 +60,9 @@ resource releaseStateBlobService 'Microsoft.Storage/storageAccounts/blobServices
   name: 'default'
   properties: {
     isVersioningEnabled: true
-    deleteRetentionPolicy: { enabled: true, days: 30 }
+    // Explicit Azure defaults: omitted values appear as deletions in What-If,
+    // which the release guard rejects for Storage resources.
+    deleteRetentionPolicy: { enabled: true, days: 30, allowPermanentDelete: false }
     containerDeleteRetentionPolicy: { enabled: true, days: 30 }
   }
 }
@@ -68,7 +70,12 @@ resource releaseStateBlobService 'Microsoft.Storage/storageAccounts/blobServices
 resource releaseStateContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-05-01' = {
   parent: releaseStateBlobService
   name: 'release-state'
-  properties: { publicAccess: 'None' }
+  properties: {
+    publicAccess: 'None'
+    // Explicit Azure defaults, for the same What-If reason as the blob service.
+    defaultEncryptionScope: '$account-encryption-key'
+    denyEncryptionScopeOverride: false
+  }
 }
 
 resource vault 'Microsoft.KeyVault/vaults@2023-07-01' = {

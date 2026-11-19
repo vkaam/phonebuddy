@@ -82,6 +82,25 @@ class BicepCiBoundaryTests(unittest.TestCase):
             pins[name] = matches[0]
         self.assertEqual(pins['azure-recover.yml'], pins['azure-deploy.yml'])
 
+    def test_release_state_storage_pins_azure_defaults_that_what_if_would_delete(self):
+        # Issue #136: omitted Storage defaults appear as What-If deletions and block releases.
+        template = (Path(__file__).resolve().parents[1] / 'infra/hosting.bicep').read_text()
+        blob = template.split("resource releaseStateBlobService ", 1)[1].split('\n}\n', 1)[0]
+        container = template.split("resource releaseStateContainer ", 1)[1].split('\n}\n', 1)[0]
+        self.assertRegex(blob, r'deleteRetentionPolicy: \{[^}]*allowPermanentDelete: false')
+        self.assertIn("defaultEncryptionScope: '$account-encryption-key'", container)
+        self.assertIn('denyEncryptionScopeOverride: false', container)
+
+    def test_storage_property_deletion_still_blocks_the_release(self):
+        storage = ('/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg/providers/'
+                   'Microsoft.Storage/storageAccounts/pbdevrel/blobServices/default')
+        result = {'status': 'Succeeded', 'changes': [{
+            'resourceId': storage, 'changeType': 'Modify',
+            'delta': [{'path': 'properties.deleteRetentionPolicy.allowPermanentDelete',
+                       'propertyChangeType': 'Delete', 'before': False}]}]}
+        with self.assertRaisesRegex(ValueError, 'destructive'):
+            validate_what_if(result)
+
     def test_static_site_location_rejects_wrong_default_or_resource_binding(self):
         parameters = {'staticSiteLocation': {'defaultValue': "[parameters('location')]"}}
         site = {'location': "[parameters('staticSiteLocation')]"}
