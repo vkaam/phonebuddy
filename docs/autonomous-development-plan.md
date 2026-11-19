@@ -8,12 +8,15 @@ Assessment task: TASK-31. The source and live-settings findings below remain a
 high-level intent; native Backlog tasks are the execution plan of record.
 Former TASK-32 through TASK-42 are now intent issues #37 through #47 and require
 fresh atomic decomposition before execution. See
-[Issue and Backlog governance](issue-backlog-governance.md).
+[the factory workflow](issue-backlog-governance.md).
 The 4 November 2026 policy revision in issue #85 supersedes the human-review
 and post-release completion gates in this dated assessment: independent agents
 may review and validate acceptance; merge to `main` completes scoped work;
-post-merge failures become new linked work. The current governance document
-controls whenever the historical stage descriptions below differ.
+post-merge failures become new linked work. The 18 November 2026 revision in
+issue #144 makes the `approved` issue label the approval record, moves task
+validation into its own `Task link` check and records task completion before
+review. The current [factory workflow](issue-backlog-governance.md) controls
+whenever the historical stage descriptions below differ.
 
 PhoneBuddy supports agent-assisted development today. It has useful CI and
 evidence controls, but no demonstrated unattended task-to-PR runtime, independent
@@ -105,12 +108,13 @@ linked follow-up work for that failure. Track merge and deployed health as
 distinct facts. Existing Backlog statuses can remain simple while the factory
 records its more detailed run states separately.
 
-Triage pins the approved issue revision, creates an idempotent decomposition and
-records each task's scope, native acceptance and verification gates. Workers
+Triage starts from an issue labeled `approved`, searches for existing tasks to
+stay idempotent and records each task's scope, native acceptance and
+verification gates. Workers
 cannot code directly from issues, widen scope or treat archived dependencies as
-complete. A versioned amendment invalidates affected evidence. A separate
-completion controller reconciles every merged task and closes the parent issue
-when all required task PRs merge. Default-branch CI/CD is observed afterward;
+complete. A recorded scope amendment invalidates affected evidence. Issues close
+through `Closes #N` on the PR that completes them; an unattended factory may
+add a controller for multi-task issues. Default-branch CI/CD is observed afterward;
 failures create new linked work. Intermediate PRs use neutral references;
 progress reporting never rewrites human requirements.
 

@@ -28,86 +28,56 @@ Do not edit Backlog task, draft, document, decision, or milestone markdown files
 </CRITICAL_INSTRUCTION>
 <!-- BACKLOG.MD GUIDELINES END -->
 
-## GitHub Issues and Backlog authority
+## Factory workflow
 
-Follow [Issue and Backlog governance](docs/issue-backlog-governance.md).
-GitHub Issues own human-approved intent, priority and issue-level acceptance;
-native Backlog.md tasks own atomic execution, dependencies, scope and evidence.
-Do not mirror the layers or automatically rewrite issue requirements from task
-changes. Explicitly authorized amendments and upward progress/evidence reporting
-are permitted.
+Follow [the factory workflow](docs/issue-backlog-governance.md). In short:
 
-Before application-code work, triage an explicitly approved issue into a native
-CLI-managed task. Every new execution task must reference one primary issue URL
-and record its approved requirements revision, approval evidence, branch,
-explicit file scope, verification commands and native acceptance criteria.
-Use native TASK IDs and dependency fields; one implementation task maps to
-one PR, with additional PRs requiring task splitting through triage.
-Archived unfinished dependencies remain unsatisfied. Reconcile migration
-records rather than restoring broad tasks or treating archival as completion.
+- GitHub Issues hold approved intent. An issue is approved while it is open and
+  labeled `approved`. Only the owner adds that label, unless the owner tells you
+  to in the conversation. Never rewrite an issue's requirements; report progress
+  in comments.
+- Each piece of work is one Backlog task, one branch and one PR. A task's
+  description starts with `Issue:`, `Branch:`, `Scope:` and `Verify:` lines and
+  has acceptance criteria that can be checked before merge. Post-merge or live
+  proof is a separate follow-up task.
+- Change only paths in the task's `Scope` (Backlog records are always allowed).
+  Ask the owner before widening scope and record the amendment in the task.
 
-Workers may change only approved scope, including explicitly listed tests and
-their own task record. Additional files, changed acceptance or changed required
-checks need a recorded triage amendment; workers cannot expand their own authority.
-Material issue changes require reassessment. Autonomous claims need durable
-exclusive leases; branch-local status alone does not prevent duplicate work.
+## Picking up work
 
-Commit proposed task completion on its feature branch, never directly on main.
-An independent agent may review the PR and validate the task's acceptance
-criteria. The author cannot approve their own work. Merge the small, ready PR
-after applicable required checks pass and blocking review findings are resolved;
-follow the effective GitHub rules. A merge to the default branch accepts that
-task's scoped change and makes its Done status final. It does not certify a
-later deployment or health check. Observe default-branch CI/CD after merge;
-failures become new linked issues and native tasks to pick up.
+When asked to work on the Backlog without a specific task, pick an unassigned
+To Do task whose issue is approved and whose dependencies are Done. Respect any
+requested priority and never take over someone else's task. If nothing is
+eligible, report why.
 
-Keep the issue and Backlog task linked and reconcile them after every status,
-scope, PR and merge transition. Report progress on the issue without rewriting
-its approved requirements. An issue with multiple tasks stays open while any
-required task is unmerged and closes when all required task PRs merge. Record
-and retry a failed sync visibly; never report mismatched records as synchronized.
-Intermediate PRs/commits use neutral issue references such as Refs #123 and
-must not create a premature auto-closing link.
+Before claiming or resuming a task, run:
 
-## Taking Backlog work through review
+```sh
+git fetch origin
+python3 -B scripts/backlog_consistency.py --base origin/main --task TASK-ID --branch RECORDED-BRANCH
+```
 
-When asked to work on the Backlog without a specific task, list the available
-tasks and pick an eligible, unassigned execution item linked to approved issue
-intent at its recorded revision, whose dependencies are satisfied.
-Respect any requested priority or scope, and do not take over someone else's
-active work. If no eligible item can be identified, report the blocker. When a
-task is specified, read it and verify its eligibility before starting. Follow
-the execution guide to claim it, record a plan, and keep progress in Backlog.
+Require exit code 0 and `"claim_verified": true`. Then set the task In Progress
+and assign yourself through the CLI, push the branch and open a draft PR with
+`[TASK-ID]` in the title straight away. That draft PR is your claim.
 
-Immediately before claiming or resuming a task, fetch origin and run
-`python3 -B scripts/backlog_consistency.py --base origin/main --task TASK-ID --branch RECORDED-BRANCH`
-with the actual native ID and approved feature branch. Require exit zero and
-`claim_verified: true`; offline checks and native `--ready` alone cannot
-authorize execution. Resolve reported approval, dependency, migration or competing
-claim blockers through triage. The command is a read-only snapshot, not an atomic
-lease; autonomous scheduling still requires the durable lease service.
+## Taking work through review and merge
 
-Carry the assigned work through a pull request, not just a local implementation:
-
-1. Have an independent agent review the change and validate the task acceptance
-   criteria using the finalization guide. Keep the task active while
-   implementation or required pre-merge verification is incomplete. Record the
-   PR link, review evidence and any blockers in the task and issue.
-2. Follow the publishing instructions below. Open or update the branch's PR with
-   its task, scope, validation, and remaining limitations. Do not create a
-   duplicate PR.
-3. Monitor all required checks on the PR's current head until they complete successfully.
-   Inspect failures, fix issues within scope, run relevant local checks, commit
-   and push, then monitor the new head again. Pending, cancelled, skipped,
-   missing, stale, or otherwise inconclusive checks are not successful checks.
-   If a check cannot be completed or fixed, report its name, state, and blocker;
-   do not claim the PR is green.
-4. Once agent review, scoped acceptance and required pre-merge checks pass,
-   complete the Backlog finalization steps, commit and push any resulting task
-   update, and recheck the final head. Merge through the permitted GitHub path
-   as early as these gates allow. Reconcile task and issue completion after the
-   merge, then inspect default-branch CI/CD. Create linked follow-up work for
-   any post-merge failure instead of holding or reopening the merged task.
+1. Implement within scope and run the task's `Verify` commands.
+2. Before asking for review, finish the task record: check each criterion that
+   has evidence, write the final summary and set it Done, following the
+   finalization guide. Commit that with the work.
+3. Have an independent agent review the final head, rerun the checks and
+   validate each criterion. The author never approves their own work. Record the
+   review on the PR with the reviewed commit SHA.
+4. Watch `Quality` and `Task link` on the current head until they pass. Pending,
+   cancelled, skipped or missing required checks are not passing. If you cannot
+   fix a failure within scope, report the check name, state and blocker.
+5. Mark the PR ready and merge as soon as checks pass and blocking findings are
+   resolved. Use `Closes #N` on the PR that completes an issue and `Refs #N` on
+   intermediate PRs.
+6. After merge, watch main CI/CD. A failure becomes a new issue and task; do not
+   reopen merged work.
 
 ## Addressing pull request feedback
 

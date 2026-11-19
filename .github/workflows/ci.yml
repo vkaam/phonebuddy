@@ -23,11 +23,9 @@ jobs:
   quality:
     name: Quality
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 20
     permissions:
       contents: read
-      issues: read
-      pull-requests: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -38,26 +36,32 @@ jobs:
           mkdir -p artifacts
           python3 scripts/quality.py 2>&1 | tee artifacts/quality.txt
           python3 -B scripts/run_required_unittests.py 2>&1 | tee artifacts/tests.txt
-      - name: Validate this PR's issue, task and claim
-        if: github.event_name == 'pull_request'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          BACKLOG_BRANCH: ${{ github.head_ref }}
+      - name: Decide whether the web app needs checking
+        id: scope
         run: |
-          git fetch origin +refs/heads/main:refs/remotes/origin/main
-          python3 -B scripts/backlog_consistency.py --ci-pr --base origin/main \
-            --branch "$BACKLOG_BRANCH" --output artifacts/backlog-consistency.json
+          # Pull requests check the web app when they change it; main pushes,
+          # merge groups and manual runs always check it. A PR checkout is the
+          # test merge commit, so its first parent is the base it merges into.
+          if [ "$GITHUB_EVENT_NAME" = pull_request ]; then
+            changed=$(git diff --name-only HEAD^1 HEAD)
+          fi
+          if [ "$GITHUB_EVENT_NAME" != pull_request ] || grep -q '^apps/web/' <<<"$changed"; then
+            echo web=true >> "$GITHUB_OUTPUT"
+          else
+            echo web=false >> "$GITHUB_OUTPUT"
+            echo 'No web app changes; web checks skipped for this pull request.'
+          fi
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: steps.scope.outputs.web == 'true'
         with:
           node-version: '22.15.1'
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: steps.scope.outputs.web == 'true'
         with:
           path: ~/.cache/ms-playwright
           key: playwright-v2-${{ runner.os }}-${{ runner.arch }}-node-22.15.1-${{ hashFiles('apps/web/package-lock.json') }}
       - name: Build and test web shell
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: steps.scope.outputs.web == 'true'
         working-directory: apps/web
         run: |
           npm ci --no-audit --no-fund
@@ -104,6 +108,43 @@ jobs:
         with:
           name: quality-${{ github.run_id }}-${{ github.run_attempt }}
           path: artifacts/
+          retention-days: 14
+
+  task-link:
+    name: Task link
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: github.event_name == 'pull_request'
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Validate this PR's task, issue approval and scope
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BACKLOG_BRANCH: ${{ github.head_ref }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+        run: |
+          mkdir -p artifacts
+          git fetch origin +refs/heads/main:refs/remotes/origin/main
+          python3 -B scripts/backlog_consistency.py --pr --base origin/main \
+            --branch "$BACKLOG_BRANCH" --output artifacts/task-link.json
+      - name: Task links are validated on pull requests only
+        if: github.event_name != 'pull_request'
+        run: echo 'Task links were validated on the pull request; nothing to check for this event.'
+      - name: Retain task-link evidence
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: task-link-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/task-link.json
+          if-no-files-found: warn
           retention-days: 14
 
   build-release-image:

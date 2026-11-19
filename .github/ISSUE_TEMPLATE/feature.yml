@@ -1,0 +1,37 @@
+name: Feature or change
+description: Ask for new behavior or a change to existing behavior.
+labels: [feature, needs-triage]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The owner reviews new issues and adds the `approved` label when agents may start.
+        Until then the issue stays `needs-triage` and no task can be claimed against it.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What is wrong or missing, who is affected and why it matters now.
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope
+      description: What is in and out of scope. Name areas of the codebase if you know them.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: Observable outcomes that can be checked before the PR merges, one per line.
+      placeholder: |
+        - ...
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes
+      description: Links, constraints, prior decisions or follow-up ideas.

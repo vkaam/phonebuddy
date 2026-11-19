@@ -1,39 +1,26 @@
-## Problem and resulting behavior
+<!-- Title: [TASK-n] Short description. Open as a draft when you claim the task. -->
 
-Backlog task:
+Task: TASK-
+Issue: Closes #  <!-- or Refs # for an intermediate slice of a multi-task issue -->
 
-Primary GitHub Issue (use a neutral reference such as Refs #123 for a partial slice):
+## What changes and why
 
-Approved issue revision and approval evidence:
+## Verification
 
-Specification (use the [work specification template](../docs/templates/work-specification.md)
-when a separate specification is useful):
+<!-- Commands from the task's Verify line and their results, including failures
+and checks not run. Map evidence to acceptance criterion numbers. -->
 
-Describe the trigger, scope, and resulting behavior.
+- [ ] Task record marked Done with every criterion checked (before review)
+- [ ] `Quality` and `Task link` pass on the current head
 
-## Evidence
+## Review
 
-Use the [acceptance evidence template](../docs/templates/acceptance-evidence.md)
-here or link a completed record. Identify the tested source/configuration and map
-results to Backlog criterion IDs; keep pending checks explicit.
+<!-- Independent reviewer, reviewed commit SHA, findings and how each was resolved.
+The author cannot approve their own PR. -->
 
-- Commands/checks run and results (include failures and checks not run):
-- CI run and artifact links for the current commit:
-- Acceptance criteria demonstrated:
-- Approved file scope, task/spec revision and authorized amendments:
-- Independent agent reviewer, reviewed head, findings and resolution:
-- Remaining issue-level tasks and issue/Backlog sync state:
+## Risk and follow-up
 
-## Risk and delivery
+<!-- Deployment, migration or rollback notes, or why none apply. Follow-up tasks
+for post-merge or live proof. -->
 
-- Affected contracts, organization boundaries, dependencies, prompts/evals, or infrastructure:
-- Deployment prerequisites, migration/rollback, and operational impact (or explain why none apply):
-- PR safety report decision, head/base SHAs, and reasons:
-
-Merge as soon as scoped acceptance, independent agent review, required
-pre-merge checks and blocking findings are clear under effective GitHub rules.
-Follow [Issue and Backlog governance](../docs/issue-backlog-governance.md).
-Task completion is proposed on this branch until merge; avoid closing keywords
-and auto-closing development links for intermediate PRs. After merge, reconcile
-the task and issue, inspect default-branch CI/CD, and create linked follow-up
-work for any failure.
+See [the factory workflow](../docs/issue-backlog-governance.md).
