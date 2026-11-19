@@ -97,6 +97,9 @@ environment.
 3. In the trusted dev job, validate the hosting Bicep and parameters and run
    authenticated what-if with the dev federated identity. Unexpected material
    changes stop the release for investigation and a reviewed correction.
+   Any property deletion on a Storage or SQL resource counts as destructive,
+   including Azure defaults the template omits, so Bicep sets those defaults
+   explicitly (for example the release-state blob service and container).
    What-if is not proof of a successful deployment. The job pushes the already
    built image by digest, then deploys the applicable France Central hosting
    resources from Bicep. Each trusted workflow attempt supplies a unique
