@@ -119,7 +119,7 @@ new task. Do not reopen merged work.
 | Check | Required | What it covers |
 | --- | --- | --- |
 | `Quality` | Yes | Repository checks, Python policy tests, actionlint, Bicep validation, Gitleaks. Web install, `npm audit`, lint, tests, build and browser smoke run on PRs that change `apps/web/`, and always on main, merge-queue and manual runs. |
-| `Task link` | Owner to add to the ruleset | Runs `backlog_consistency.py --pr`. See below. |
+| `Task link` | Yes | Runs `backlog_consistency.py --pr`. See below. |
 | `Backlog audit` | No | Repository-wide drift report. Its warnings are for cleanup and never block a PR. |
 | `PR safety` | No | Advisory risk report from default-branch code. It never authorizes a merge. |
 
@@ -169,14 +169,24 @@ ruleset requires Code Owner review. Unattended parallel workers need the lease s
   any later PR or a Backlog-only PR.
 - An archived task that was never Done does not satisfy a dependency.
 
-## Repository settings for the owner
+## Repository settings
 
-These settings live in GitHub, not in this repository:
+These settings live in GitHub under **Settings**, not in this repository. As
+set by the owner on 21 November 2026:
 
-- Add `Task link` to the required status checks of the `Standard main` ruleset.
-- Enable the merge queue, then turn off "require branches to be up to date
-  before merging". CI already runs on `merge_group`.
-- Optionally allow auto-merge so grouped Dependabot minor and patch updates
-  merge once `Quality` passes.
-- Optionally require Code Owner review, so changes to the guard, workflows and
-  policy files need the owner's approval.
+- **Rules > Rulesets > Standard main > Require status checks to pass** requires
+  `Quality` and `Task link`. **Require branches to be up to date before
+  merging** is off, so PRs no longer need rebasing after every merge. Two PRs
+  that pass separately can still break once both land; main CI catches that
+  straight after merge, and the dev release deploys only after the main CI run
+  succeeds, so the break becomes a new issue instead of reaching dev.
+- **Settings > General > Pull Requests > Allow auto-merge** is on. Auto-merge is
+  switched on per PR, for example for grouped Dependabot minor and patch
+  updates, and merges once the required checks pass.
+- Code Owner review is not required. `.github/CODEOWNERS` names only `@vkaam`,
+  whose account also opens agent PRs, and GitHub does not let an author approve
+  their own PR, so requiring it would block every PR touching owned paths. Add a
+  second maintainer to CODEOWNERS before turning it on.
+- GitHub's merge queue is not available: it is offered only to
+  organization-owned repositories, and this one belongs to a personal account.
+  CI still runs on `merge_group`, so it is ready if the repository moves.
