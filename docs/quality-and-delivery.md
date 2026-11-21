@@ -323,15 +323,17 @@ non-fast-forward updates and require zero approving reviews. This setting
 permits the adopted agent-review policy, but the advisory report still does
 not authorize a merge.
 
-As inspected on 18 November 2026, these rules are unchanged. The owner should
-add `Task link` as a required check and enable the merge queue, then drop the
-"up to date before merging" requirement; see the
-[factory workflow](issue-backlog-governance.md#repository-settings-for-the-owner).
+As inspected on 21 November 2026, these rules are unchanged. The owner should
+add `Task link` as a required check and may turn off the "up to date before
+merging" requirement. A merge queue is not available because the repository
+is owned by a personal account; see the
+[factory workflow](issue-backlog-governance.md#repository-settings-for-the-owner)
+for the trade-off.
 
 GitHub's [required-check behavior](https://docs.github.com/en/pull-requests/how-tos/merge-and-close-pull-requests/troubleshooting-required-status-checks)
 accepts skipped/neutral checks in some cases, so the evaluator specifically
-requires `success`. The merge-group trigger ensures required CI can run in a
-future merge queue. Protect policy files and keep privileged event handlers
+requires `success`. The merge-group trigger keeps required CI ready for a merge
+queue if the repository moves to an organization. Protect policy files and keep privileged event handlers
 on trusted code; see [secure use of Actions](https://docs.github.com/en/actions/security-for-github-actions/security-guides/security-hardening-for-github-actions).
 
 ## Platform QA gates to implement with each component

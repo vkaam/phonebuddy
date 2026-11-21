@@ -1,7 +1,7 @@
 ---
 id: TASK-118
 title: Correct owner-settings guidance for a personal repository
-status: In Progress
+status: Done
 assignee:
   - '@claude'
 created_date: '2026-11-21T12:08:00Z'
@@ -26,9 +26,9 @@ The owner looked for the merge queue setting the docs describe and could not fin
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 docs/issue-backlog-governance.md and docs/quality-and-delivery.md describe only settings available to this personal-account repository, including the trade-off of turning off the up-to-date requirement without a merge queue
-- [ ] #2 The Code Owner review guidance says a second maintainer must be added to CODEOWNERS before enabling it
-- [ ] #3 No document on the branch instructs the owner to enable a merge queue
+- [x] #1 docs/issue-backlog-governance.md and docs/quality-and-delivery.md describe only settings available to this personal-account repository, including the trade-off of turning off the up-to-date requirement without a merge queue
+- [x] #2 The Code Owner review guidance says a second maintainer must be added to CODEOWNERS before enabling it
+- [x] #3 No document on the branch instructs the owner to enable a merge queue
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -43,4 +43,12 @@ The owner looked for the merge queue setting the docs describe and could not fin
 
 <!-- SECTION:NOTES:BEGIN -->
 Claim check 2026-11-21: pass, claim_verified true.
+
+Verified the repository owner is a User account (gh api repos/vkaam/phonebuddy owner.type), so the merge queue rule is not offered. Updated the owner-settings list in docs/issue-backlog-governance.md (exact settings paths, up-to-date trade-off, auto-merge per PR, Code Owner review warning) and the GitHub activation paragraphs in docs/quality-and-delivery.md. grep finds no remaining instruction to enable a merge queue; scripts/quality.py passed.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Corrected the owner-settings guidance: GitHub offers merge queues only for organization-owned repositories, and this one belongs to a personal account. The workflow doc now lists only settings that exist here, with menu paths: add Task link as a required check, optionally turn off the up-to-date requirement (with the trade-off explained), optionally allow auto-merge, and hold off on Code Owner review until a second maintainer is in CODEOWNERS. The quality baseline matches.
+<!-- SECTION:FINAL_SUMMARY:END -->

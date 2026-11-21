@@ -171,12 +171,25 @@ ruleset requires Code Owner review. Unattended parallel workers need the lease s
 
 ## Repository settings for the owner
 
-These settings live in GitHub, not in this repository:
+These settings live in GitHub under **Settings**, not in this repository. The
+repository belongs to a personal account, so GitHub's merge queue (offered only
+to organization-owned repositories) is not available.
 
-- Add `Task link` to the required status checks of the `Standard main` ruleset.
-- Enable the merge queue, then turn off "require branches to be up to date
-  before merging". CI already runs on `merge_group`.
-- Optionally allow auto-merge so grouped Dependabot minor and patch updates
-  merge once `Quality` passes.
-- Optionally require Code Owner review, so changes to the guard, workflows and
-  policy files need the owner's approval.
+- In **Rules > Rulesets > Standard main > Require status checks to pass**, add
+  `Task link` next to `Quality`.
+- In the same rule, consider turning off **Require branches to be up to date
+  before merging**. Without it, PRs no longer need rebasing after every merge,
+  but two PRs that pass separately can break once both land. Main CI catches
+  that straight after merge, and the dev release deploys only after main
+  `Quality` passes, so the break becomes a new issue instead of reaching dev.
+  Leave it on to rule this out at the cost of more rebasing.
+- Optionally tick **Settings > General > Pull Requests > Allow auto-merge**.
+  Auto-merge is then switched on per PR, for example for grouped Dependabot
+  minor and patch updates, and merges once required checks pass.
+- Do not require Code Owner review yet. `.github/CODEOWNERS` names only
+  `@vkaam`, whose account also opens agent PRs, and GitHub does not let an
+  author approve their own PR, so every PR touching owned paths would be
+  blocked. Add a second maintainer to CODEOWNERS first.
+
+CI also runs on `merge_group`, so it is ready if the repository ever moves to
+an organization.
