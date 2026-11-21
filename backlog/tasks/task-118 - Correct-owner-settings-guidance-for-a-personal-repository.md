@@ -5,7 +5,7 @@ status: Done
 assignee:
   - '@claude'
 created_date: '2026-11-21T12:08:00Z'
-updated_date: '2026-11-21T12:09:00Z'
+updated_date: '2026-11-21T12:11:00Z'
 labels: []
 dependencies: []
 priority: medium
@@ -45,6 +45,8 @@ The owner looked for the merge queue setting the docs describe and could not fin
 Claim check 2026-11-21: pass, claim_verified true.
 
 Verified the repository owner is a User account (gh api repos/vkaam/phonebuddy owner.type), so the merge queue rule is not offered. Updated the owner-settings list in docs/issue-backlog-governance.md (exact settings paths, up-to-date trade-off, auto-merge per PR, Code Owner review warning) and the GitHub activation paragraphs in docs/quality-and-delivery.md. grep finds no remaining instruction to enable a merge queue; scripts/quality.py passed.
+
+Independent review of 3b8991d found one blocking issue: the owner had already applied the settings (ruleset updated 2026-11-21 12:00 UTC: Task link required, up-to-date off; auto-merge allowed), so the docs listed done items as to-dos. Rewrote the governance section as "Repository settings" describing the current state, marked Task link as required in the checks table, updated the quality doc paragraph, and stated that the release gate is the whole main CI run. Verified live with gh api; quality.py passed.
 <!-- SECTION:NOTES:END -->
 
 ## Final Summary

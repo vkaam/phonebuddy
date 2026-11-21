@@ -323,12 +323,12 @@ non-fast-forward updates and require zero approving reviews. This setting
 permits the adopted agent-review policy, but the advisory report still does
 not authorize a merge.
 
-As inspected on 21 November 2026, these rules are unchanged. The owner should
-add `Task link` as a required check and may turn off the "up to date before
-merging" requirement. A merge queue is not available because the repository
-is owned by a personal account; see the
-[factory workflow](issue-backlog-governance.md#repository-settings-for-the-owner)
-for the trade-off.
+As inspected on 21 November 2026, the owner has since made `Task link` a
+required check alongside `Quality`, turned off the "up to date before merging"
+requirement and allowed auto-merge. A merge queue is not available because the
+repository is owned by a personal account. See the
+[factory workflow](issue-backlog-governance.md#repository-settings) for the
+current settings and their trade-offs.
 
 GitHub's [required-check behavior](https://docs.github.com/en/pull-requests/how-tos/merge-and-close-pull-requests/troubleshooting-required-status-checks)
 accepts skipped/neutral checks in some cases, so the evaluator specifically
