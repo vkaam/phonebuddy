@@ -174,13 +174,17 @@ before the new revision can receive traffic:
    and adds it to role `pb_api` (migration `002_api_role_grants.sql`): SELECT
    on `dbo.OrganizationMembership`, and SELECT, INSERT, UPDATE, DELETE on
    `dbo.WebSocketTicket`. It fails the release if the API identity holds a
-   broad role or any write permission on memberships.
+   broad role or any effective write permission on memberships (checked as the
+   API user, so grants through any role or public are caught).
 6. It creates a database user for the owner from `PHONEBUDDY_SQL_ADMIN_OBJECT_ID`
-   and `PHONEBUDDY_SQL_ADMIN_LOGIN` in role `db_owner`, so the owner keeps
-   access after the server administrator changes.
+   and `PHONEBUDDY_SQL_ADMIN_LOGIN` in role `db_owner`. This happens first,
+   right after connecting and before any migration, so only connecting sits
+   between the administrator switch and the owner's access.
 7. It inserts each missing membership for the object IDs in
-   `PHONEBUDDY_DEV_MEMBER_OBJECT_IDS` as role `admin` in the organization
-   `PHONEBUDDY_DEV_ORGANIZATION_ID`. Existing rows are never changed or
+   `PHONEBUDDY_DEV_MEMBER_OBJECT_IDS` in the organization
+   `PHONEBUDDY_DEV_ORGANIZATION_ID`. Only the owner
+   (`PHONEBUDDY_SQL_ADMIN_OBJECT_ID`) is seeded as role `admin`; every other
+   listed object ID gets role `user`. Existing rows are never changed or
    re-activated, so revoking someone (`IsActive = 0`) sticks.
 
 Set these public Actions Variables (repository level or on the `dev`
@@ -190,12 +194,21 @@ environment; no Secrets):
 | --- | --- |
 | `PHONEBUDDY_SQL_ADMIN_OBJECT_ID` | The owner's Entra object ID (becomes the owner's database user) |
 | `PHONEBUDDY_SQL_ADMIN_LOGIN` | The owner's sign-in name or UPN (the database user name) |
-| `PHONEBUDDY_DEV_MEMBER_OBJECT_IDS` | Comma-separated Entra object IDs to give access, valid GUIDs; the owner's first |
+| `PHONEBUDDY_DEV_MEMBER_OBJECT_IDS` | Comma-separated Entra object IDs to give access, valid GUIDs. The owner's ID gets `admin`, all others `user` |
 | `PHONEBUDDY_DEV_ORGANIZATION_ID` | A GUID you choose for the pilot organization (required when members are listed) |
 
 To give another pilot user access, add their object ID to
 `PHONEBUDDY_DEV_MEMBER_OBJECT_IDS` and run the next release. Only accounts
 named under owner decision 1 belong there.
+
+### If the owner loses database access
+
+If the release fails after switching the server administrator but before it
+connects (for example the runner IP lookup or the firewall rule fails), the
+owner's database user may not exist yet. Recover in the Azure portal: open the
+SQL server, then Settings, Microsoft Entra ID, Set admin, pick your own account
+and Save. Rerunning the release later switches the administrator back and
+creates your database user first.
 
 Rollback and recovery never run migrations, reverse one or restore a database
 over newer data. `infra/release-schema.json` records the schema version and an

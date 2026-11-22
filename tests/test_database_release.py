@@ -117,7 +117,12 @@ class MigrationDiscoveryTests(unittest.TestCase):
 
     def test_destructive_sql_needs_a_contract_release(self):
         for sql in ('DROP TABLE dbo.T;', 'ALTER TABLE t ALTER COLUMN c int;',
-                    'DELETE FROM dbo.T;', 'TRUNCATE TABLE dbo.T;', 'EXEC sp_rename a, b;'):
+                    'DELETE FROM dbo.T;', 'TRUNCATE TABLE dbo.T;', 'EXEC sp_rename a, b;',
+                    'DELETE dbo.T;', 'DELETE T WHERE Id = 1;', 'DELETE [T];',
+                    'MERGE dbo.T AS t USING dbo.S AS s ON t.Id = s.Id '
+                    'WHEN MATCHED THEN DELETE;',
+                    'MERGE dbo.T AS t USING dbo.S AS s ON t.Id = s.Id '
+                    'WHEN NOT MATCHED BY SOURCE THEN DELETE;'):
             with self.subTest(sql=sql), tempfile.TemporaryDirectory() as directory:
                 self.write(directory, {'001_a.sql': sql})
                 with self.assertRaisesRegex(dr.DatabaseReleaseError, 'destructive'):
@@ -127,7 +132,9 @@ class MigrationDiscoveryTests(unittest.TestCase):
 
     def test_comments_and_grants_are_not_destructive(self):
         with tempfile.TemporaryDirectory() as directory:
-            self.write(directory, {'001_a.sql': '-- drop table\nGRANT SELECT, DELETE ON OBJECT::dbo.T TO r;'})
+            self.write(directory, {'001_a.sql': '-- drop table\nGRANT SELECT, DELETE ON OBJECT::dbo.T TO r;\n'
+                                   'REVOKE DELETE ON OBJECT::dbo.T FROM r;\n'
+                                   'CREATE TABLE dbo.C (Id int REFERENCES dbo.T (Id) ON DELETE CASCADE);'})
             self.assertEqual(len(dr.discover_migrations(
                 directory, {'version': 1, 'migration_mode': 'expand'})), 1)
 
@@ -176,11 +183,16 @@ class PrincipalTests(unittest.TestCase):
 
     def test_api_gets_only_the_migration_role_and_is_checked(self):
         connection = FakeConnection()
+        dr.configure_owner(connection, config(), lambda _: None)
         dr.configure_principals(connection, config(), lambda _: None)
         joined = '\n'.join(connection.executed)
         self.assertIn("IS_ROLEMEMBER(N'pb_api'", joined)
         self.assertIn('broad database role', joined)
         self.assertIn('can write memberships', joined)
+        self.assertIn('EXECUTE AS USER = @api', joined)
+        self.assertIn("HAS_PERMS_BY_NAME(N'dbo.OrganizationMembership', N'OBJECT', N'INSERT')", joined)
+        self.assertIn("HAS_PERMS_BY_NAME(DB_NAME(), N'DATABASE', N'CONTROL')", joined)
+        self.assertLess(joined.index('EXECUTE AS USER'), joined.index('REVERT'))
         # The API identity is never added to db_owner; only the owner is.
         api_role_batches = [sql for sql in connection.executed if "N'id-pb-dev-pull'" in sql]
         self.assertFalse(any("N'db_owner'" in sql and 'ALTER ROLE' in sql for sql in api_role_batches))
@@ -207,6 +219,17 @@ class PrincipalTests(unittest.TestCase):
         dr.configure_principals(connection, config(), lambda _: None)
         seeds = [sql for sql in connection.executed if 'INSERT INTO dbo.OrganizationMembership' in sql]
         self.assertEqual(len(seeds), 2)
+
+    def test_only_the_owner_is_seeded_as_admin(self):
+        connection = FakeConnection()
+        dr.configure_principals(connection, config(), lambda _: None)
+        seeds = [sql for sql in connection.executed if 'INSERT INTO dbo.OrganizationMembership' in sql]
+        by_member = {member: sql for member in (OWNER, MEMBER) for sql in seeds
+                     if f"N'{member}'" in sql}
+        self.assertIn("N'admin'", by_member[OWNER])
+        self.assertIn("N'user'", by_member[MEMBER])
+        self.assertNotIn("N'admin'", by_member[MEMBER])
+        self.assertIn("N'user'", dr.seed_membership_sql(ORGANIZATION, TENANT, MEMBER))
 
     def test_no_members_runs_no_seed(self):
         connection = FakeConnection()
@@ -263,6 +286,26 @@ class FirewallTests(unittest.TestCase):
             with dr.TemporaryFirewallRule(az, config(), '20.50.1.9'):
                 pass
 
+    def test_cleanup_failure_does_not_hide_the_original_error(self):
+        az = self.az_recorder(fail_on='delete')
+        with self.assertRaises(dr.DatabaseReleaseError) as caught:
+            with dr.TemporaryFirewallRule(az, config(), '20.50.1.9'):
+                raise dr.DatabaseReleaseError('migration exploded')
+        message = str(caught.exception)
+        self.assertIn('migration exploded', message)
+        self.assertIn('Could not remove temporary firewall rule', message)
+
+    def test_owner_user_is_created_before_any_migration(self):
+        az = self.az_recorder()
+        connection = FakeConnection(fail_on='SECOND')
+        with self.assertRaises(dr.DatabaseReleaseError):
+            dr.run_release(config(), [migration(1), migration(2, 'SECOND;')], connection, az,
+                           '20.50.1.9', sleep=lambda _: None, log=lambda _: None)
+        owner_index = next(i for i, sql in enumerate(connection.executed)
+                           if "N'Owner O''Brien'" in sql and 'CREATE USER' in sql)
+        migration_index = next(i for i, sql in enumerate(connection.executed) if sql == 'SECOND;')
+        self.assertLess(owner_index, migration_index)
+
     def test_stale_rules_from_killed_runs_are_removed(self):
         az = self.az_recorder(listing='pb-release-1-1\nunrelated-rule\npb-release-7-3\n')
         dr.remove_stale_rules(az, config(), lambda _: None)
@@ -283,7 +326,7 @@ class FirewallTests(unittest.TestCase):
             dr.run_release(config(), migrations, connection, az, '20.50.1.9',
                            sleep=lambda _: None, log=lambda _: None)
         self.assertEqual(len(self.deletes(az)), 1)
-        self.assertFalse(any('CREATE USER' in sql for sql in connection.executed))
+        self.assertFalse(any("N'id-pb-dev-pull'" in sql for sql in connection.executed))
 
     def test_success_runs_everything_between_open_and_close(self):
         az = self.az_recorder()

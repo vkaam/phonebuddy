@@ -5,7 +5,7 @@ status: Done
 assignee:
   - '@claude'
 created_date: '2026-11-22T14:09:00Z'
-updated_date: '2026-11-22T14:23:00Z'
+updated_date: '2026-11-22T20:40:00Z'
 labels:
   - task
 dependencies: []
@@ -52,6 +52,8 @@ The dev SQL server accepts Entra logins only and the release workflow never touc
 Owner decision (conversation, 2026-11-22): the deployment identity becomes the SQL server Entra administrator via infrastructure code; the release step creates a database user for the owner so they keep access, and seeds the owner membership. Nobody runs SQL by hand.
 
 Validation: quality.py passed; run_required_unittests 260 OK (38 new in tests/test_database_release.py); services/api npm test 8 pass; check_bicep passed (BICEP on PATH). Unproven until the live follow-up: go-sqlcmd ActiveDirectoryAzCli against the real server, that Azure accepts the Application administrator login string, runner IP detection via api.ipify.org, and the CREATE USER by SID on the real database. data-platform.bicep itself is still not deployed by any workflow; the release manages only the administrator through hosting.bicep. The first migrated release is not auto-rolled back to the schema-0 release (recovery refuses by design).
+
+Review follow-up: the owner database user is now created right after connecting and before any migration; seeding makes only the owner admin (others user); API privilege check uses EXECUTE AS USER with HAS_PERMS_BY_NAME; destructive lint covers DELETE without FROM and MERGE ... THEN DELETE; firewall cleanup failure no longer hides the original error. Unproven live: the SQL administrator SID is the deployment identity's object ID, as Microsoft's Bicep docs state for administrators sid; whether Azure accepts it for this service principal is untested until the live follow-up. Portal recovery for an owner lock-out is in docs/dev-sign-in-runbook.md.
 <!-- SECTION:NOTES:END -->
 
 ## Final Summary

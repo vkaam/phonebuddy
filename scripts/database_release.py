@@ -39,13 +39,15 @@ DATABASE_RESOURCE = 'https://database.windows.net/'
 API_USER = 'id-pb-dev-pull'
 API_ROLE = 'pb_api'
 OWNER_ROLE = 'db_owner'
-MEMBER_ROLE = 'admin'
+ADMIN_ROLE = 'admin'
+USER_ROLE = 'user'
 FIREWALL_PREFIX = 'pb-release-'
 # Roles and permissions the API identity must never hold.
 BROAD_ROLES = ('db_owner', 'db_datawriter', 'db_ddladmin', 'db_securityadmin', 'db_accessadmin')
 _MIGRATION_NAME = re.compile(r'(\d{3})_[a-z0-9_]+\.sql')
 _DESTRUCTIVE = re.compile(
-    r'\b(drop|truncate|delete\s+(from|top|dbo\.|\[)|sp_rename|alter\s+column)\b', re.IGNORECASE)
+    r'\b(drop|truncate|sp_rename|alter\s+column|then\s+delete'
+    r'|delete\s+(?!(on|cascade|set|no)\b)[\w\[#@])', re.IGNORECASE)
 _TOKEN = re.compile(r'eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]*')
 _SECRET_ASSIGNMENT = re.compile(
     r'(password|pwd|secret|token|accesstoken)\s*[=:]\s*\S+', re.IGNORECASE)
@@ -269,8 +271,21 @@ END;
 
 
 def verify_api_privileges_sql(name):
-    """Fail the release if the API identity holds more than the pb_api role grants."""
+    """Fail the release if the API identity's effective rights exceed the pb_api grants.
+
+    Effective rights are tested as the API user (EXECUTE AS USER with
+    HAS_PERMS_BY_NAME), so grants that arrive through any role, nested role or
+    public are caught, not only direct grants.
+    """
     roles = ', '.join(sql_literal(role) for role in BROAD_ROLES)
+    write = ('INSERT', 'UPDATE', 'DELETE', 'ALTER', 'CONTROL')
+    database_checks = ' OR '.join(
+        f"HAS_PERMS_BY_NAME(DB_NAME(), N'DATABASE', N'{perm}') = 1"
+        for perm in ('CONTROL', 'ALTER', 'INSERT', 'UPDATE', 'DELETE', 'EXECUTE',
+                     'ALTER ANY USER', 'ALTER ANY ROLE'))
+    table_checks = ' OR '.join(
+        f"HAS_PERMS_BY_NAME(N'dbo.OrganizationMembership', N'OBJECT', N'{perm}') = 1"
+        for perm in write)
     return f"""\
 DECLARE @api sysname = {sql_literal(name)};
 IF EXISTS (SELECT 1 FROM sys.database_role_members m
@@ -278,24 +293,34 @@ IF EXISTS (SELECT 1 FROM sys.database_role_members m
     JOIN sys.database_principals u ON u.principal_id = m.member_principal_id
     WHERE u.name = @api AND r.name IN ({roles}))
   THROW 50002, N'The API identity holds a broad database role.', 1;
-IF EXISTS (SELECT 1 FROM sys.database_permissions p
-    JOIN sys.database_principals u ON u.principal_id = p.grantee_principal_id
-    WHERE u.name = @api AND p.state IN ('G', 'W')
-      AND ((p.class = 0 AND p.permission_name <> 'CONNECT') OR (p.class = 1 AND p.major_id = OBJECT_ID(N'dbo.OrganizationMembership')
-           AND p.permission_name IN ('INSERT', 'UPDATE', 'DELETE', 'CONTROL', 'ALTER'))))
-  THROW 50003, N'The API identity can write memberships or holds database-wide permissions.', 1;
+DECLARE @problem nvarchar(200) = NULL;
+EXECUTE AS USER = @api;
+IF {table_checks}
+  SET @problem = N'The API identity can write memberships (effective permission).';
+ELSE IF {database_checks}
+  SET @problem = N'The API identity holds effective database-wide permissions.';
+REVERT;
+IF @problem IS NOT NULL
+  THROW 50003, @problem, 1;
 """
 
 
-def seed_membership_sql(organization_id, tenant_id, object_id):
+def seed_membership_sql(organization_id, tenant_id, object_id, role=USER_ROLE):
     """Insert a missing membership; existing rows are never touched or re-activated."""
     org, tenant, member = (sql_literal(value) for value in (organization_id, tenant_id, object_id))
     return f"""\
 IF NOT EXISTS (SELECT 1 FROM dbo.OrganizationMembership
     WHERE OrganizationId = {org} AND TenantId = {tenant} AND ObjectId = {member})
   INSERT INTO dbo.OrganizationMembership (OrganizationId, TenantId, ObjectId, Role)
-  VALUES ({org}, {tenant}, {member}, {sql_literal(MEMBER_ROLE)});
+  VALUES ({org}, {tenant}, {member}, {sql_literal(role)});
 """
+
+
+def configure_owner(connection, config, log=print):
+    """Give the owner a database user first, so the administrator switch cannot lock them out."""
+    connection.execute(ensure_external_user_sql(config.owner_login, config.owner_object_id))
+    connection.execute(add_to_role_sql(config.owner_login, OWNER_ROLE))
+    log('Owner database user ready.')
 
 
 def configure_principals(connection, config, log=print):
@@ -303,11 +328,11 @@ def configure_principals(connection, config, log=print):
     connection.execute(add_to_role_sql(API_USER, API_ROLE))
     connection.execute(verify_api_privileges_sql(API_USER))
     log('API identity user ready with least-privilege role.')
-    connection.execute(ensure_external_user_sql(config.owner_login, config.owner_object_id))
-    connection.execute(add_to_role_sql(config.owner_login, OWNER_ROLE))
-    log('Owner database user ready.')
     for object_id in config.member_object_ids:
-        connection.execute(seed_membership_sql(config.organization_id, config.tenant_id, object_id))
+        # Only the owner is seeded as admin; every other listed member is a plain user.
+        role = ADMIN_ROLE if object_id == config.owner_object_id else USER_ROLE
+        connection.execute(seed_membership_sql(config.organization_id, config.tenant_id,
+                                               object_id, role))
     log(f'Membership seed checked for {len(config.member_object_ids)} principal(s).')
 
 
@@ -378,8 +403,15 @@ class TemporaryFirewallRule:
                 f'Could not remove temporary firewall rule {self.config.rule_name}: '
                 f'{scrub(error)}') from error
 
-    def __exit__(self, *_):
-        self.remove()
+    def __exit__(self, exc_type, exc, _traceback):
+        try:
+            self.remove()
+        except FirewallCleanupError as cleanup:
+            if exc is None:
+                raise
+            # Report both: the original failure must not be hidden by the cleanup failure.
+            raise DatabaseReleaseError(
+                f'{scrub(exc)} Additionally: {cleanup}') from exc
         return False
 
 
@@ -432,6 +464,9 @@ def run_release(config, migrations, connection, az, ip, sleep=time.sleep, log=pr
     remove_stale_rules(az, config, log)
     with TemporaryFirewallRule(az, config, ip):
         wait_for_access(connection, sleep=sleep, log=log)
+        # The owner's access comes first: nothing that can fail runs between the
+        # administrator switch and this user, apart from connecting.
+        configure_owner(connection, config, log)
         apply_migrations(connection, migrations, log)
         configure_principals(connection, config, log)
     log('Temporary firewall rule removed.')
