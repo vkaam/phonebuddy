@@ -343,11 +343,13 @@ class SqlcmdConnection:
 
     ActiveDirectoryAzCli obtains the token with `az account get-access-token`
     inside sqlcmd; no password or token is passed on a command line or printed.
+    `-N true` requires encryption with server certificate validation (go-sqlcmd
+    v1.10.0 does not validate without it); `-C` must never be added.
     """
 
     def __init__(self, server, database, binary='sqlcmd', run=subprocess.run):
         self.base = [binary, '-S', server, '-d', database, '--authentication-method',
-                     'ActiveDirectoryAzCli', '-b', '-I']
+                     'ActiveDirectoryAzCli', '-N', 'true', '-b', '-I']
         self.run = run
 
     def _run(self, extra):
