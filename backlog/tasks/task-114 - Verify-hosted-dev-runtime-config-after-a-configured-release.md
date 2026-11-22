@@ -4,10 +4,11 @@ title: Verify hosted dev runtime config after a configured release
 status: To Do
 assignee: []
 created_date: '2026-11-19T04:16:00Z'
-updated_date: '2026-11-19T04:21:00Z'
+updated_date: '2026-11-22T09:31:00Z'
 labels: []
 dependencies:
   - TASK-109
+  - TASK-123
 priority: high
 type: task
 ordinal: 97000
