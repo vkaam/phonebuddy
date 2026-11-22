@@ -21,7 +21,7 @@ SETTINGS = {
     'SQL_MANAGED_IDENTITY_CLIENT_ID': ('sqlManagedIdentityClientId', 'guid'),
 }
 _GUID = re.compile(r'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}')
-_SQL_SERVER = re.compile(r'[a-z0-9][a-z0-9-]{0,62}(\.database\.windows\.net)?')
+_SQL_SERVER = re.compile(r'[a-z0-9][a-z0-9-]{0,62}\.database\.windows\.net')
 _NAME = re.compile(r'[A-Za-z0-9][A-Za-z0-9_.-]{0,127}')
 _PLACEHOLDERS = {
     'unresolved', 'placeholder', 'changeme', 'change-me', 'todo', 'tbd', 'example',
@@ -29,7 +29,7 @@ _PLACEHOLDERS = {
 }
 _SHAPE_HINT = {
     'guid': 'a GUID with real digits',
-    'sql-server': 'an Azure SQL server name or <name>.database.windows.net',
+    'sql-server': 'the full Azure SQL server hostname <name>.database.windows.net (a bare server name is not accepted)',
     'name': 'a database name',
 }
 

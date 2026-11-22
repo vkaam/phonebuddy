@@ -42,7 +42,8 @@ class ApiSettingsTests(unittest.TestCase):
             'ENTRA_TENANT_ID': ('UNRESOLVED', '00000000-0000-0000-0000-000000000000',
                                 'not-a-guid', '<tenant-id>'),
             'ENTRA_API_CLIENT_ID': ('placeholder', 'TODO'),
-            'SQL_SERVER': ('UNRESOLVED', 'evil.example.com', 'changeme'),
+            'SQL_SERVER': ('UNRESOLVED', 'evil.example.com', 'changeme',
+                           'sql-pb-dev-abc123', 'sql-pb-dev-abc123.database.windows.net.evil.com'),
             'SQL_DATABASE': ('tbd', '', ' '),
             'SQL_MANAGED_IDENTITY_CLIENT_ID': ('unresolved', '0' * 8 + '-0000-0000-0000-' + '0' * 12),
         }

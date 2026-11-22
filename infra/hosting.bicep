@@ -30,7 +30,7 @@ param entraTenantId string
 @description('Public client ID of the API app registration (the token audience).')
 @minLength(1)
 param entraApiClientId string
-@description('Azure SQL server name or host name; a public identifier, never a credential.')
+@description('Full Azure SQL server hostname (<name>.database.windows.net), as the API requires; a public identifier, never a credential.')
 @minLength(1)
 param sqlServer string
 @description('Azure SQL database name.')

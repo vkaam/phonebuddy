@@ -1,9 +1,11 @@
 ---
 id: TASK-125
 title: Issue 152 - Run the API in the dev Container App through the release pipeline
-status: To Do
-assignee: []
+status: In Progress
+assignee:
+  - '@claude'
 created_date: '2026-11-22T09:34:00Z'
+updated_date: '2026-11-22T09:54:00Z'
 labels:
   - task
 dependencies: []
@@ -29,3 +31,12 @@ Merged API changes must reach dev through the normal release, as the web app doe
 - [ ] #3 Existing health-gate, rollback and what-if tests still pass and new tests cover the added settings
 - [ ] #4 Placeholder or missing Entra and SQL settings fail the release preflight with a clear message instead of deploying a broken API
 <!-- AC:END -->
+
+## Implementation Plan
+
+<!-- SECTION:PLAN:BEGIN -->
+1. Merge origin/main; reconcile Backlog records.
+2. Make api_settings preflight require the full <name>.database.windows.net host to match the API config.
+3. Confirm Bicep /ready probe and health gate agree with the API contract (GET / and /ready, health_request logs).
+4. Run quality, required unittests and check_bicep; open draft PR.
+<!-- SECTION:PLAN:END -->
