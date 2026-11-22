@@ -5,7 +5,7 @@ status: Done
 assignee:
   - '@claude'
 created_date: '2026-11-22T09:34:00Z'
-updated_date: '2026-11-22T09:54:00Z'
+updated_date: '2026-11-22T09:57:00Z'
 labels:
   - task
 dependencies: []
@@ -18,7 +18,7 @@ ordinal: 103000
 <!-- SECTION:DESCRIPTION:BEGIN -->
 Issue: https://github.com/vkaam/phonebuddy/issues/152
 Branch: agent/gh-152-hosting
-Scope: infra/hosting.bicep; infra/main.bicep; infra/release-schema.json; infra/environments/dev.bicepparam; .github/workflows/ci.yml; .github/workflows/azure-deploy.yml; scripts/**; tests/**
+Scope: infra/hosting.bicep; infra/main.bicep; infra/release-schema.json; infra/environments/dev.bicepparam; .github/workflows/ci.yml; .github/workflows/azure-deploy.yml; .github/workflows/azure-recover.yml; .github/workflows/azure-hosting-what-if.yml; scripts/**; tests/**
 Verify: python3 -B scripts/quality.py; python3 -B scripts/run_required_unittests.py; BICEP=bicep python3 -B scripts/check_bicep.py
 
 Merged API changes must reach dev through the normal release, as the web app does. Today CI builds only infra/release-test and the Container App passes only RELEASE_VERSION. Follows the contract in the sibling task Issue 152 - Package the PhoneBuddy API as a releasable container image (image from services/api/Dockerfile, port 8080, /ready, env var names). Entra IDs and the web origin are public values supplied as Actions Variables or Bicep parameters, never secrets. Live proof is a separate follow-up task.
@@ -45,4 +45,6 @@ Merged API changes must reach dev through the normal release, as the web app doe
 
 <!-- SECTION:FINAL_SUMMARY:BEGIN -->
 API image is built in CI from services/api and promoted by digest; hosting.bicep runs it on 8080 with HTTPS-only ingress, contract env vars and no secrets; release preflight rejects missing/placeholder Entra and SQL settings and now requires the full SQL hostname like the API. Verified: quality.py, 218 required unittests, check_bicep (local bicep) all pass; Bicep /ready probe and health_gate agree with the API contract. Nothing deployed; owner must set five PHONEBUDDY_DEV_* Actions Variables, and the SQL identity vs id-pb-dev-pull must be reconciled in the live follow-up.
+
+Scope amended on 2026-11-22 with owner approval in the conversation to add azure-recover.yml and azure-hosting-what-if.yml.
 <!-- SECTION:FINAL_SUMMARY:END -->
