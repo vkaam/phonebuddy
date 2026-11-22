@@ -1,9 +1,11 @@
 ---
 id: TASK-126
 title: Issue 152 - Document dev sign-in and API setup
-status: To Do
-assignee: []
+status: In Progress
+assignee:
+  - '@claude'
 created_date: '2026-11-22T09:34:00Z'
+updated_date: '2026-11-22T09:44:00Z'
 labels:
   - docs
 dependencies: []
@@ -29,3 +31,9 @@ Issue 152 requires the dev sign-in and API setup to be recreatable from document
 - [ ] #3 Runbook states the dev, test and production separation and that no secret or token is committed or published
 - [ ] #4 Open owner decisions are listed explicitly in the runbook
 <!-- AC:END -->
+
+## Implementation Plan
+
+<!-- SECTION:PLAN:BEGIN -->
+1. Merge origin/main into the runbook branch and rerun python3 -B scripts/quality.py. 2. Open draft PR. 3. Check each acceptance criterion against docs/dev-sign-in-runbook.md sections, write final summary, set Done. 4. Independent review follows.
+<!-- SECTION:PLAN:END -->
