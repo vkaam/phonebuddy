@@ -265,6 +265,7 @@ class FirewallTests(unittest.TestCase):
             self.assertEqual(created[created.index('--end-ip-address') + 1], '20.50.1.9')
         self.assertEqual(len(self.deletes(az)), 1)
         self.assertIn('pb-release-42-2', self.deletes(az)[0])
+        self.assertNotIn('--yes', self.deletes(az)[0])  # az firewall-rule delete takes no such flag
 
     def test_rule_is_removed_when_the_body_fails(self):
         az = self.az_recorder()
@@ -311,6 +312,8 @@ class FirewallTests(unittest.TestCase):
         dr.remove_stale_rules(az, config(), lambda _: None)
         removed = [c[c.index('--name') + 1] for c in self.deletes(az)]
         self.assertEqual(removed, ['pb-release-1-1', 'pb-release-7-3'])
+        for command in self.deletes(az):
+            self.assertNotIn('--yes', command)
 
     def test_public_ip_must_be_a_public_ipv4(self):
         self.assertEqual(dr.detect_public_ip(lambda: '20.50.1.9\n'), '20.50.1.9')

@@ -399,7 +399,7 @@ class TemporaryFirewallRule:
     def remove(self):
         try:
             self.az(['sql', 'server', 'firewall-rule', 'delete', *self._scope(),
-                     '--name', self.config.rule_name, '--yes'])
+                     '--name', self.config.rule_name])
         except Exception as error:
             raise FirewallCleanupError(
                 f'Could not remove temporary firewall rule {self.config.rule_name}: '
@@ -424,7 +424,7 @@ def remove_stale_rules(az, config, log=print):
                 f"[?starts_with(name, '{FIREWALL_PREFIX}')].name", '--output', 'tsv'])
     for name in (line.strip() for line in names.splitlines()):
         if re.fullmatch(re.escape(FIREWALL_PREFIX) + r'[0-9a-z-]+', name):
-            az(['sql', 'server', 'firewall-rule', 'delete', *scope, '--name', name, '--yes'])
+            az(['sql', 'server', 'firewall-rule', 'delete', *scope, '--name', name])
             log(f'Removed stale firewall rule {name}.')
 
 
