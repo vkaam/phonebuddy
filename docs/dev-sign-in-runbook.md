@@ -19,8 +19,8 @@ These are not settled. The steps below assume the first answer in each case.
    registrations, so granting it those permissions is a separate owner
    decision about a security-relevant right.
 3. **Who runs the membership SQL** and with which database identity. The API's
-   own identity should have only read and update rights on membership and
-   ticket rows and must not be used to insert memberships.
+   own identity should only read membership rows, and insert, update and
+   delete WebSocket ticket rows. It must not be used to insert memberships.
 4. **Whether the dev API origin is fixed** before the SPA registration and the
    Variables are finalized (see Prerequisites), because the Variables need its
    HTTPS URL.
