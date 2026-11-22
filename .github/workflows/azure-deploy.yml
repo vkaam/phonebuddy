@@ -42,6 +42,11 @@ jobs:
       SOURCE_RUN_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
       RESOURCE_GROUP: rg-pb-dev-francecentral-foundation
       APP_NAME: ca-pb-dev-release-test
+      ENTRA_TENANT_ID: ${{ vars.PHONEBUDDY_DEV_ENTRA_TENANT_ID }}
+      ENTRA_API_CLIENT_ID: ${{ vars.PHONEBUDDY_DEV_ENTRA_API_CLIENT_ID }}
+      SQL_SERVER: ${{ vars.PHONEBUDDY_DEV_SQL_SERVER }}
+      SQL_DATABASE: ${{ vars.PHONEBUDDY_DEV_SQL_DATABASE }}
+      SQL_MANAGED_IDENTITY_CLIENT_ID: ${{ vars.PHONEBUDDY_DEV_SQL_MANAGED_IDENTITY_CLIENT_ID }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -117,6 +122,8 @@ jobs:
           if manifest != expected:
               raise SystemExit('Frontend artifact does not match the successful main CI run')
           PY
+      - name: Validate the API runtime settings
+        run: python3 -B scripts/api_settings.py --output "$RUNNER_TEMP/api-settings.json"
       - name: Compile the exact-source Bicep template
         run: |
           set -euo pipefail
@@ -323,6 +330,7 @@ jobs:
               managePullRoleAssignment=false \
               deployStaticSite=true staticSiteLocation=eastus2 imageDigest="$IMAGE_DIGEST" \
               releaseVersion="$RELEASE_SHA" \
+              @"$RUNNER_TEMP/api-settings.json" \
               revisionSuffix="$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" \
             --validation-level ProviderNoRbac \
             --result-format FullResourcePayloads --no-pretty-print \
@@ -348,6 +356,7 @@ jobs:
               managePullRoleAssignment=false \
               deployStaticSite=true staticSiteLocation=eastus2 imageDigest="$IMAGE_DIGEST" \
               releaseVersion="$RELEASE_SHA" \
+              @"$RUNNER_TEMP/api-settings.json" \
               revisionSuffix="$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" \
             --output json > artifacts/deployment.json
           printf '%s\n' "$IMAGE_DIGEST" > artifacts/image-digest.txt
@@ -651,6 +660,7 @@ jobs:
               managePullRoleAssignment=false deployStaticSite=true \
               staticSiteLocation="$RECOVERY_STATIC_SITE_LOCATION" imageDigest="$RECOVERY_IMAGE_DIGEST" \
               releaseVersion="$RECOVERY_RELEASE_SHA" \
+              @"$RUNNER_TEMP/api-settings.json" \
               revisionSuffix="$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT-recovery" \
             --validation-level ProviderNoRbac --result-format FullResourcePayloads \
             --no-pretty-print --output json > artifacts/recovery-what-if.json
@@ -666,6 +676,7 @@ jobs:
               managePullRoleAssignment=false deployStaticSite=true \
               staticSiteLocation="$RECOVERY_STATIC_SITE_LOCATION" imageDigest="$RECOVERY_IMAGE_DIGEST" \
               releaseVersion="$RECOVERY_RELEASE_SHA" \
+              @"$RUNNER_TEMP/api-settings.json" \
               revisionSuffix="$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT-recovery" \
             --output json > artifacts/recovery-deployment.json
           az containerapp revision list --name "$APP_NAME" \

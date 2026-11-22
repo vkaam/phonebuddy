@@ -24,6 +24,21 @@ param releaseVersion string
 @minLength(1)
 @maxLength(63)
 param revisionSuffix string
+@description('Public Microsoft Entra tenant ID the API validates tokens against.')
+@minLength(1)
+param entraTenantId string
+@description('Public client ID of the API app registration (the token audience).')
+@minLength(1)
+param entraApiClientId string
+@description('Azure SQL server name or host name; a public identifier, never a credential.')
+@minLength(1)
+param sqlServer string
+@description('Azure SQL database name.')
+@minLength(1)
+param sqlDatabase string
+@description('Client ID of the user-assigned managed identity used to reach Azure SQL.')
+@minLength(1)
+param sqlManagedIdentityClientId string
 
 var suffix = uniqueString(subscription().id, resourceGroup().id)
 var tags = { environment: environment, service: 'phonebuddy', owner: owner, costCenter: costCenter }
@@ -100,6 +115,9 @@ resource site 'Microsoft.Web/staticSites@2023-12-01' = if (deployStaticSite) {
   sku: { name: 'Free', tier: 'Free' }
   properties: { allowConfigFileUpdates: false }
 }
+
+// Exact CORS origin for the browser app; empty only where no site is deployed.
+var webOrigin = deployStaticSite ? 'https://${site.properties.defaultHostname}' : ''
 
 resource identity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
   name: 'id-pb-${environment}-pull'
@@ -181,7 +199,16 @@ resource app 'Microsoft.App/containerApps@2023-05-01' = if (deployWorkload) {
       containers: [{
         name: 'release-test'
         image: '${registry.properties.loginServer}/release-test@sha256:${imageDigest}'
-        env: [{ name: 'RELEASE_VERSION', value: releaseVersion }]
+        // Public values only: no secrets, keys or connection strings.
+        env: [
+          { name: 'RELEASE_VERSION', value: releaseVersion }
+          { name: 'ENTRA_TENANT_ID', value: entraTenantId }
+          { name: 'ENTRA_API_CLIENT_ID', value: entraApiClientId }
+          { name: 'WEB_ORIGIN', value: webOrigin }
+          { name: 'SQL_SERVER', value: sqlServer }
+          { name: 'SQL_DATABASE', value: sqlDatabase }
+          { name: 'SQL_MANAGED_IDENTITY_CLIENT_ID', value: sqlManagedIdentityClientId }
+        ]
         resources: { cpu: json('0.25'), memory: '0.5Gi' }
         probes: [{ type: 'Readiness', httpGet: { path: '/ready', port: 8080 }, initialDelaySeconds: 2, periodSeconds: 10 }]
       }]

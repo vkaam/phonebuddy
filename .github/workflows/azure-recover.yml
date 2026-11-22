@@ -38,6 +38,11 @@ jobs:
       APP_NAME: ca-pb-dev-release-test
       RELEASE_ID: ${{ inputs.release_id }}
       RECOVERY_REASON: ${{ inputs.reason }}
+      ENTRA_TENANT_ID: ${{ vars.PHONEBUDDY_DEV_ENTRA_TENANT_ID }}
+      ENTRA_API_CLIENT_ID: ${{ vars.PHONEBUDDY_DEV_ENTRA_API_CLIENT_ID }}
+      SQL_SERVER: ${{ vars.PHONEBUDDY_DEV_SQL_SERVER }}
+      SQL_DATABASE: ${{ vars.PHONEBUDDY_DEV_SQL_DATABASE }}
+      SQL_MANAGED_IDENTITY_CLIENT_ID: ${{ vars.PHONEBUDDY_DEV_SQL_MANAGED_IDENTITY_CLIENT_ID }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -49,6 +54,8 @@ jobs:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: Validate the API runtime settings
+        run: python3 -B scripts/api_settings.py --output "$RUNNER_TEMP/api-settings.json"
       - name: Create operator evidence before making recovery changes
         run: |
           set -euo pipefail
@@ -186,6 +193,7 @@ jobs:
               managePullRoleAssignment=false deployStaticSite=true \
               staticSiteLocation=eastus2 imageDigest="$image_digest" \
               releaseVersion="$release_sha" \
+              @"$RUNNER_TEMP/api-settings.json" \
               revisionSuffix="$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT-manual" \
             --validation-level ProviderNoRbac --result-format FullResourcePayloads \
             --no-pretty-print --output json > artifacts/manual-recovery/what-if.json
@@ -212,6 +220,7 @@ jobs:
               staticSiteLocation="${{ steps.release.outputs.static_site_location }}" \
               imageDigest="${{ steps.release.outputs.image_digest }}" \
               releaseVersion="${{ steps.release.outputs.release_sha }}" \
+              @"$RUNNER_TEMP/api-settings.json" \
               revisionSuffix="$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT-manual" \
             --output json > artifacts/manual-recovery/deployment.json
       - name: Verify the selected immutable image revision is active
