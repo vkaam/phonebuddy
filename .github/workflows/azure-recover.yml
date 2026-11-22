@@ -38,6 +38,11 @@ jobs:
       APP_NAME: ca-pb-dev-release-test
       RELEASE_ID: ${{ inputs.release_id }}
       RECOVERY_REASON: ${{ inputs.reason }}
+      ENTRA_TENANT_ID: ${{ vars.PHONEBUDDY_DEV_ENTRA_TENANT_ID }}
+      ENTRA_API_CLIENT_ID: ${{ vars.PHONEBUDDY_DEV_ENTRA_API_CLIENT_ID }}
+      SQL_SERVER: ${{ vars.PHONEBUDDY_DEV_SQL_SERVER }}
+      SQL_DATABASE: ${{ vars.PHONEBUDDY_DEV_SQL_DATABASE }}
+      SQL_MANAGED_IDENTITY_CLIENT_ID: ${{ vars.PHONEBUDDY_DEV_SQL_MANAGED_IDENTITY_CLIENT_ID }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -167,6 +172,8 @@ jobs:
           chmod +x "$RUNNER_TEMP/bicep"
           "$RUNNER_TEMP/bicep" build "$RUNNER_TEMP/recovery-hosting.bicep" \
             --outfile "$RUNNER_TEMP/recovery-hosting.json"
+          python3 -B scripts/api_settings.py --template "$RUNNER_TEMP/recovery-hosting.json" \
+            --output "$RUNNER_TEMP/api-settings.json"
           image_digest=$(python3 - artifacts/manual-recovery/target-manifest.json <<'PY'
           import json
           import sys
@@ -186,6 +193,7 @@ jobs:
               managePullRoleAssignment=false deployStaticSite=true \
               staticSiteLocation=eastus2 imageDigest="$image_digest" \
               releaseVersion="$release_sha" \
+              @"$RUNNER_TEMP/api-settings.json" \
               revisionSuffix="$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT-manual" \
             --validation-level ProviderNoRbac --result-format FullResourcePayloads \
             --no-pretty-print --output json > artifacts/manual-recovery/what-if.json
@@ -200,6 +208,10 @@ jobs:
             printf 'static_site_location=%s\n' "$static_site_location"
           } >> "$GITHUB_OUTPUT"
       - name: Deploy the selected immutable application release
+        env:
+          STATIC_SITE_LOCATION: ${{ steps.release.outputs.static_site_location }}
+          IMAGE_DIGEST: ${{ steps.release.outputs.image_digest }}
+          RELEASE_SHA: ${{ steps.release.outputs.release_sha }}
         run: |
           set -euo pipefail
           az deployment group create \
@@ -209,9 +221,10 @@ jobs:
             --parameters environment=dev owner=PHONEBUDDY-PLATFORM \
               costCenter=PHONEBUDDY-NONPROD deployWorkload=true \
               managePullRoleAssignment=false deployStaticSite=true \
-              staticSiteLocation="${{ steps.release.outputs.static_site_location }}" \
-              imageDigest="${{ steps.release.outputs.image_digest }}" \
-              releaseVersion="${{ steps.release.outputs.release_sha }}" \
+              staticSiteLocation="$STATIC_SITE_LOCATION" \
+              imageDigest="$IMAGE_DIGEST" \
+              releaseVersion="$RELEASE_SHA" \
+              @"$RUNNER_TEMP/api-settings.json" \
               revisionSuffix="$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT-manual" \
             --output json > artifacts/manual-recovery/deployment.json
       - name: Verify the selected immutable image revision is active
@@ -263,19 +276,22 @@ jobs:
           output_location: ''
           skip_app_build: true
       - name: Verify backend and frontend recovery
+        env:
+          RELEASE_SHA: ${{ steps.release.outputs.release_sha }}
+          STATIC_WEB_APP_URL: ${{ steps.web-deploy.outputs.static_web_app_url }}
         run: |
           set -euo pipefail
           app_url=$(az resource show --resource-group "$RESOURCE_GROUP" \
             --name "$APP_NAME" --resource-type Microsoft.App/containerApps \
             --query 'properties.configuration.ingress.fqdn' --output tsv)
           python3 -B scripts/health_gate.py --url "https://$app_url" \
-            --expected-version "${{ steps.release.outputs.release_sha }}" \
+            --expected-version "$RELEASE_SHA" \
             --skip-workspace-telemetry > artifacts/manual-recovery/health-gate.json
-          static_url='${{ steps.web-deploy.outputs.static_web_app_url }}'
+          static_url="$STATIC_WEB_APP_URL"
           curl --fail --silent --show-error --retry 5 --retry-all-errors \
             --retry-delay 5 "$static_url/release.json" \
             > artifacts/manual-recovery/frontend-release.json
-          python3 - "${{ steps.release.outputs.release_sha }}" \
+          python3 - "$RELEASE_SHA" \
             artifacts/manual-recovery/frontend-release.json <<'PY'
           import json
           import sys

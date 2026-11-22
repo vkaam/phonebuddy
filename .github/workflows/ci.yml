@@ -224,6 +224,9 @@ jobs:
         run: |
           test "$GITHUB_REF" = refs/heads/main
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+      # The image keeps its historical release-test name (registry repository,
+      # archive and Container App) so rollback and health tooling are unchanged;
+      # its content is the PhoneBuddy API built from services/api/Dockerfile.
       - name: Build and export the release image once
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         env:
@@ -234,8 +237,9 @@ jobs:
             --platform linux/amd64 \
             --provenance=false \
             --load \
+            --file services/api/Dockerfile \
             --tag "$IMAGE_TAG" \
-            infra/release-test
+            services/api
           mkdir -p "$RUNNER_TEMP/release-image"
           docker save --output "$RUNNER_TEMP/release-image/release-test.tar" "$IMAGE_TAG"
           gzip -n "$RUNNER_TEMP/release-image/release-test.tar"

@@ -412,6 +412,48 @@ def validate_static_site_location(parameters, site):
         raise ValueError('Static Web App location must default to the workload location and allow an explicit override')
 
 
+API_ENVIRONMENT = {
+    'RELEASE_VERSION': "[parameters('releaseVersion')]",
+    'ENTRA_TENANT_ID': "[parameters('entraTenantId')]",
+    'ENTRA_API_CLIENT_ID': "[parameters('entraApiClientId')]",
+    'SQL_SERVER': "[parameters('sqlServer')]",
+    'SQL_DATABASE': "[parameters('sqlDatabase')]",
+    'SQL_MANAGED_IDENTITY_CLIENT_ID': "[parameters('sqlManagedIdentityClientId')]",
+}
+API_REQUIRED_PARAMETERS = ('entraTenantId', 'entraApiClientId', 'sqlServer', 'sqlDatabase',
+                           'sqlManagedIdentityClientId')
+
+
+def validate_api_container(parameters, app):
+    """Require the API's public settings, HTTPS-only ingress and no secret values."""
+    for name in API_REQUIRED_PARAMETERS:
+        parameter = parameters.get(name, {})
+        if parameter.get('minLength') != 1 or 'defaultValue' in parameter:
+            raise ValueError(f'API setting {name} must be supplied and nonempty')
+    properties = app['properties']
+    ingress = properties.get('configuration', {}).get('ingress', {})
+    if (ingress.get('targetPort') != 8080 or ingress.get('allowInsecure') is not False
+            or ingress.get('external') is not True):
+        raise ValueError('API ingress must target port 8080 and refuse insecure HTTP')
+    if properties.get('configuration', {}).get('secrets'):
+        raise ValueError('API container must not define secrets')
+    container = properties['template']['containers'][0]
+    env = {}
+    for item in container.get('env', []):
+        if set(item) != {'name', 'value'}:
+            raise ValueError('API environment entries must be plain public values, not secret references')
+        env[item['name']] = item['value']
+    if set(env) != set(API_ENVIRONMENT) | {'WEB_ORIGIN'}:
+        raise ValueError('API environment must contain exactly the reviewed public settings')
+    for name, expected in API_ENVIRONMENT.items():
+        if env[name] != expected:
+            raise ValueError(f'API setting {name} must come from its deployment parameter')
+    web_origin = env['WEB_ORIGIN']
+    if ('defaultHostname' not in web_origin or 'Microsoft.Web/staticSites' not in web_origin
+            or 'https://' not in web_origin):
+        raise ValueError('WEB_ORIGIN must be the HTTPS origin of the dev Static Web App')
+
+
 def validate_hosting(template):
     """Check security-critical defaults in the compiled pilot template."""
     resources = {r['type']: r for r in template.get('resources', [])}
@@ -448,6 +490,7 @@ def validate_hosting(template):
                       "'2023-07-01').loginServer, parameters('imageDigest'))]")
     if image != expected_image:
         raise ValueError('Workload image must use the provisioned registry and digest')
+    validate_api_container(parameters, resources['Microsoft.App/containerApps'])
     if parameters['deployWorkload'].get('defaultValue') is not False:
         raise ValueError('Workload deployment must be opt-in')
     if (parameters.get('deployStaticSite', {}).get('defaultValue') is not True
