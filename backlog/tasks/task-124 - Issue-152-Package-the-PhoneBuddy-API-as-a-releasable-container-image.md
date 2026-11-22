@@ -1,9 +1,11 @@
 ---
 id: TASK-124
 title: Issue 152 - Package the PhoneBuddy API as a releasable container image
-status: To Do
-assignee: []
+status: In Progress
+assignee:
+  - '@claude'
 created_date: '2026-11-22T09:34:00Z'
+updated_date: '2026-11-22T09:44:00Z'
 labels:
   - task
 dependencies: []
@@ -29,3 +31,11 @@ The dev Container App only runs the release-test stand-in, so signed-in features
 - [ ] #3 The API accepts only tokens issued for it and browser requests only from the configured WEB_ORIGIN, covered by existing or new tests
 - [ ] #4 docs/api-container-contract.md records the image, port, endpoint, log and environment-variable contract
 <!-- AC:END -->
+
+## Implementation Plan
+
+<!-- SECTION:PLAN:BEGIN -->
+1. Merge origin/main into the branch and rerun Verify.
+2. Confirm the Dockerfile, /ready endpoint, tests and contract doc meet the criteria.
+3. Open a draft PR, then finalize the record with evidence (note the image was not built: no Docker daemon).
+<!-- SECTION:PLAN:END -->
