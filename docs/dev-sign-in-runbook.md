@@ -6,24 +6,26 @@ pilot membership row and what a user without membership sees. It contains no
 secret, token, client secret or real tenant or client ID. Put real values only
 in the owner's records and in the public Actions Variables named below.
 
-## Open owner decisions
+## Owner decisions
 
-These are not settled. The steps below assume the first answer in each case.
+Decided on 2026-11-22 (recorded in TASK-121 and TASK-122):
 
-1. **Who may sign in to dev.** Which accounts get a membership row: only the
-   owner, a named pilot group, or members of the nonproduction tenant in
-   general. Until decided, grant a row only to accounts the owner names.
-2. **How the Entra app registrations are made.** By hand by the owner in the
-   nonproduction tenant (assumed here), or by the deployment. The deployment
-   identity may lack the directory permissions to create or change app
-   registrations, so granting it those permissions is a separate owner
-   decision about a security-relevant right.
+1. **Who may sign in to dev.** Only the owner and invited guests of the
+   nonproduction tenant. Grant a membership row only to those accounts.
+2. **How the Entra app registrations are made.** The deployment will create
+   them (TASK-121, not built yet). Until that task lands, create them by hand
+   with sections 1 and 2; the values they produce are the same ones the
+   deployment will publish.
+
+Still open:
+
 3. **Who runs the membership SQL** and with which database identity. The API's
    own identity should only read membership rows, and insert, update and
    delete WebSocket ticket rows. It must not be used to insert memberships.
-4. **Whether the dev API origin is fixed** before the SPA registration and the
-   Variables are finalized (see Prerequisites), because the Variables need its
-   HTTPS URL.
+   The Container App currently runs as the user-assigned identity
+   `id-pb-dev-pull`, which has no Azure SQL access yet (TASK-120).
+4. **How guests are invited and provisioned** (TASK-122): the invitation steps
+   and the provisioning path for their membership rows are not written yet.
 
 ## Environments and separation
 
@@ -32,8 +34,8 @@ These are not settled. The steps below assume the first answer in each case.
   configuration. Do not reuse a registration, client ID, scope or membership
   row across environments, and never put production data or credentials in dev
   or test. See `docs/azure-delivery-policy.md` for the environment register.
-- This runbook configures dev only. Only the four `PHONEBUDDY_DEV_*` Variables
-  exist today and the release workflow deploys only dev. Test and production
+- This runbook configures dev only. Only `PHONEBUDDY_DEV_*` Variables are used
+  and the release workflow deploys only dev. Test and production
   need their own registrations and their own, differently named Variables.
 - Entra registrations for dev and test live in the nonproduction tenant. The
   production tenant is unresolved; do not register production there.
@@ -94,8 +96,9 @@ If the Static Web App hostname changes, the redirect URI must change with it.
 ## 3. Set the public Actions Variables
 
 In the GitHub repository under **Settings, Secrets and variables, Actions,
-Variables** (not Secrets), create these four repository variables. They are
-public configuration:
+Variables** (not Secrets), create these four **repository** variables. The
+web build reads them and its job has no environment, so they cannot live only
+on the `dev` environment. They are public configuration:
 
 | Variable | Value |
 | --- | --- |
@@ -108,18 +111,35 @@ On the next trusted main release, `apps/web/scripts/generate-public-config.mjs`
 validates all four and writes `config.json` into the artifact. If any value is
 missing or invalid it removes any stale config and the site stays on its
 unconfigured shell. Set the four only after the API HTTPS endpoint and both
-registrations exist.
+registrations exist. The API address only exists after the first successful
+dev release, so set `PHONEBUDDY_DEV_API_BASE_URL` last, then release again.
+The config is built into the main build, so the next release needs a new main
+commit: rerunning CI for the same commit rebuilds a different image, and the
+release refuses it.
 
 ## 4. Configure the API
 
-Set these on the dev API (plain settings, no secrets): `ENTRA_TENANT_ID` (same
-tenant), `ENTRA_API_CLIENT_ID` (the API client ID), `WEB_ORIGIN` (the exact dev
-Static Web App origin, which becomes the CORS origin), `SQL_SERVER` (the dev
-`*.database.windows.net` host), `SQL_DATABASE`, and
-`SQL_MANAGED_IDENTITY_CLIENT_ID` when a user-assigned identity is used. The
-tenant ID, API audience and web origin must match across the API settings and
-the `PHONEBUDDY_DEV_*` Variables. Apply `services/api/migrations/001_identity.sql`
-to the dev database as the database migration owner before the API starts.
+The release deploys the API settings from Actions Variables; you do not set
+them on the Container App by hand. Create these five variables, at repository
+level or on the `dev` environment (the deploy job runs in `dev`, so either
+works). They are plain public values:
+
+| Variable | Container App setting | Value |
+| --- | --- | --- |
+| `PHONEBUDDY_DEV_ENTRA_TENANT_ID` | `ENTRA_TENANT_ID` | The tenant ID (shared with section 3) |
+| `PHONEBUDDY_DEV_ENTRA_API_CLIENT_ID` | `ENTRA_API_CLIENT_ID` | The API client ID |
+| `PHONEBUDDY_DEV_SQL_SERVER` | `SQL_SERVER` | The full `<name>.database.windows.net` hostname |
+| `PHONEBUDDY_DEV_SQL_DATABASE` | `SQL_DATABASE` | The dev database name |
+| `PHONEBUDDY_DEV_SQL_MANAGED_IDENTITY_CLIENT_ID` | `SQL_MANAGED_IDENTITY_CLIENT_ID` | The Client ID (not Object ID) of the identity the app runs as |
+
+`WEB_ORIGIN` is not a variable: the template sets it to the dev Static Web App
+origin, which becomes the CORS origin. Before any deploy, the release checks
+these values and stops with a message naming each missing, placeholder or
+malformed one. GUIDs must be valid (version 1 to 8, RFC 4122 variant), the
+same rule the API applies at startup. Apply
+`services/api/migrations/001_identity.sql` to the dev database as the database
+migration owner, and grant the app's identity only the access it needs (see
+open decision 3), before expecting sign-in to work.
 
 ## 5. Grant a pilot user access
 
