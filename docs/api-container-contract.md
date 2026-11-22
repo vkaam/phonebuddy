@@ -17,7 +17,8 @@ The API listens on `0.0.0.0:8080` (`PORT` defaults to 8080).
 
 ## Endpoints
 
-- `GET /ready` needs no authentication and returns
+- `GET /ready` and `GET /` need no authentication (the release gate alternates
+  its probes between them) and return
   `{"version": "<RELEASE_VERSION>", "ready": true}` with status 200.
   `RELEASE_VERSION` is `unknown` when unset.
 - `GET /health` needs no authentication and returns `{"status":"ok"}`.
@@ -28,7 +29,7 @@ The API listens on `0.0.0.0:8080` (`PORT` defaults to 8080).
 
 ## Log line
 
-Each `/ready` or `/health` request writes exactly one JSON line to stdout and
+Each `/`, `/ready` or `/health` request writes exactly one JSON line to stdout and
 nothing else about that request:
 
 ```json

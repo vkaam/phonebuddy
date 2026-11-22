@@ -189,7 +189,10 @@ test('GET /ready is unauthenticated, reports the release version, and logs one h
     assert.deepEqual(ready.json(), { version: 'test-release', ready: true });
     const health = await probe.inject({ method: 'GET', url: '/health' });
     assert.equal(health.statusCode, 200);
-    assert.equal(lines.length, 2);
+    const root = await probe.inject({ method: 'GET', url: '/' });
+    assert.equal(root.statusCode, 200);
+    assert.deepEqual(root.json(), { version: 'test-release', ready: true });
+    assert.equal(lines.length, 3);
     for (const line of lines) {
       const event = JSON.parse(line);
       assert.deepEqual(Object.keys(event), ['event', 'version', 'status', 'duration_ms']);
@@ -200,7 +203,7 @@ test('GET /ready is unauthenticated, reports the release version, and logs one h
       assert.ok(!line.includes('secret'));
     }
     await probe.inject({ method: 'GET', url: '/api/me' });
-    assert.equal(lines.length, 2);
+    assert.equal(lines.length, 3);
   } finally {
     await probe.close();
   }

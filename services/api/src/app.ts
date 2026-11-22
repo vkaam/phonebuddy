@@ -15,11 +15,11 @@ export interface ApiDependencies {
   verifyAccessToken: AccessTokenVerifier;
   now?: () => Date;
   logger?: boolean;
-  /** Receives one JSON line per /ready or /health request. Defaults to stdout. */
+  /** Receives one JSON line per /, /ready or /health request. Defaults to stdout. */
   healthLog?: (line: string) => void;
 }
 
-const healthPaths = new Set(['/ready', '/health']);
+const healthPaths = new Set(['/', '/ready', '/health']);
 
 function isHealthRequest(url: string | undefined): boolean {
   return healthPaths.has((url ?? '').split('?')[0]);
@@ -90,7 +90,10 @@ export async function buildApi(dependencies: ApiDependencies): Promise<FastifyIn
   };
 
   app.get('/health', async () => ({ status: 'ok' }));
-  app.get('/ready', async () => ({ version: config.releaseVersion, ready: true }));
+  // The release gate alternates probes between /ready and /, expecting the same payload.
+  const ready = async () => ({ version: config.releaseVersion, ready: true });
+  app.get('/ready', ready);
+  app.get('/', ready);
 
   app.get('/api/me', async (request, reply) => {
     const principal = await authenticate(request, reply);
