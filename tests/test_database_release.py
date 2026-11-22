@@ -397,6 +397,23 @@ class SecretHandlingTests(unittest.TestCase):
         for forbidden in ('-P', '--password', '-U'):
             self.assertNotIn(forbidden, calls[0])
 
+    def test_sqlcmd_requires_encryption_with_certificate_validation(self):
+        calls = []
+
+        def fake_run(command, **kwargs):
+            calls.append(command)
+            return mock.Mock(returncode=0, stdout='', stderr='')
+
+        connection = dr.SqlcmdConnection('server.database.windows.net', 'db', run=fake_run)
+        connection.execute('SELECT 1')
+        connection.query('SELECT 1')
+        self.assertEqual(len(calls), 2)
+        for command in calls:
+            index = command.index('-N')
+            self.assertEqual(command[index + 1], 'true')
+            self.assertNotIn('-C', command)
+            self.assertNotIn('--trust-server-certificate', command)
+
     def test_deployment_identity_writes_only_the_object_id(self):
         payload = base64.urlsafe_b64encode(json.dumps({'oid': OWNER}).encode()).decode().rstrip('=')
         token = f'ey' + f'JhbGciOiJub25lIn0.{payload}.c2ln'
