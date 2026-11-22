@@ -20,6 +20,11 @@ Entra tenant and object IDs separately from the application organization ID.
 Only an authorized provisioning process should create or deactivate membership
 rows; this task does not add an admin membership-management interface.
 
+For the Entra registrations (the API needs v2 access tokens whose audience is
+the API client ID), public Actions Variables and the SQL insert for a pilot
+membership, see the
+[dev sign-in and API setup runbook](../../docs/dev-sign-in-runbook.md).
+
 The browser uses `@azure/msal-browser` with authorization code and PKCE. Its
 public `config.json` contains the tenant ID, client ID, API scope, and API URL;
 it must never contain a client secret. Configure the API CORS origin to the

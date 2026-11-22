@@ -44,6 +44,9 @@ through the approved admin workflow. The API and SPA configuration must use the
 same tenant, API audience/scope, and allowed web origin. No app registration,
 consent, cloud deployment, or production data is part of this task.
 
+See the [dev sign-in and API setup runbook](../../docs/dev-sign-in-runbook.md)
+for the Entra registrations, public Variables and pilot membership steps.
+
 The protected-main release workflow builds the web artifact and deploys it to
 the dev Azure Static Web App's default HTTPS hostname after main Quality passes.
 Later trusted main releases update the same preview. See
