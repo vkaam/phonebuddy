@@ -25,6 +25,13 @@ param sqlAdminObjectId string = 'UNRESOLVED'
 @description('Microsoft Entra administrator name for Azure SQL. Deployment remains blocked while this is UNRESOLVED.')
 param sqlAdminLogin string = 'UNRESOLVED'
 
+@allowed([
+  'User'
+  'Application'
+])
+@description('Entra principal type of the SQL administrator. Use Application with the release deployment identity so a manual run cannot hand the server back to a person.')
+param sqlAdminPrincipalType string = 'User'
+
 @description('Foundry model name pinned in the environment deployment.')
 param foundryModelName string = 'gpt-5-mini'
 
@@ -55,6 +62,7 @@ module dataPlatform './modules/data-platform.bicep' = {
     costCenter: costCenter
     sqlAdminObjectId: sqlAdminObjectId
     sqlAdminLogin: sqlAdminLogin
+    sqlAdminPrincipalType: sqlAdminPrincipalType
     foundryModelName: foundryModelName
     foundryModelVersion: foundryModelVersion
     foundryModelCapacity: environment == 'prod' ? 50 : environment == 'test' ? 20 : 10

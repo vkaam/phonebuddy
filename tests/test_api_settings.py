@@ -145,7 +145,8 @@ class ApiContainerTemplateTests(unittest.TestCase):
         # Normal deploys keep the strict preflight before any preview or deployment.
         self.assertLess(deploy.index('scripts/api_settings.py --output'),
                         deploy.index('az deployment group what-if'))
-        self.assertEqual(deploy.count('@"$RUNNER_TEMP/api-settings.json"'), 2)
+        # what-if, SQL administrator deployment, apply
+        self.assertEqual(deploy.count('@"$RUNNER_TEMP/api-settings.json"'), 3)
         # Both recovery paths filter to what the target release's own template declares.
         self.assertEqual(deploy.count('@"$RUNNER_TEMP/recovery-api-settings.json"'), 2)
         self.assertEqual(recover.count('@"$RUNNER_TEMP/api-settings.json"'), 2)

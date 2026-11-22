@@ -334,7 +334,7 @@ def foundation_template(resource_group_name=FOUNDATION_RESOURCE_GROUP_NAME,
             'properties': {'parameters': {
                 name: {} for name in (
                     'environment', 'location', 'owner', 'costCenter',
-                    'sqlAdminObjectId', 'sqlAdminLogin', 'foundryModelName',
+                    'sqlAdminObjectId', 'sqlAdminLogin', 'sqlAdminPrincipalType', 'foundryModelName',
                     'foundryModelVersion', 'foundryModelCapacity',
                 )
             }},

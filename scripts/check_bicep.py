@@ -259,7 +259,8 @@ def validate_data_platform(template):
     sql_server = by_type['Microsoft.Sql/servers'][0]['properties']
     sql_auth = sql_server.get('administrators', {})
     if (sql_auth.get('administratorType') != 'ActiveDirectory'
-            or sql_auth.get('principalType') != 'User'
+            or sql_auth.get('principalType') not in (
+                'User', 'Application', "[parameters('sqlAdminPrincipalType')]")
             or sql_auth.get('azureADOnlyAuthentication') is not True
             or not sql_auth.get('login') or not sql_auth.get('sid')
             or not sql_auth.get('tenantId')
@@ -363,7 +364,7 @@ def validate_foundation_isolation(template):
 
     expected_data_parameters = {
         'environment', 'location', 'owner', 'costCenter', 'sqlAdminObjectId',
-        'sqlAdminLogin', 'foundryModelName', 'foundryModelVersion',
+        'sqlAdminLogin', 'sqlAdminPrincipalType', 'foundryModelName', 'foundryModelVersion',
         'foundryModelCapacity',
     }
     if set(data_platform.get('properties', {}).get('parameters', {})) != expected_data_parameters:
@@ -478,6 +479,12 @@ def validate_hosting(template):
     if (parameters.get('managePullRoleAssignment', {}).get('defaultValue') is not True
             or pull_role.get('condition') != "[parameters('managePullRoleAssignment')]"):
         raise ValueError('Pull-role assignment must be enabled for privileged bootstrap by default')
+    sql_admin = resources.get('Microsoft.Sql/servers/administrators')
+    if (not sql_admin or sql_admin.get('condition') != "[parameters('manageSqlAdministrator')]"
+            or parameters.get('manageSqlAdministrator', {}).get('defaultValue') is not False
+            or sql_admin.get('properties', {}).get('administratorType') != 'ActiveDirectory'
+            or 'administratorLoginPassword' in json.dumps(sql_admin)):
+        raise ValueError('SQL administrator must be an opt-in Entra administrator without a password')
     digest = parameters['imageDigest']
     if digest.get('minLength') != 64 or digest.get('maxLength') != 64 or 'defaultValue' in digest:
         raise ValueError('Image digest must be supplied as 64 characters')

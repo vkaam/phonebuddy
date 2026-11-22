@@ -39,9 +39,31 @@ param sqlDatabase string
 @description('Client ID of the user-assigned managed identity used to reach Azure SQL.')
 @minLength(1)
 param sqlManagedIdentityClientId string
+@description('Make the deployment identity the Entra administrator of the existing SQL server so the release can migrate the database without a password or a human. Contributor on the resource group is sufficient.')
+param manageSqlAdministrator bool = false
+@description('Object ID of the deployment identity (service principal); public, read from its own token.')
+param sqlAdministratorObjectId string = ''
+@description('Entra administrator display name recorded for the deployment identity.')
+param sqlAdministratorLogin string = 'github-actions-deploy'
 
 var suffix = uniqueString(subscription().id, resourceGroup().id)
 var tags = { environment: environment, service: 'phonebuddy', owner: owner, costCenter: costCenter }
+
+// The server is created by the data-platform template; the release only manages its Entra administrator.
+resource sqlServerForAdministrator 'Microsoft.Sql/servers@2023-08-01' existing = if (manageSqlAdministrator) {
+  name: split(sqlServer, '.')[0]
+}
+
+resource sqlAdministrator 'Microsoft.Sql/servers/administrators@2023-08-01' = if (manageSqlAdministrator) {
+  parent: sqlServerForAdministrator
+  name: 'ActiveDirectory'
+  properties: {
+    administratorType: 'ActiveDirectory'
+    login: sqlAdministratorLogin
+    sid: sqlAdministratorObjectId
+    tenantId: tenant().tenantId
+  }
+}
 
 resource registry 'Microsoft.ContainerRegistry/registries@2023-07-01' = {
   name: 'pb${environment}${suffix}'

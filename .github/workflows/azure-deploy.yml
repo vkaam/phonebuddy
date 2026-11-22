@@ -47,6 +47,12 @@ jobs:
       SQL_SERVER: ${{ vars.PHONEBUDDY_DEV_SQL_SERVER }}
       SQL_DATABASE: ${{ vars.PHONEBUDDY_DEV_SQL_DATABASE }}
       SQL_MANAGED_IDENTITY_CLIENT_ID: ${{ vars.PHONEBUDDY_DEV_SQL_MANAGED_IDENTITY_CLIENT_ID }}
+      # Public identifiers only. The owner keeps database access and the first
+      # sign-in membership is seeded from these; no SQL credential exists.
+      SQL_OWNER_OBJECT_ID: ${{ vars.PHONEBUDDY_SQL_ADMIN_OBJECT_ID }}
+      SQL_OWNER_LOGIN: ${{ vars.PHONEBUDDY_SQL_ADMIN_LOGIN }}
+      MEMBER_OBJECT_IDS: ${{ vars.PHONEBUDDY_DEV_MEMBER_OBJECT_IDS }}
+      MEMBER_ORGANIZATION_ID: ${{ vars.PHONEBUDDY_DEV_ORGANIZATION_ID }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -124,6 +130,20 @@ jobs:
           PY
       - name: Validate the API runtime settings
         run: python3 -B scripts/api_settings.py --output "$RUNNER_TEMP/api-settings.json"
+      - name: Validate the database release inputs and migrations
+        run: python3 -B scripts/database_release.py check
+      - name: Install the pinned SQL command-line client
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --location --retry 3 \
+            https://github.com/microsoft/go-sqlcmd/releases/download/v1.10.0/sqlcmd-linux-amd64.tar.bz2 \
+            -o "$RUNNER_TEMP/sqlcmd.tar.bz2"
+          printf '%s  %s\n' \
+            92516d98c63d99b0994de5b61350c91f6915f9b76f139a59039fbcb225c2e987 \
+            "$RUNNER_TEMP/sqlcmd.tar.bz2" | sha256sum --check
+          mkdir -p "$RUNNER_TEMP/sqlcmd-bin"
+          tar -xjf "$RUNNER_TEMP/sqlcmd.tar.bz2" -C "$RUNNER_TEMP/sqlcmd-bin"
+          echo "$RUNNER_TEMP/sqlcmd-bin" >> "$GITHUB_PATH"
       - name: Compile the exact-source Bicep template
         run: |
           set -euo pipefail
@@ -340,6 +360,36 @@ jobs:
             --what-if-result artifacts/what-if.json --expected-scope "$expected_scope"
           python3 -B scripts/release_recovery.py check-what-if \
             --path artifacts/what-if.json --output artifacts/destructive-change-check.txt
+      - name: Make the deployment identity the SQL administrator through Bicep
+        id: sql-admin
+        env:
+          IMAGE_DIGEST: ${{ steps.image.outputs.image_digest }}
+        run: |
+          set -euo pipefail
+          python3 -B scripts/database_release.py deployment-identity \
+            --output "$RUNNER_TEMP/sql-admin-object-id.txt"
+          admin_object_id=$(cat "$RUNNER_TEMP/sql-admin-object-id.txt")
+          # The workload stays off here, so this only changes the SQL administrator
+          # and the running revision keeps serving traffic untouched.
+          az deployment group create \
+            --name "pbdev-sqladmin-${SOURCE_RUN_ID}-${SOURCE_RUN_ATTEMPT}" \
+            --resource-group "$RESOURCE_GROUP" \
+            --template-file "$RUNNER_TEMP/hosting.json" \
+            --parameters environment=dev owner=PHONEBUDDY-PLATFORM \
+              costCenter=PHONEBUDDY-NONPROD deployWorkload=false \
+              managePullRoleAssignment=false \
+              deployStaticSite=true staticSiteLocation=eastus2 imageDigest="$IMAGE_DIGEST" \
+              releaseVersion="$RELEASE_SHA" \
+              manageSqlAdministrator=true sqlAdministratorObjectId="$admin_object_id" \
+              @"$RUNNER_TEMP/api-settings.json" \
+              revisionSuffix="$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" \
+            --output none
+      - name: Apply database migrations and API grants before any traffic change
+        id: migrate
+        run: python3 -B scripts/database_release.py apply
+      - name: Remove the temporary SQL firewall rule
+        if: always() && steps.sql-admin.outcome != 'skipped'
+        run: python3 -B scripts/database_release.py cleanup-firewall
       - name: Apply the reviewed Bicep release
         id: deploy
         env:
