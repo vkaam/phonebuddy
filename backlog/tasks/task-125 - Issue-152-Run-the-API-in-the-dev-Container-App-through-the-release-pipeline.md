@@ -4,9 +4,11 @@ title: Issue 152 - Run the API in the dev Container App through the release pipe
 status: To Do
 assignee: []
 created_date: '2026-11-22T09:34:00Z'
+updated_date: '2026-11-22T09:40:00Z'
 labels:
   - task
-dependencies: []
+dependencies:
+  - TASK-124
 priority: high
 ordinal: 103000
 ---
