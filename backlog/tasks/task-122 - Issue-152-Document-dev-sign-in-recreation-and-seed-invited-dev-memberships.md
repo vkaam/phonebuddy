@@ -4,6 +4,7 @@ title: Issue 152 - Document dev sign-in recreation and seed invited dev membersh
 status: To Do
 assignee: []
 created_date: '2026-11-22T09:31:00Z'
+updated_date: '2026-11-22T11:08:00Z'
 labels: []
 dependencies:
   - TASK-121
@@ -25,6 +26,12 @@ The owner decided on 2026-11-22 that only the owner and invited guests may sign 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
 - [ ] #1 A runbook covers inviting a guest to the nonproduction tenant, adding or deactivating their dev membership row through the provisioning path, and recreating dev sign-in and the API from scratch
-- [ ] #2 The runbook and examples contain no secret, token or real credential and keep dev separate from test and prod
+- [x] #2 The runbook and examples contain no secret, token or real credential and keep dev separate from test and prod
 - [ ] #3 A test shows a signed-in user without an active membership is denied by the API and the web app shows a no-access message
 <!-- AC:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Reconciled 2026-11-22: TASK-126 (PR #155 for #152) added docs/dev-sign-in-runbook.md with membership SQL, no-access behavior, dev/test/prod separation and no secrets (AC 2). It is incomplete for this task: it has no guest-invitation steps (AC 1), it assumes the owner creates the Entra app registrations by hand, which TASK-121 and the 2026-11-22 owner decision replace with a deployment step, and it still lists open owner decisions the owner has since made (owner and invited guests only; deployment creates registrations). Whoever takes this task should update the runbook to match, and confirm AC 3 against the existing API and web tests.
+<!-- SECTION:NOTES:END -->
