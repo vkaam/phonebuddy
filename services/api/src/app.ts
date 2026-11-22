@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from 'node:crypto';
-import Fastify, { type FastifyInstance, type FastifyRequest } from 'fastify';
+import Fastify, { LogController, type FastifyInstance, type FastifyRequest } from 'fastify';
 import websocket from '@fastify/websocket';
 import { bearerToken, UnauthorizedError, type AccessTokenVerifier } from './token.js';
 import type { ApiConfig } from './config.js';
@@ -15,6 +15,14 @@ export interface ApiDependencies {
   verifyAccessToken: AccessTokenVerifier;
   now?: () => Date;
   logger?: boolean;
+  /** Receives one JSON line per /ready or /health request. Defaults to stdout. */
+  healthLog?: (line: string) => void;
+}
+
+const healthPaths = new Set(['/ready', '/health']);
+
+function isHealthRequest(url: string | undefined): boolean {
+  return healthPaths.has((url ?? '').split('?')[0]);
 }
 
 function ticketHash(ticket: string): string {
@@ -38,6 +46,19 @@ export async function buildApi(dependencies: ApiDependencies): Promise<FastifyIn
     logger: dependencies.logger === false ? false : {
       redact: ['req.headers.authorization', 'req.headers.sec-websocket-protocol'],
     },
+    // Health probes emit only the single health_request line below.
+    logController: new LogController({ disableRequestLogging: request => isHealthRequest(request.url) }),
+  });
+  const healthLog = dependencies.healthLog ?? (line => { process.stdout.write(`${line}\n`); });
+
+  app.addHook('onResponse', async (request, reply) => {
+    if (!isHealthRequest(request.url)) return;
+    healthLog(JSON.stringify({
+      event: 'health_request',
+      version: config.releaseVersion,
+      status: reply.statusCode,
+      duration_ms: Math.round(reply.elapsedTime * 1000) / 1000,
+    }));
   });
 
   await app.register(websocket, { options: { maxPayload: 16 * 1024 } });
@@ -69,6 +90,7 @@ export async function buildApi(dependencies: ApiDependencies): Promise<FastifyIn
   };
 
   app.get('/health', async () => ({ status: 'ok' }));
+  app.get('/ready', async () => ({ version: config.releaseVersion, ready: true }));
 
   app.get('/api/me', async (request, reply) => {
     const principal = await authenticate(request, reply);
