@@ -4,7 +4,7 @@ title: Issue 161 - Run database migrations and API grants as part of the dev rel
 status: To Do
 assignee: []
 created_date: '2026-11-22T14:09:00Z'
-updated_date: '2026-11-22T14:10:00Z'
+updated_date: '2026-11-22T14:11:00Z'
 labels:
   - task
 dependencies: []
@@ -33,3 +33,9 @@ The dev SQL server accepts Entra logins only and the release workflow never touc
 - [ ] #6 The owner's initial dev membership is seeded by the same release step from a public Actions Variable listing object IDs, idempotently, so a first sign-in works without manual SQL; the owner keeps database access through a user the step creates
 - [ ] #7 Tests cover the migration runner, its failure handling and the firewall cleanup, and the runbook describes the automated flow instead of manual SQL
 <!-- AC:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Owner decision (conversation, 2026-11-22): the deployment identity becomes the SQL server Entra administrator via infrastructure code; the release step creates a database user for the owner so they keep access, and seeds the owner membership. Nobody runs SQL by hand.
+<!-- SECTION:NOTES:END -->
