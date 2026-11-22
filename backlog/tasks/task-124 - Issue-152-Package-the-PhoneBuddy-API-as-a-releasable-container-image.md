@@ -5,7 +5,7 @@ status: Done
 assignee:
   - '@claude'
 created_date: '2026-11-22T09:34:00Z'
-updated_date: '2026-11-22T09:44:00Z'
+updated_date: '2026-11-22T09:46:00Z'
 labels:
   - task
 dependencies: []
@@ -26,7 +26,7 @@ The dev Container App only runs the release-test stand-in, so signed-in features
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 services/api/Dockerfile builds a pinned-base, non-root image that starts the compiled API on port 8080
+- [x] #1 services/api/Dockerfile builds a pinned-base, non-root image that starts the compiled API on port 8080
 - [x] #2 GET /ready answers without authentication with the release version and emits the health_request log line, covered by a test
 - [x] #3 The API accepts only tokens issued for it and browser requests only from the configured WEB_ORIGIN, covered by existing or new tests
 - [x] #4 docs/api-container-contract.md records the image, port, endpoint, log and environment-variable contract
@@ -43,5 +43,5 @@ The dev Container App only runs the release-test stand-in, so signed-in features
 ## Final Summary
 
 <!-- SECTION:FINAL_SUMMARY:BEGIN -->
-Added a digest-pinned, non-root (uid 65532) services/api/Dockerfile and .dockerignore that start the compiled API on port 8080; an unauthenticated GET /ready returning the release version with one health_request log line per /ready or /health request; PORT/RELEASE_VERSION config defaults; and docs/api-container-contract.md. Verified: npm test --prefix services/api passes 8/8 (including /ready, WEB_ORIGIN and token-audience tests) and python3 -B scripts/quality.py passes after merging origin/main. Not verified: AC #1 is left unchecked because the image has never been built; the Docker daemon was not running, so docker build and a /ready curl against the container remain to be done (e.g. by TASK-125 or CI).
+Added a digest-pinned, non-root (uid 65532) services/api/Dockerfile and .dockerignore that start the compiled API on port 8080; an unauthenticated GET /ready returning the release version with one health_request log line per /ready or /health request; PORT/RELEASE_VERSION config defaults; and docs/api-container-contract.md. Verified: npm test --prefix services/api passes 8/8 (including /ready, WEB_ORIGIN and token-audience tests); python3 -B scripts/quality.py passes after merging origin/main. Also verified locally with OrbStack: docker build services/api succeeds; the container runs as uid 65532 on 8080, GET /ready returns {"version":"abc123","ready":true} with a health_request log line, and /api/me without a token returns 401. Not verified: running against real Entra or Azure SQL, which is live proof for a follow-up task.
 <!-- SECTION:FINAL_SUMMARY:END -->
