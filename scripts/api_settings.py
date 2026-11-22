@@ -20,7 +20,8 @@ SETTINGS = {
     'SQL_DATABASE': ('sqlDatabase', 'name'),
     'SQL_MANAGED_IDENTITY_CLIENT_ID': ('sqlManagedIdentityClientId', 'guid'),
 }
-_GUID = re.compile(r'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}')
+# Same shape as services/api/src/config.ts: version 1-8 and RFC 4122 variant.
+_GUID = re.compile(r'[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}')
 _SQL_SERVER = re.compile(r'[a-z0-9][a-z0-9-]{0,62}\.database\.windows\.net')
 # Same pattern as services/api/src/config.ts for SQL_DATABASE.
 _NAME = re.compile(r'[A-Za-z0-9_-]{1,128}')

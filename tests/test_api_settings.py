@@ -12,11 +12,11 @@ from scripts.check_bicep import validate_api_container
 
 ROOT = Path(__file__).resolve().parents[1]
 GOOD = {
-    'ENTRA_TENANT_ID': '11111111-2222-3333-4444-555555555555',
-    'ENTRA_API_CLIENT_ID': 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
+    'ENTRA_TENANT_ID': '11111111-2222-4333-8444-555555555555',
+    'ENTRA_API_CLIENT_ID': 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee',
     'SQL_SERVER': 'sql-pb-dev-abc123.database.windows.net',
     'SQL_DATABASE': 'phonebuddy',
-    'SQL_MANAGED_IDENTITY_CLIENT_ID': '99999999-8888-7777-6666-555555555555',
+    'SQL_MANAGED_IDENTITY_CLIENT_ID': '99999999-8888-4777-9666-555555555555',
 }
 
 
@@ -40,7 +40,8 @@ class ApiSettingsTests(unittest.TestCase):
     def test_placeholders_and_malformed_values_fail(self):
         bad = {
             'ENTRA_TENANT_ID': ('UNRESOLVED', '00000000-0000-0000-0000-000000000000',
-                                'not-a-guid', '<tenant-id>'),
+                                'not-a-guid', '<tenant-id>',
+                                '11111111-2222-3333-4444-555555555555'),  # version/variant the API rejects
             'ENTRA_API_CLIENT_ID': ('placeholder', 'TODO'),
             'SQL_SERVER': ('UNRESOLVED', 'evil.example.com', 'changeme',
                            'sql-pb-dev-abc123', 'sql-pb-dev-abc123.database.windows.net.evil.com'),
