@@ -9,6 +9,7 @@ export interface ApiConfig {
   sqlServer: string;
   sqlDatabase: string;
   sqlManagedIdentityClientId?: string;
+  releaseVersion: string;
 }
 
 function required(env: NodeJS.ProcessEnv, key: string): string {
@@ -40,7 +41,7 @@ export function readApiConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
   if (!/^[a-zA-Z0-9_-]{1,128}$/.test(sqlDatabase)) {
     throw new Error('SQL_DATABASE must be a database name.');
   }
-  const port = Number(env.PORT ?? 3000);
+  const port = Number(env.PORT ?? 8080);
   if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error('PORT must be between 1 and 65535.');
 
   return {
@@ -52,6 +53,7 @@ export function readApiConfig(env: NodeJS.ProcessEnv = process.env): ApiConfig {
     sqlServer,
     sqlDatabase,
     sqlManagedIdentityClientId: env.SQL_MANAGED_IDENTITY_CLIENT_ID?.trim() || undefined,
+    releaseVersion: env.RELEASE_VERSION?.trim() || 'unknown',
   };
 }
 

@@ -19,6 +19,7 @@ const config: ApiConfig = {
   webOrigin: 'https://phonebuddy.example',
   sqlServer: 'phonebuddy.database.windows.net',
   sqlDatabase: 'phonebuddy',
+  releaseVersion: 'test-release',
 };
 
 const { privateKey, publicKey } = await generateKeyPair('RS256');
@@ -177,4 +178,55 @@ test('ticket WebSocket access is scoped, short-lived, one-use, and rechecks memb
   const revokedTicket = await issueTicket(organizationA);
   repository.revokeMembership(principal, organizationA);
   await expectRejectedSocket(organizationA, revokedTicket);
+});
+
+test('GET /ready is unauthenticated, reports the release version, and logs one health_request line', async () => {
+  const lines: string[] = [];
+  const probe = await buildApi({ config, repository, verifyAccessToken, logger: false, healthLog: line => lines.push(line) });
+  try {
+    const ready = await probe.inject({ method: 'GET', url: '/ready?secret=value', headers: { authorization: 'Bearer secret' } });
+    assert.equal(ready.statusCode, 200);
+    assert.deepEqual(ready.json(), { version: 'test-release', ready: true });
+    const health = await probe.inject({ method: 'GET', url: '/health' });
+    assert.equal(health.statusCode, 200);
+    const root = await probe.inject({ method: 'GET', url: '/' });
+    assert.equal(root.statusCode, 200);
+    assert.deepEqual(root.json(), { version: 'test-release', ready: true });
+    assert.equal(lines.length, 3);
+    for (const line of lines) {
+      const event = JSON.parse(line);
+      assert.deepEqual(Object.keys(event), ['event', 'version', 'status', 'duration_ms']);
+      assert.equal(event.event, 'health_request');
+      assert.equal(event.version, 'test-release');
+      assert.equal(event.status, 200);
+      assert.equal(typeof event.duration_ms, 'number');
+      assert.ok(!line.includes('secret'));
+    }
+    await probe.inject({ method: 'GET', url: '/api/me' });
+    assert.equal(lines.length, 3);
+  } finally {
+    await probe.close();
+  }
+});
+
+test('browser requests are accepted only from the configured WEB_ORIGIN', async () => {
+  const allowed = await api.inject({ method: 'OPTIONS', url: '/api/me', headers: { origin: config.webOrigin } });
+  assert.equal(allowed.statusCode, 204);
+  assert.equal(allowed.headers['access-control-allow-origin'], config.webOrigin);
+  const denied = await api.inject({ method: 'GET', url: '/api/me', headers: { origin: 'https://attacker.example' } });
+  assert.equal(denied.statusCode, 403);
+  assert.equal(denied.headers['access-control-allow-origin'], undefined);
+});
+
+test('API configuration defaults to port 8080 and reads RELEASE_VERSION', () => {
+  const env = {
+    ENTRA_TENANT_ID: tenantId,
+    ENTRA_API_CLIENT_ID: apiClientId,
+    SQL_SERVER: 'phonebuddy.database.windows.net',
+    SQL_DATABASE: 'phonebuddy',
+    WEB_ORIGIN: 'https://phonebuddy.example',
+  };
+  assert.equal(readApiConfig(env).port, 8080);
+  assert.equal(readApiConfig(env).releaseVersion, 'unknown');
+  assert.equal(readApiConfig({ ...env, RELEASE_VERSION: 'abc123' }).releaseVersion, 'abc123');
 });
