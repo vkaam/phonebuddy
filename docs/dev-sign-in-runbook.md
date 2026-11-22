@@ -19,11 +19,12 @@ Decided on 2026-11-22 (recorded in TASK-121 and TASK-122):
 
 Still open:
 
-3. **Who runs the membership SQL** and with which database identity. The API's
-   own identity should only read membership rows, and insert, update and
-   delete WebSocket ticket rows. It must not be used to insert memberships.
-   The Container App currently runs as the user-assigned identity
-   `id-pb-dev-pull`, which has no Azure SQL access yet (TASK-120).
+3. **Who runs the membership SQL: nobody (issue 161).** The release does. The
+   deployment identity becomes the SQL server's Entra administrator through
+   Bicep, and the release migrates the database and seeds membership itself.
+   The API's own identity only reads membership rows and inserts, updates and
+   deletes WebSocket ticket rows through the `pb_api` role. It never inserts
+   memberships.
 4. **How guests are invited and provisioned** (TASK-122): the invitation steps
    and the provisioning path for their membership rows are not written yet.
 
@@ -136,32 +137,73 @@ works). They are plain public values:
 origin, which becomes the CORS origin. Before any deploy, the release checks
 these values and stops with a message naming each missing, placeholder or
 malformed one. GUIDs must be valid (version 1 to 8, RFC 4122 variant), the
-same rule the API applies at startup. Apply
-`services/api/migrations/001_identity.sql` to the dev database as the database
-migration owner, and grant the app's identity only the access it needs (see
-open decision 3), before expecting sign-in to work.
+same rule the API applies at startup. The release also applies the database
+migrations and the API identity's grants; see section 5. You never run SQL.
 
-## 5. Grant a pilot user access
+## 5. Database migrations, grants and pilot membership (automated)
 
 Sign-in alone does not grant access. The API authorizes only a principal
 (tenant ID plus object ID from the token) that has an active row in
-`dbo.OrganizationMembership`. There is no admin interface, so the database
-owner inserts the row. Use the user's object ID from the Entra admin center
-(Users, Object ID), the tenant ID, and an organization ID you choose (a new
-GUID per pilot organization; keep these in the owner's records):
+`dbo.OrganizationMembership`. The dev release creates that row; nobody runs SQL
+by hand and no SQL password exists (the server accepts Entra sign-in only).
 
-```sql
-INSERT INTO dbo.OrganizationMembership (OrganizationId, TenantId, ObjectId, Role)
-VALUES ('<organization GUID>', '<tenant GUID>', '<user object ID GUID>', N'user');
-```
+What `.github/workflows/azure-deploy.yml` does on every dev release, in order,
+before the new revision can receive traffic:
 
-`Role` is `user` or `admin`. `IsActive` defaults to 1 and `CreatedAt` is set
-automatically. The primary key is organization, tenant and object ID, so the
-same user can be a member of several organizations. To revoke, set
-`IsActive = 0` rather than deleting, because WebSocket ticket rows reference
-the membership. Run this with the owner's own database identity, never by
-embedding SQL credentials anywhere, and only for accounts named under open
-decision 1.
+1. `scripts/database_release.py check` validates the inputs below and the
+   migration files, so a bad value stops the release before Azure changes.
+2. A Bicep deployment of `infra/hosting.bicep` (workload off, so the running
+   revision is untouched) makes the deployment identity, the GitHub OIDC
+   service principal, the SQL server's Entra administrator
+   (`manageSqlAdministrator`). Its object ID comes from its own token.
+   `infra/modules/data-platform.bicep` and `infra/main.bicep` take
+   `sqlAdminPrincipalType`; if the server template is ever deployed by hand,
+   pass `Application` and the deployment identity there so it is not handed
+   back to a person.
+3. `scripts/database_release.py apply` opens one temporary firewall rule for
+   the runner IP, connects with an Entra token (go-sqlcmd with
+   `ActiveDirectoryAzCli`, i.e. `az account get-access-token --resource
+   https://database.windows.net/`), and removes the rule when it is done or
+   fails. A separate always-run step removes any leftover rule.
+4. It applies `services/api/migrations/*.sql` in order. Each file is
+   idempotent, and `dbo.SchemaMigration` records each version and checksum so
+   an applied file cannot be edited. A failed migration stops the release
+   before the traffic-changing deployment.
+5. It creates the API identity's database user by SID from
+   `PHONEBUDDY_DEV_SQL_MANAGED_IDENTITY_CLIENT_ID`, with no directory lookup,
+   and adds it to role `pb_api` (migration `002_api_role_grants.sql`): SELECT
+   on `dbo.OrganizationMembership`, and SELECT, INSERT, UPDATE, DELETE on
+   `dbo.WebSocketTicket`. It fails the release if the API identity holds a
+   broad role or any write permission on memberships.
+6. It creates a database user for the owner from `PHONEBUDDY_SQL_ADMIN_OBJECT_ID`
+   and `PHONEBUDDY_SQL_ADMIN_LOGIN` in role `db_owner`, so the owner keeps
+   access after the server administrator changes.
+7. It inserts each missing membership for the object IDs in
+   `PHONEBUDDY_DEV_MEMBER_OBJECT_IDS` as role `admin` in the organization
+   `PHONEBUDDY_DEV_ORGANIZATION_ID`. Existing rows are never changed or
+   re-activated, so revoking someone (`IsActive = 0`) sticks.
+
+Set these public Actions Variables (repository level or on the `dev`
+environment; no Secrets):
+
+| Variable | Value |
+| --- | --- |
+| `PHONEBUDDY_SQL_ADMIN_OBJECT_ID` | The owner's Entra object ID (becomes the owner's database user) |
+| `PHONEBUDDY_SQL_ADMIN_LOGIN` | The owner's sign-in name or UPN (the database user name) |
+| `PHONEBUDDY_DEV_MEMBER_OBJECT_IDS` | Comma-separated Entra object IDs to give access, valid GUIDs; the owner's first |
+| `PHONEBUDDY_DEV_ORGANIZATION_ID` | A GUID you choose for the pilot organization (required when members are listed) |
+
+To give another pilot user access, add their object ID to
+`PHONEBUDDY_DEV_MEMBER_OBJECT_IDS` and run the next release. Only accounts
+named under owner decision 1 belong there.
+
+Rollback and recovery never run migrations, reverse one or restore a database
+over newer data. `infra/release-schema.json` records the schema version and an
+honest `migration_mode` (`expand` for these additive migrations). The release
+that first migrates is not automatically rolled back to a release that predates
+its schema; a destructive (`contract`) migration is never rolled back
+automatically and the lint in `database_release.py` refuses one unless the mode
+says so.
 
 ## 6. What a user without membership sees
 

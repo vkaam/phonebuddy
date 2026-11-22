@@ -16,6 +16,13 @@ param sqlAdminObjectId string = 'UNRESOLVED'
 @description('Microsoft Entra administrator name for SQL. Replace UNRESOLVED before deployment.')
 param sqlAdminLogin string = 'UNRESOLVED'
 
+@allowed([
+  'User'
+  'Application'
+])
+@description('Entra principal type of the SQL administrator: Application for the release deployment identity (issue 161), User for a person.')
+param sqlAdminPrincipalType string = 'User'
+
 @description('Foundry model identity checked by scripts/check_bicep.py --foundry-preflight.')
 param foundryModelName string = 'gpt-5-mini'
 
@@ -60,7 +67,7 @@ resource sqlServer 'Microsoft.Sql/servers@2023-08-01' = {
     publicNetworkAccess: 'Enabled'
     administrators: {
       administratorType: 'ActiveDirectory'
-      principalType: 'User'
+      principalType: sqlAdminPrincipalType
       login: sqlAdminLogin
       sid: sqlAdminObjectId
       tenantId: tenant().tenantId

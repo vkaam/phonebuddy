@@ -128,14 +128,14 @@ and keep the failed release stopped or recovered under this policy.
 
 These are minimum initial release gates for each applicable component. The dev
 release-test pilot uses the readiness and request-health checks below; its
-current workflow does not exercise migrations or promote test/prod. A missing
+current workflow applies the dev database migrations before traffic moves (`scripts/database_release.py`) but does not promote test/prod. A missing
 HTTP sample, timeout or unavailable readiness check is unknown and fails
 closed. Do not substitute a green deployment command for health.
 For components not deployed in a release, record why their gate is not applicable.
 
 | Gate | Initial pass condition and window | Failure action |
 | --- | --- | --- |
-| Deployment and migrations | Deployment completes within its configured timeout; every migration succeeds and compatibility with the previous release is verified before traffic moves. | Stop promotion; keep or restore the last healthy application version only if schema compatibility is established. |
+| Deployment and migrations | Deployment completes within its configured timeout; every migration succeeds and compatibility with the previous release is verified before traffic moves. The dev release migrates with the deployment identity as the Entra-only SQL administrator, through a temporary firewall rule it always removes, with no SQL credential. | Stop promotion; keep or restore the last healthy application version only if schema compatibility is established. |
 | Readiness and smoke | All required instances ready and all versioned smoke, authentication and organization-isolation checks pass. Run smoke checks once after deployment and again at the end of observation. | Stop promotion; withdraw the new version from traffic where supported. |
 | Observation | Observe at least 10 consecutive minutes after readiness in each environment; all one-minute readiness samples must pass, with no critical alert or restart loop. | Stop promotion on any breach or missing sample. |
 | Request health | During observation, at least 100 representative requests, including synthetic requests when traffic is low; server-error rate below 1% and p95 latency below 2 seconds per rolling five-minute window. | Stop promotion if either threshold is exceeded or sample count is insufficient. Synthetic traffic must exercise the deployed service, not just a static health endpoint. |
