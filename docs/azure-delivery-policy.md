@@ -59,7 +59,9 @@ is [thankful-wave-01ad93d0f.3.azurestaticapps.net](https://thankful-wave-01ad93d
 the API must have its own real HTTPS origin. Later successful main releases
 update the dev preview; test and production are not deployed by this workflow.
 Their settings must be scoped to their own builds and artifacts. Public browser
-configuration must never contain secrets.
+configuration must never contain secrets. The Entra app registrations,
+Variables and pilot membership steps for dev are in
+[the dev sign-in and API setup runbook](dev-sign-in-runbook.md).
 
 Use distinct resource groups, data, secrets, workload identities, deployment
 identities and access assignments for each environment, even if subscriptions
