@@ -4,6 +4,7 @@ title: Issue 152 - Create the dev Entra app registrations from the deployment
 status: To Do
 assignee: []
 created_date: '2026-11-22T09:31:00Z'
+updated_date: '2026-11-22T11:08:00Z'
 labels: []
 dependencies: []
 priority: high
@@ -28,3 +29,9 @@ The owner decided on 2026-11-22 that the deployment, not the owner by hand, crea
 - [ ] #3 The tenant ID, SPA client ID, API client ID and API scope are published as non-secret outputs for the four web Actions Variables and the API settings; no client secret is created, stored or logged
 - [ ] #4 The one-time owner permission grant is documented with the least privilege required and how to revoke it
 <!-- AC:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Context 2026-11-22: the API settings preflight (scripts/api_settings.py) and the web config generator expect the registration outputs as public Actions Variables: PHONEBUDDY_DEV_ENTRA_TENANT_ID, PHONEBUDDY_DEV_ENTRA_API_CLIENT_ID (new, API app), PHONEBUDDY_DEV_ENTRA_CLIENT_ID (SPA), PHONEBUDDY_DEV_API_SCOPE, plus SQL ones. Until they exist, the main dev release stops at the settings preflight.
+<!-- SECTION:NOTES:END -->
