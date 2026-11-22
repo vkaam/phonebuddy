@@ -1,3 +1,0 @@
-Repo 'github-scripts' is not on the master branch but on claude/issue-152-sonnet-subagents-7a5109. This may result in incorrect/incomplete git hook functionality!
-Be sure to switch it to master and don't commit this file in your project!!!
-
