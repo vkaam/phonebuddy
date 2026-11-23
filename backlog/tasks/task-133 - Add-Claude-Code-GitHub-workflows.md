@@ -1,10 +1,11 @@
 ---
 id: TASK-133
 title: Add Claude Code GitHub workflows
-status: In Progress
+status: Done
 assignee:
   - '@claude'
 created_date: '2026-11-23T18:01:00Z'
+updated_date: '2026-11-23T18:32:00Z'
 labels: []
 dependencies: []
 ordinal: 113000
@@ -23,6 +24,12 @@ The Claude Code GitHub App installer opened PR #168 with workflows that let main
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 Both workflows pin every action to a full commit SHA and python3 scripts/quality.py passes
-- [ ] #2 Task link and Quality checks pass on the PR head
+- [x] #1 Both workflows pin every action to a full commit SHA and python3 scripts/quality.py passes
+- [x] #2 Task link and Quality checks pass on the PR head
 <!-- AC:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Pinned actions/checkout and anthropics/claude-code-action to full commit SHAs in both Claude workflows so scripts/quality.py passes. Dropped the synchronize trigger from the review workflow after review feedback, since the plugin skips PRs it already commented on. Verified: quality.py and 270 required unit tests pass; Quality and Task link pass in CI. Review of the final head is recorded on the PR.
+<!-- SECTION:FINAL_SUMMARY:END -->
