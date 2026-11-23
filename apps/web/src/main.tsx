@@ -79,7 +79,7 @@ function App() {
       <div className="brand"><span className="brand-icon">✳</span><span>phonebuddy<small>YOUR CALLING WORKSPACE</small></span></div>
       <div className="nav-label">WORKSPACE</div>
       <nav aria-label="Main navigation">{pages.map(item => <a key={item.id} href={`#${item.id}`} aria-current={page === item.id ? 'page' : undefined}><span aria-hidden="true">{item.icon}</span>{item.label}</a>)}</nav>
-      <div className="sidebar-bottom"><span className="avatar">{session.account?.username?.slice(0, 2).toUpperCase() || 'PB'}</span><span>{session.account?.username || 'Signed in'}<small>{session.memberships?.find(item => item.organizationId === organizationId)?.role === 'admin' ? 'Workspace admin' : 'Workspace member'}</small></span><button className="signout" type="button" onClick={() => void session.auth?.signOut()}>Sign out</button></div>
+      <div className="sidebar-bottom"><span className="avatar">{session.account?.username?.slice(0, 2).toUpperCase() || 'PB'}</span><span className="account-text"><span title={session.account?.username}>{session.account?.username || 'Signed in'}</span><small>{session.memberships?.find(item => item.organizationId === organizationId)?.role === 'admin' ? 'Workspace admin' : 'Workspace member'}</small></span><button className="signout" type="button" onClick={() => void session.auth?.signOut()}>Sign out</button></div>
     </aside>
     <div className="workspace">
       <header><span>Workspace <span className="crumb">/</span> <strong>{pages.find(item => item.id === page)?.label}</strong></span><span className="pilot"><span className="dot" /> Pilot workspace</span></header>
