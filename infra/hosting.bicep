@@ -240,6 +240,17 @@ resource app 'Microsoft.App/containerApps@2023-05-01' = if (deployWorkload) {
   dependsOn: managePullRoleAssignment ? [pull] : []
 }
 
+// The API reaches the public, Entra-only SQL server from the environment's outbound IPs, which
+// Azure assigns. Allow exactly those addresses (never 0.0.0.0) so the rules follow the app.
+// Production should replace this with private networking.
+module sqlApiFirewall 'modules/sql-firewall-rules.bicep' = if (deployWorkload) {
+  name: 'sql-api-firewall'
+  params: {
+    sqlServerName: split(sqlServer, '.')[0]
+    outboundIpAddresses: app.properties.outboundIpAddresses
+  }
+}
+
 resource appDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = if (deployWorkload) {
   name: 'phonebuddy-health-telemetry'
   scope: app
