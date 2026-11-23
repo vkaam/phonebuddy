@@ -7,7 +7,7 @@ status: Done
 assignee:
   - '@claude'
 created_date: '2026-11-23T07:56:00Z'
-updated_date: '2026-11-23T07:59:00Z'
+updated_date: '2026-11-23T08:01:00Z'
 labels: []
 dependencies: []
 ordinal: 111000
@@ -18,7 +18,7 @@ ordinal: 111000
 <!-- SECTION:DESCRIPTION:BEGIN -->
 Issue: https://github.com/vkaam/phonebuddy/issues/152
 Branch: agent/gh-152-sql-firewall-api
-Scope: infra/**; scripts/check_bicep.py; scripts/database_release.py only if needed; tests/** for those; docs/azure-delivery-policy.md; docs/dev-sign-in-runbook.md
+Scope: infra/**; scripts/check_bicep.py; scripts/database_release.py; tests/**; docs/azure-delivery-policy.md; docs/dev-sign-in-runbook.md
 Verify: python3 -B scripts/quality.py; python3 -B scripts/run_required_unittests.py; BICEP=$HOME/.azure/bin/bicep python3 -B scripts/check_bicep.py
 
 Live dev: every /api/me returns 503 because Azure SQL (public access on, Entra-only auth) has no firewall rule for the Container App's outbound IP (98.66.189.7): 'Client with IP address is not allowed to access the server'. The owner decided the fix is infrastructure code, not a portal step: the release manages SQL server firewall rules for the Container App's outbound IPs (read from the app's outboundIpAddresses so the rules follow IP changes on each release). Not the allow-all-Azure-services 0.0.0.0 rule and no private networking in dev; production should adopt private networking later. The release's temporary runner rules use the pb-release- prefix and a stale sweep deletes by it, so the new rules must use a different prefix. Post-merge live proof is a separate follow-up task.
