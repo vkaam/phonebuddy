@@ -187,6 +187,38 @@ before the new revision can receive traffic:
    listed object ID gets role `user`. Existing rows are never changed or
    re-activated, so revoking someone (`IsActive = 0`) sticks.
 
+### API access to Azure SQL (managed firewall rules)
+
+The dev SQL server has public network access with Entra-only authentication, so
+the API container can only connect if the server's firewall allows its outbound
+IP. Without a rule every `/api/me` returns 503 with "Client with IP address ...
+is not allowed to access the server". The reviewed release declares those rules
+itself, in `infra/hosting.bicep` through `infra/modules/sql-firewall-rules.bicep`:
+
+- One single-address rule per entry of the Container App's
+  `properties.outboundIpAddresses`, named `pb-api-egress-0`, `pb-api-egress-1`
+  and so on. They are created and updated by the same Bicep deployment that
+  deploys the app (only when the workload is deployed), so they follow an IP
+  change on the next release and are part of a recreatable environment. Never
+  add them by hand in the portal.
+- The rules never use the 0.0.0.0 "Allow Azure services" range. Their prefix is
+  deliberately not `pb-release-`, which belongs to the runner's temporary rules
+  that `database_release.py` creates and sweeps; the sweep matches only that
+  prefix, so it cannot delete these.
+- Limitation: if the outbound IP list ever shrinks, a surplus `pb-api-egress-N`
+  rule is not removed automatically. Delete it in the portal once the app no
+  longer uses that address.
+- What-if cannot expand the rules module (the IPs exist only once the app does),
+  so the preview reports one `NestedDeploymentShortCircuited` warning for the
+  `sql-api-firewall` deployment. `scripts/check_bicep.py` tolerates exactly that
+  warning and nothing else; the rules are additive single-IP entries and cannot
+  delete anything.
+- The deployment identity needs only Contributor on the dev resource group,
+  which it already has; no extra role.
+- This is a dev-only compromise: production should use private networking
+  (virtual network integration and a private endpoint) instead of public
+  firewall rules.
+
 Set these public Actions Variables (repository level or on the `dev`
 environment; no Secrets):
 

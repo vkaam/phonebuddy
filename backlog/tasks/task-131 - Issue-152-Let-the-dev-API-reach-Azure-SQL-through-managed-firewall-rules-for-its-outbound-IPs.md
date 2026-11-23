@@ -3,11 +3,11 @@ id: TASK-131
 title: >-
   Issue 152 - Let the dev API reach Azure SQL through managed firewall rules for
   its outbound IPs
-status: In Progress
+status: Done
 assignee:
   - '@claude'
 created_date: '2026-11-23T07:56:00Z'
-updated_date: '2026-11-23T07:56:00Z'
+updated_date: '2026-11-23T07:59:00Z'
 labels: []
 dependencies: []
 ordinal: 111000
@@ -26,12 +26,12 @@ Live dev: every /api/me returns 503 because Azure SQL (public access on, Entra-o
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 hosting.bicep declares one SQL server firewall rule per outbound IP address of the Container App (read from the app), named with a prefix that does not start with pb-release-, only when the workload is deployed
-- [ ] #2 No rule uses the 0.0.0.0 allow-Azure-services range and no SQL credential or private networking is introduced
-- [ ] #3 scripts/database_release.py's stale-rule sweep provably cannot delete the managed API rules, covered by a test
-- [ ] #4 check_bicep.py validates the rule shape and tests cover it; the what-if guard still accepts the release preview
-- [ ] #5 docs/azure-delivery-policy.md and docs/dev-sign-in-runbook.md document the rule, why it exists, the stale-rule limitation and that production should use private networking
-- [ ] #6 python3 -B scripts/quality.py, scripts/run_required_unittests.py and check_bicep.py pass
+- [x] #1 hosting.bicep declares one SQL server firewall rule per outbound IP address of the Container App (read from the app), named with a prefix that does not start with pb-release-, only when the workload is deployed
+- [x] #2 No rule uses the 0.0.0.0 allow-Azure-services range and no SQL credential or private networking is introduced
+- [x] #3 scripts/database_release.py's stale-rule sweep provably cannot delete the managed API rules, covered by a test
+- [x] #4 check_bicep.py validates the rule shape and tests cover it; the what-if guard still accepts the release preview
+- [x] #5 docs/azure-delivery-policy.md and docs/dev-sign-in-runbook.md document the rule, why it exists, the stale-rule limitation and that production should use private networking
+- [x] #6 python3 -B scripts/quality.py, scripts/run_required_unittests.py and check_bicep.py pass
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -42,3 +42,15 @@ Live dev: every /api/me returns 503 because Azure SQL (public access on, Entra-o
 3. Document in azure-delivery-policy and dev-sign-in-runbook.
 4. Verify, read-only what-if against dev, finalize record.
 <!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Design: infra/modules/sql-firewall-rules.bicep loops over the app's properties.outboundIpAddresses (passed as a module parameter so the loop is evaluated after the app exists); hosting.bicep calls it when deployWorkload. Rules pb-api-egress-N are single-address, named by position (in-place update on IP change; a shrinking list leaves a surplus rule, documented). Env cae-pb-dev is consumption-only (no vnet), staticIp 51.11.206.78 is inbound; the app reports outboundIpAddresses=[98.66.189.7]. Deployment identity has Contributor on the dev group, which covers Microsoft.Sql/servers/firewallRules/write. Read-only what-if against live dev found Azure cannot expand the nested deployment and emits NestedDeploymentShortCircuited, which the guard rejected; validate_what_if now tolerates exactly that warning for the sql-api-firewall deployment in the dev group. az deployment group validate succeeded. Validation: quality.py ok, run_required_unittests 270 OK, check_bicep ok. Unproven until a live release: actual rule creation and API reaching SQL.
+<!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Added a Bicep module that creates one single-IP SQL firewall rule (pb-api-egress-N) per Container App outbound IP, called from hosting.bicep when the workload deploys. check_bicep validates the shape (no 0.0.0.0, no pb-release- prefix) and its what-if guard tolerates only the one expected NestedDeploymentShortCircuited warning; tests prove the release sweep cannot delete the rules. Docs record the rule, why it exists, the stale-rule limitation and the production private-networking direction. Verified with quality, unit tests, check_bicep, a read-only what-if against dev and az deployment group validate. Live proof (rule created, /api/me works) is a follow-up. Risk: what-if does not preview the rules.
+<!-- SECTION:FINAL_SUMMARY:END -->

@@ -315,6 +315,15 @@ class FirewallTests(unittest.TestCase):
         for command in self.deletes(az):
             self.assertNotIn('--yes', command)
 
+    def test_stale_sweep_never_deletes_the_managed_api_egress_rules(self):
+        az = self.az_recorder(listing='pb-api-egress-0\npb-api-egress-1\npb-release-1-1\n')
+        dr.remove_stale_rules(az, config(), lambda _: None)
+        removed = [c[c.index('--name') + 1] for c in self.deletes(az)]
+        self.assertEqual(removed, ['pb-release-1-1'])
+        query = next(c for c in az.calls if 'list' in c)[-3]
+        self.assertIn("starts_with(name, 'pb-release-')", query)
+        self.assertFalse('pb-api-egress-0'.startswith(dr.FIREWALL_PREFIX))
+
     def test_public_ip_must_be_a_public_ipv4(self):
         self.assertEqual(dr.detect_public_ip(lambda: '20.50.1.9\n'), '20.50.1.9')
         for bad in ('10.0.0.4', '::1', 'nope', '2001:db8::1'):

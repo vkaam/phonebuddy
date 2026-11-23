@@ -455,6 +455,36 @@ def validate_api_container(parameters, app):
         raise ValueError('WEB_ORIGIN must be the HTTPS origin of the dev Static Web App')
 
 
+def validate_sql_api_firewall(template):
+    """The API's SQL access is one single-address rule per outbound IP, never allow-all."""
+    deployments = [r for r in template.get('resources', [])
+                   if r.get('type') == 'Microsoft.Resources/deployments'
+                   and r.get('name') == 'sql-api-firewall']
+    if len(deployments) != 1:
+        raise ValueError('Hosting must deploy the SQL API firewall rules module exactly once')
+    deployment = deployments[0]
+    parameters = deployment.get('properties', {}).get('parameters', {})
+    ips = json.dumps(parameters.get('outboundIpAddresses', {}))
+    if (deployment.get('condition') != "[parameters('deployWorkload')]"
+            or "'Microsoft.App/containerApps'" not in ips or 'outboundIpAddresses' not in ips):
+        raise ValueError('SQL API firewall rules must come from the deployed app\'s outbound IPs '
+                         'and exist only when the workload is deployed')
+    nested = deployment.get('properties', {}).get('template', {})
+    rules = [r for r in nested.get('resources', [])
+             if r.get('type') == 'Microsoft.Sql/servers/firewallRules']
+    if len(rules) != 1 or 'copy' not in rules[0]:
+        raise ValueError('SQL API firewall rules must be one looped rule per outbound IP')
+    rule = rules[0]
+    name = rule.get('name', '')
+    properties = rule.get('properties', {})
+    if (nested.get('variables', {}).get('rulePrefix') != 'pb-api-egress-'
+            or "variables('rulePrefix')" not in name
+            or properties.get('startIpAddress') != properties.get('endIpAddress')
+            or '0.0.0.0' in json.dumps(rule)):
+        raise ValueError('SQL API firewall rules must be single-address pb-api-egress-N rules, '
+                         'never the allow-Azure-services range and never pb-release-')
+
+
 def validate_hosting(template):
     """Check security-critical defaults in the compiled pilot template."""
     resources = {r['type']: r for r in template.get('resources', [])}
@@ -485,6 +515,7 @@ def validate_hosting(template):
             or sql_admin.get('properties', {}).get('administratorType') != 'ActiveDirectory'
             or 'administratorLoginPassword' in json.dumps(sql_admin)):
         raise ValueError('SQL administrator must be an opt-in Entra administrator without a password')
+    validate_sql_api_firewall(template)
     digest = parameters['imageDigest']
     if digest.get('minLength') != 64 or digest.get('maxLength') != 64 or 'defaultValue' in digest:
         raise ValueError('Image digest must be supplied as 64 characters')
@@ -668,11 +699,34 @@ def validate_media(template):
         raise ValueError('Media outputs must not expose credentials')
 
 
+SQL_API_FIREWALL_DIAGNOSTIC = re.compile(
+    r"nested deployment '/subscriptions/[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}"
+    r"/resourcegroups/rg-pb-dev-francecentral-foundation"
+    r"/providers/microsoft\.resources/deployments/sql-api-firewall' ", re.IGNORECASE)
+
+
+def unexpected_what_if_diagnostics(diagnostics):
+    """Return What-if diagnostics other than the one reviewed, expected short-circuit.
+
+    The SQL API firewall module loops over the Container App's outbound IPs, which Azure only
+    reports after the app exists, so What-if cannot expand that one nested deployment. It is
+    additive single-address rules in Incremental mode and cannot delete anything.
+    """
+    if not diagnostics:
+        return []
+    if not isinstance(diagnostics, list):
+        return [diagnostics]
+    return [item for item in diagnostics
+            if not (isinstance(item, dict) and item.get('code') == 'NestedDeploymentShortCircuited'
+                    and item.get('level') == 'Warning'
+                    and SQL_API_FIREWALL_DIAGNOSTIC.search(str(item.get('message', ''))))]
+
+
 def validate_what_if(result, expected_scope=None):
     """Fail closed except for known Azure-managed or conditionally omitted resources."""
     if not isinstance(result, dict) or result.get('status') != 'Succeeded' or result.get('error'):
         raise ValueError('What-if did not report success')
-    if result.get('potentialChanges') or result.get('diagnostics'):
+    if result.get('potentialChanges') or unexpected_what_if_diagnostics(result.get('diagnostics')):
         raise ValueError('What-if reported unverified changes or diagnostics')
     changes = result.get('changes')
     if not isinstance(changes, list) or not changes:
